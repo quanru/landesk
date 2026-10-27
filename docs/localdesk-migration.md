@@ -96,3 +96,5 @@ Install the resulting `flutter/build/macos/Build/Products/Release/LocalDesk.app`
 into `/Applications`. To serve a desktop, configure local access credentials in
 LocalDesk and allow its screen recording/accessibility permissions in macOS.
 Installation and opening the UI alone do not verify remote screen/input access.
+
+The macOS helper also requires flutter_rust_bridge_codegen 1.80.1, dart and rustfmt on PATH; it regenerates all bindings before compiling. BRIDGE_CODEGEN_BIN can override the codegen executable. Desktop builds now require --features flutter; the obsolete Sciter sources and dependency are removed.

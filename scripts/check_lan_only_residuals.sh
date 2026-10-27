@@ -116,9 +116,12 @@ report_matches \
 report_matches \
   'raw credential-bearing launch or window arguments in logs' \
   '(launch args:.*\$args|with args .*call\.arguments|android msg.*\$arguments|debugPrint\([^\n]*call\.arguments|Wrong command:.*args)' \
-  flutter/lib src/ui.rs
+  flutter/lib src/flutter.rs
 
 for removed in \
+  src/ui \
+  src/ui.rs \
+  src/lan_identity.rs \
   src/plugin \
   src/hbbs_http.rs \
   src/hbbs_http \
@@ -161,6 +164,20 @@ report_matches \
   'account management entrypoint in native Flutter UI' \
   'showLanIdentityManager|showLanIdentityEditor|showLanIdentityPicker|showImportLegacyLanCredentialDialog|lan_identity_manager.dart' \
   flutter/lib/desktop flutter/lib/mobile flutter/lib/common
+
+
+# Scan the implementation and generated bridge, not only visible UI entrypoints.
+report_matches \
+  'retired account backend or online feature implementation' \
+  'LanIdentity|lan_identity|lan_identities|LANIdentities|software_update|plugin_framework|crate::plugin|hbbs_http' \
+  src/*.rs src/client src/server flutter/lib/generated_bridge* flutter/lib/web/bridge.dart Cargo.toml
+report_matches \
+  'retired online direct dependency' \
+  '^(reqwest|ring)[[:space:]]*=' Cargo.toml
+report_matches \
+  'retired account storage in shared configuration' \
+  'pub struct LanIdentity|pub fn .*lan_identity|lan_identities:|lan_identity_bindings:|default_lan_identity_id:' \
+  libs/hbb_common/src/config.rs
 
 if [[ $failed -ne 0 ]]; then
   exit 1

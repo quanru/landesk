@@ -33,8 +33,6 @@ drm = ["scrap/drm"]
 # kind of operation and deserves a switch that can remove it from the binary entirely, without
 # giving up DRM capture: `--features drm` builds the capture path with no wake code compiled in.
 drm-wake = ["drm"]
-plugin_framework = ["dep:reqwest"]
-software-update = ["dep:reqwest", "dep:ring"]
 linux-pkg-config = ["magnum-opus/linux-pkg-config", "scrap/linux-pkg-config"]
 unix-file-copy-paste = [
     "dep:x11-clipboard",
@@ -82,8 +80,6 @@ cidr-utils = "0.5"
 fon = "0.6"
 zip = "0.6"
 shutdown_hooks = "0.1"
-reqwest = { version = "0.12", features = ["blocking", "json", "native-tls", "rustls-tls", "rustls-tls-native-roots", "gzip"], default-features=false, optional = true }
-ring = { version = "0.17", optional = true }
 
 [target.'cfg(not(target_os = "linux"))'.dependencies]
 # https://github.com/rustdesk/rustdesk/discussions/10197, not use cpal on linux
@@ -93,7 +89,6 @@ ringbuf = "0.3"
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
 mac_address = "1.1"
 mdns-sd = { version = "=0.20.2", default-features = false, features = ["logging"] }
-sciter-rs = { git = "https://github.com/rustdesk-org/rust-sciter", branch = "dyn" }
 sys-locale = "0.3"
 enigo = { path = "libs/enigo", features = [ "with_serde" ] }
 clipboard = { path = "libs/clipboard" }

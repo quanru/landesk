@@ -1,10 +1,9 @@
 use crate::{
     client::*,
     flutter_ffi::{EventToUI, SessionID},
-    ui_session_interface::{
-        io_loop, InvokeUiSession, LanIdentityRequest, LanSessionCredential, Session,
-    },
+    ui_session_interface::{io_loop, InvokeUiSession, LanSessionCredential, Session},
 };
+use base::message_proto::*;
 use flutter_rust_bridge::StreamSink;
 #[cfg(not(any(target_os = "android", target_os = "ios")))]
 use hbb_common::dlopen::{
@@ -12,10 +11,9 @@ use hbb_common::dlopen::{
     Error as LibError,
 };
 use hbb_common::{
-    anyhow::anyhow, bail, config::LocalConfig, get_version_number, log,
-    rendezvous_proto::ConnType, ResultType,
+    anyhow::anyhow, bail, config::LocalConfig, get_version_number, log, rendezvous_proto::ConnType,
+    ResultType,
 };
-use base::message_proto::*;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 #[cfg(target_os = "windows")]
@@ -48,18 +46,15 @@ pub(crate) const APP_TYPE_CM: &str = "main";
 pub type FlutterSession = Arc<Session<FlutterHandler>>;
 
 #[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
 struct LanCredentialPayload {
     lan_version: u32,
-    #[serde(default)]
-    identity_id: String,
     #[serde(default)]
     username: String,
     #[serde(default)]
     password: String,
     #[serde(default)]
     remember: bool,
-    #[serde(default)]
-    bind_identity: bool,
 }
 
 lazy_static::lazy_static! {
@@ -243,8 +238,6 @@ pub struct FlutterHandler {
     session_handlers: Arc<RwLock<HashMap<SessionID, SessionHandler>>>,
     display_rgbas: Arc<RwLock<HashMap<usize, RgbaData>>>,
     peer_info: Arc<RwLock<PeerInfo>>,
-    #[cfg(not(any(target_os = "android", target_os = "ios")))]
-    hooks: Arc<RwLock<HashMap<String, SessionHook>>>,
     use_texture_render: Arc<AtomicBool>,
 }
 
@@ -254,8 +247,6 @@ impl Default for FlutterHandler {
             session_handlers: Default::default(),
             display_rgbas: Default::default(),
             peer_info: Default::default(),
-            #[cfg(not(any(target_os = "android", target_os = "ios")))]
-            hooks: Default::default(),
             use_texture_render: Arc::new(
                 AtomicBool::new(crate::ui_interface::use_texture_render()),
             ),
@@ -688,30 +679,6 @@ impl FlutterHandler {
             msg_vec.push(h);
         }
         serde_json::ser::to_string(&msg_vec).unwrap_or("".to_owned())
-    }
-
-    #[cfg(feature = "plugin_framework")]
-    #[cfg(not(any(target_os = "android", target_os = "ios")))]
-    pub(crate) fn add_session_hook(&self, key: String, hook: SessionHook) -> bool {
-        let mut hooks = self.hooks.write().unwrap();
-        if hooks.contains_key(&key) {
-            // Already has the hook with this key.
-            return false;
-        }
-        let _ = hooks.insert(key, hook);
-        true
-    }
-
-    #[cfg(feature = "plugin_framework")]
-    #[cfg(not(any(target_os = "android", target_os = "ios")))]
-    pub(crate) fn remove_session_hook(&self, key: &String) -> bool {
-        let mut hooks = self.hooks.write().unwrap();
-        if !hooks.contains_key(key) {
-            // The hook with this key does not found.
-            return false;
-        }
-        let _ = hooks.remove(key);
-        true
     }
 
     pub fn update_use_texture_render(&self) {
@@ -1237,15 +1204,6 @@ impl InvokeUiSession for FlutterHandler {
 impl FlutterHandler {
     #[inline]
     fn on_rgba_soft_render(&self, display: usize, rgba: &mut scrap::ImageRgb) {
-        // Give a chance for plugins or etc to hook a rgba data.
-        #[cfg(not(any(target_os = "android", target_os = "ios")))]
-        for (key, hook) in self.hooks.read().unwrap().iter() {
-            match hook {
-                SessionHook::OnSessionRgba(cb) => {
-                    cb(key.to_owned(), rgba);
-                }
-            }
-        }
         // If the current rgba is not fetched by flutter, i.e., is valid.
         // We give up sending a new event to flutter.
         let mut rgba_write_lock = self.display_rgbas.write().unwrap();
@@ -1380,58 +1338,30 @@ pub fn session_add(
 
     LocalConfig::set_remote_id(&id);
 
-    let (lan_credential, lan_identity_request) = if password.is_empty() {
-        (None, None)
+    let lan_credential = if password.is_empty() {
+        None
     } else {
         let payload: LanCredentialPayload = serde_json::from_str(&password)
             .map_err(|_| anyhow!("Invalid LAN credential payload"))?;
         if payload.lan_version != hbb_common::lan::PROTOCOL_VERSION {
             bail!("Unsupported LAN credential payload version");
         }
-        if !payload.identity_id.is_empty() {
-            if !payload.username.is_empty() || !payload.password.is_empty() {
-                bail!("LAN identity payload must not include plaintext credentials");
-            }
-            if LocalConfig::get_lan_identity(&payload.identity_id).is_none() {
-                bail!("LAN identity does not exist");
-            }
-            (
-                None,
-                Some(LanIdentityRequest {
-                    identity_id: payload.identity_id,
-                    bind_on_success: payload.bind_identity,
-                }),
-            )
-        } else {
-            let username = hbb_common::lan::validate_username(&payload.username)?;
-            hbb_common::lan::validate_password(payload.password.as_bytes())?;
-            (
-                Some(LanSessionCredential {
-                    username,
-                    password: payload.password.into_bytes(),
-                    remember: payload.remember,
-                    identity_id: String::new(),
-                    bind_identity_on_success: false,
-                }),
-                None,
-            )
-        }
+        let username = hbb_common::lan::validate_username(&payload.username)?;
+        hbb_common::lan::validate_password(payload.password.as_bytes())?;
+        Some(LanSessionCredential {
+            username,
+            password: payload.password.into_bytes(),
+            remember: payload.remember,
+        })
     };
     let lan_access_username = lan_credential
         .as_ref()
         .map(|credential| credential.username.clone())
-        .or_else(|| {
-            lan_identity_request.as_ref().and_then(|request| {
-                LocalConfig::get_lan_identity(&request.identity_id)
-                    .map(|identity| identity.username)
-            })
-        })
         .unwrap_or_default();
     zeroize::Zeroize::zeroize(&mut password);
     let session: Session<FlutterHandler> = Session {
         password: String::new(),
         lan_credential: Arc::new(std::sync::Mutex::new(lan_credential)),
-        lan_identity_request: Arc::new(std::sync::Mutex::new(lan_identity_request)),
         server_keyboard_enabled: Arc::new(RwLock::new(true)),
         server_file_transfer_enabled: Arc::new(RwLock::new(true)),
         server_clipboard_enabled: Arc::new(RwLock::new(true)),
@@ -2102,12 +2032,6 @@ pub fn session_on_waiting_for_image_dialog_show(session_id: SessionID) {
             h.on_waiting_for_image_dialog_show();
         }
     }
-}
-
-/// Hooks for session.
-#[derive(Clone)]
-pub enum SessionHook {
-    OnSessionRgba(fn(String, &mut scrap::ImageRgb)),
 }
 
 #[inline]

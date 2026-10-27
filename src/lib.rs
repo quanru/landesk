@@ -1,5 +1,5 @@
-#[cfg(any(feature = "software-update", feature = "plugin_framework"))]
-compile_error!("LocalDesk excludes online updates and plugins; build without these features");
+#[cfg(not(any(target_os = "android", target_os = "ios", feature = "flutter")))]
+compile_error!("LocalDesk desktop builds require --features flutter; the legacy Sciter frontend has been removed.");
 mod keyboard;
 /// cbindgen:ignore
 pub mod platform;
@@ -16,18 +16,15 @@ pub use self::server::*;
 mod client;
 /// cbindgen:ignore
 pub mod common;
-#[cfg(not(any(target_os = "ios")))]
-pub mod ipc;
 #[cfg(any(target_os = "android", target_os = "ios", feature = "flutter"))]
 mod diagnostics;
+#[cfg(not(any(target_os = "ios")))]
+pub mod ipc;
 mod lan;
-mod lan_identity;
 #[cfg(not(any(target_os = "android", target_os = "ios")))]
 mod lan_mdns;
 mod lan_protocol;
 mod lan_server;
-#[cfg(not(any(target_os = "android", target_os = "ios", feature = "flutter")))]
-pub mod ui;
 mod version;
 #[cfg(not(any(target_os = "android", target_os = "ios")))]
 mod web_gateway;
@@ -47,7 +44,6 @@ mod lang;
 #[cfg(not(any(target_os = "android", target_os = "ios")))]
 mod port_forward;
 
-
 #[cfg(not(any(target_os = "android", target_os = "ios")))]
 mod tray;
 
@@ -57,7 +53,6 @@ mod whiteboard;
 mod ui_cm_interface;
 mod ui_interface;
 mod ui_session_interface;
-
 
 #[cfg(any(target_os = "windows", target_os = "linux", target_os = "macos"))]
 pub mod clipboard_file;

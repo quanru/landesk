@@ -12,9 +12,7 @@ use crate::{
     ui_interface::{self, *},
 };
 use flutter_rust_bridge::{StreamSink, SyncReturn};
-#[cfg(feature = "plugin_framework")]
-#[cfg(not(any(target_os = "android", target_os = "ios")))]
-use hbb_common::allow_err;
+
 use base::fs;
 use hbb_common::{
     config::{self, Config, LocalConfig, PeerConfig, RecentLanEndpoint},
@@ -114,11 +112,6 @@ fn initialize(app_dir: &str, custom_client_config: &str) {
     {
         // core_main's init_log does not work for flutter since it is only applied to its load_library in main.c
         hbb_common::init_log(false, "flutter_ffi");
-        #[cfg(all(
-            feature = "software-update",
-            any(target_os = "windows", target_os = "macos")
-        ))]
-        crate::software_update::start_scheduler();
     }
 }
 
@@ -272,17 +265,6 @@ pub fn session_login_lan(
     let result = sessions::get_session_by_session_id(&session_id)
         .ok_or_else(|| hbb_common::anyhow::anyhow!("Session is no longer available"))
         .and_then(|session| session.submit_lan_credentials(username, password, remember));
-    SyncReturn(result.err().map(|err| err.to_string()).unwrap_or_default())
-}
-
-pub fn session_login_lan_identity(
-    session_id: SessionID,
-    identity_id: String,
-    bind_on_success: bool,
-) -> SyncReturn<String> {
-    let result = sessions::get_session_by_session_id(&session_id)
-        .ok_or_else(|| hbb_common::anyhow::anyhow!("Session is no longer available"))
-        .and_then(|session| session.submit_lan_identity(identity_id, bind_on_success));
     SyncReturn(result.err().map(|err| err.to_string()).unwrap_or_default())
 }
 
@@ -1064,80 +1046,6 @@ pub fn main_get_version() -> String {
     get_version()
 }
 
-pub fn main_get_software_update_state() -> String {
-    #[cfg(all(
-        feature = "software-update",
-        not(any(target_os = "android", target_os = "ios"))
-    ))]
-    return crate::software_update::state_json();
-    #[cfg(not(all(
-        feature = "software-update",
-        not(any(target_os = "android", target_os = "ios"))
-    )))]
-    return String::new();
-}
-
-pub fn main_check_software_update() -> String {
-    #[cfg(all(
-        feature = "software-update",
-        not(any(target_os = "android", target_os = "ios"))
-    ))]
-    return crate::software_update::check(true)
-        .err()
-        .map(|e| e.to_string())
-        .unwrap_or_default();
-    #[cfg(not(all(
-        feature = "software-update",
-        not(any(target_os = "android", target_os = "ios"))
-    )))]
-    return "Automatic updates are managed by the app distribution channel".to_owned();
-}
-
-pub fn main_download_software_update() -> String {
-    #[cfg(all(
-        feature = "software-update",
-        not(any(target_os = "android", target_os = "ios"))
-    ))]
-    return crate::software_update::download()
-        .err()
-        .map(|e| e.to_string())
-        .unwrap_or_default();
-    #[cfg(not(all(
-        feature = "software-update",
-        not(any(target_os = "android", target_os = "ios"))
-    )))]
-    return "Automatic updates are managed by the app distribution channel".to_owned();
-}
-
-pub fn main_install_software_update() -> String {
-    #[cfg(all(
-        feature = "software-update",
-        not(any(target_os = "android", target_os = "ios"))
-    ))]
-    return crate::software_update::install()
-        .err()
-        .map(|e| e.to_string())
-        .unwrap_or_default();
-    #[cfg(not(all(
-        feature = "software-update",
-        not(any(target_os = "android", target_os = "ios"))
-    )))]
-    return "Automatic updates are managed by the app distribution channel".to_owned();
-}
-
-pub fn main_set_software_update_preferences(auto_check: bool, auto_download: bool) {
-    #[cfg(all(
-        feature = "software-update",
-        not(any(target_os = "android", target_os = "ios"))
-    ))]
-    crate::software_update::set_preferences(auto_check, auto_download);
-    #[cfg(not(all(
-        feature = "software-update",
-        not(any(target_os = "android", target_os = "ios"))
-    )))]
-    let _ = (auto_check, auto_download);
-}
-
 pub fn main_get_fav() -> Vec<String> {
     get_fav()
 }
@@ -1153,107 +1061,6 @@ pub fn main_get_peer_sync(id: String) -> SyncReturn<String> {
 
 pub fn main_get_lan_peers() -> String {
     serde_json::to_string(&get_lan_peers()).unwrap_or_default()
-}
-
-pub fn main_list_lan_identities() -> SyncReturn<String> {
-    SyncReturn(serde_json::to_string(&crate::lan_identity::list()).unwrap_or_default())
-}
-
-pub fn main_create_lan_identity(
-    name: String,
-    username: String,
-    mut password: String,
-    make_default: bool,
-) -> SyncReturn<String> {
-    let result = crate::lan_identity::create(&name, &username, &password, make_default);
-    zeroize::Zeroize::zeroize(&mut password);
-    SyncReturn(match result {
-        Ok(identity_id) => serde_json::json!({
-            "identity_id": identity_id,
-            "error": "",
-        })
-        .to_string(),
-        Err(err) => serde_json::json!({
-            "identity_id": "",
-            "error": err.to_string(),
-        })
-        .to_string(),
-    })
-}
-
-pub fn main_update_lan_identity(
-    identity_id: String,
-    name: String,
-    username: String,
-    mut password: String,
-    make_default: bool,
-) -> SyncReturn<String> {
-    let password_update = (!password.is_empty()).then_some(password.as_str());
-    let result = crate::lan_identity::update(
-        &identity_id,
-        &name,
-        &username,
-        password_update,
-        make_default,
-    );
-    zeroize::Zeroize::zeroize(&mut password);
-    SyncReturn(result.err().map(|err| err.to_string()).unwrap_or_default())
-}
-
-pub fn main_delete_lan_identity(identity_id: String) -> SyncReturn<String> {
-    SyncReturn(
-        crate::lan_identity::delete(&identity_id)
-            .err()
-            .map(|err| err.to_string())
-            .unwrap_or_default(),
-    )
-}
-
-pub fn main_set_default_lan_identity(identity_id: String) -> SyncReturn<String> {
-    SyncReturn(
-        crate::lan_identity::set_default(&identity_id)
-            .err()
-            .map(|err| err.to_string())
-            .unwrap_or_default(),
-    )
-}
-
-pub fn main_bind_lan_identity(fingerprint: String, identity_id: String) -> SyncReturn<String> {
-    SyncReturn(
-        crate::lan_identity::bind(&fingerprint, &identity_id)
-            .err()
-            .map(|err| err.to_string())
-            .unwrap_or_default(),
-    )
-}
-
-pub fn main_get_bound_lan_identity_id(fingerprint: String) -> SyncReturn<String> {
-    SyncReturn(crate::lan_identity::bound_identity_id(&fingerprint))
-}
-
-pub fn main_has_legacy_lan_credential(fingerprint: String) -> SyncReturn<bool> {
-    SyncReturn(crate::lan_identity::has_legacy_credential(&fingerprint))
-}
-
-pub fn main_import_legacy_lan_credential(
-    fingerprint: String,
-    name: String,
-    make_default: bool,
-) -> SyncReturn<String> {
-    SyncReturn(
-        match crate::lan_identity::import_legacy_credential(&fingerprint, &name, make_default) {
-            Ok(identity_id) => serde_json::json!({
-                "identity_id": identity_id,
-                "error": "",
-            })
-            .to_string(),
-            Err(err) => serde_json::json!({
-                "identity_id": "",
-                "error": err.to_string(),
-            })
-            .to_string(),
-        },
-    )
 }
 
 pub fn main_get_connect_status() -> String {
@@ -1520,7 +1327,8 @@ fn recent_lan_endpoint_to_map(
         .get("alias")
         .cloned()
         .unwrap_or_default();
-    let presence = crate::lan::find_discovered_peer(discovered, &recent.fingerprint, &recent.endpoint);
+    let presence =
+        crate::lan::find_discovered_peer(discovered, &recent.fingerprint, &recent.endpoint);
     serde_json::json!({
         "id": recent.endpoint,
         "username": recent.username,
@@ -2618,180 +2426,6 @@ pub fn is_disable_installation() -> SyncReturn<bool> {
 pub fn send_url_scheme(_url: String) {
     #[cfg(target_os = "macos")]
     std::thread::spawn(move || crate::handle_url_scheme(_url));
-}
-
-#[inline]
-pub fn plugin_event(_id: String, _peer: String, _event: Vec<u8>) {
-    #[cfg(feature = "plugin_framework")]
-    #[cfg(not(any(target_os = "android", target_os = "ios")))]
-    {
-        allow_err!(crate::plugin::handle_ui_event(&_id, &_peer, &_event));
-    }
-}
-
-pub fn plugin_register_event_stream(_id: String, _event2ui: StreamSink<EventToUI>) {
-    #[cfg(feature = "plugin_framework")]
-    {
-        crate::plugin::native_handlers::session::session_register_event_stream(_id, _event2ui);
-    }
-}
-
-#[inline]
-pub fn plugin_get_session_option(
-    _id: String,
-    _peer: String,
-    _key: String,
-) -> SyncReturn<Option<String>> {
-    #[cfg(feature = "plugin_framework")]
-    #[cfg(not(any(target_os = "android", target_os = "ios")))]
-    {
-        SyncReturn(crate::plugin::PeerConfig::get(&_id, &_peer, &_key))
-    }
-    #[cfg(any(
-        not(feature = "plugin_framework"),
-        target_os = "android",
-        target_os = "ios"
-    ))]
-    {
-        SyncReturn(None)
-    }
-}
-
-#[inline]
-pub fn plugin_set_session_option(_id: String, _peer: String, _key: String, _value: String) {
-    #[cfg(feature = "plugin_framework")]
-    #[cfg(not(any(target_os = "android", target_os = "ios")))]
-    {
-        let _res = crate::plugin::PeerConfig::set(&_id, &_peer, &_key, &_value);
-    }
-}
-
-#[inline]
-pub fn plugin_get_shared_option(_id: String, _key: String) -> SyncReturn<Option<String>> {
-    #[cfg(feature = "plugin_framework")]
-    #[cfg(not(any(target_os = "android", target_os = "ios")))]
-    {
-        SyncReturn(crate::plugin::ipc::get_config(&_id, &_key).unwrap_or(None))
-    }
-    #[cfg(any(
-        not(feature = "plugin_framework"),
-        target_os = "android",
-        target_os = "ios"
-    ))]
-    {
-        SyncReturn(None)
-    }
-}
-
-#[inline]
-pub fn plugin_set_shared_option(_id: String, _key: String, _value: String) {
-    #[cfg(feature = "plugin_framework")]
-    #[cfg(not(any(target_os = "android", target_os = "ios")))]
-    {
-        allow_err!(crate::plugin::ipc::set_config(&_id, &_key, _value));
-    }
-}
-
-#[inline]
-pub fn plugin_reload(_id: String) {
-    #[cfg(feature = "plugin_framework")]
-    #[cfg(not(any(target_os = "android", target_os = "ios")))]
-    {
-        allow_err!(crate::plugin::ipc::reload_plugin(&_id,));
-        allow_err!(crate::plugin::reload_plugin(&_id));
-    }
-}
-
-#[inline]
-pub fn plugin_enable(_id: String, _v: bool) -> SyncReturn<()> {
-    #[cfg(feature = "plugin_framework")]
-    #[cfg(not(any(target_os = "android", target_os = "ios")))]
-    {
-        allow_err!(crate::plugin::ipc::set_manager_plugin_config(
-            &_id,
-            "enabled",
-            _v.to_string()
-        ));
-        if _v {
-            allow_err!(crate::plugin::load_plugin(&_id));
-        } else {
-            crate::plugin::unload_plugin(&_id);
-        }
-    }
-    SyncReturn(())
-}
-
-pub fn plugin_is_enabled(_id: String) -> SyncReturn<bool> {
-    #[cfg(feature = "plugin_framework")]
-    #[cfg(not(any(target_os = "android", target_os = "ios")))]
-    {
-        SyncReturn(
-            match crate::plugin::ipc::get_manager_plugin_config(&_id, "enabled") {
-                Ok(Some(enabled)) => bool::from_str(&enabled).unwrap_or(false),
-                _ => false,
-            },
-        )
-    }
-    #[cfg(any(
-        not(feature = "plugin_framework"),
-        target_os = "android",
-        target_os = "ios"
-    ))]
-    {
-        SyncReturn(false)
-    }
-}
-
-pub fn plugin_feature_is_enabled() -> SyncReturn<bool> {
-    #[cfg(feature = "plugin_framework")]
-    #[cfg(not(any(target_os = "android", target_os = "ios")))]
-    {
-        #[cfg(debug_assertions)]
-        let enabled = true;
-        #[cfg(not(debug_assertions))]
-        let enabled = is_installed();
-        SyncReturn(enabled)
-    }
-    #[cfg(any(
-        not(feature = "plugin_framework"),
-        target_os = "android",
-        target_os = "ios"
-    ))]
-    {
-        SyncReturn(false)
-    }
-}
-
-pub fn plugin_sync_ui(_sync_to: String) {
-    #[cfg(feature = "plugin_framework")]
-    #[cfg(not(any(target_os = "android", target_os = "ios")))]
-    {
-        if plugin_feature_is_enabled().0 {
-            crate::plugin::sync_ui(_sync_to);
-        }
-    }
-}
-
-pub fn plugin_list_reload() {
-    #[cfg(feature = "plugin_framework")]
-    #[cfg(not(any(target_os = "android", target_os = "ios")))]
-    {
-        crate::plugin::load_plugin_list();
-    }
-}
-
-pub fn plugin_install(_id: String, _b: bool) {
-    #[cfg(feature = "plugin_framework")]
-    #[cfg(not(any(target_os = "android", target_os = "ios")))]
-    {
-        if _b {
-            if let Err(e) = crate::plugin::install_plugin(&_id) {
-                log::error!("Failed to install plugin '{}': {}", _id, e);
-            }
-        } else {
-            crate::plugin::uninstall_plugin(&_id, true);
-        }
-    }
 }
 
 pub fn is_support_multi_ui_session(version: String) -> SyncReturn<bool> {

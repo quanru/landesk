@@ -1418,12 +1418,6 @@ impl<T: InvokeUiSession> Remote<T> {
                                 crate::flutter::update_file_clipboard_required();
 
                                 // on connection established client
-                                #[cfg(all(feature = "flutter", feature = "plugin_framework"))]
-                                #[cfg(not(any(target_os = "android", target_os = "ios")))]
-                                crate::plugin::handle_listen_event(
-                                    crate::plugin::EVENT_ON_CONN_CLIENT.to_owned(),
-                                    self.handler.get_id(),
-                                );
                             }
 
                             if self.handler.is_file_transfer() {
@@ -1583,8 +1577,7 @@ impl<T: InvokeUiSession> Remote<T> {
                             if digest.is_upload {
                                 if let Some(job) = fs::get_job(digest.id, &mut self.read_jobs) {
                                     if let Some(file) = job.files().get(digest.file_num as usize) {
-                                        let fs::DataSource::FilePath(p) = &job.data_source
-                                        else {
+                                        let fs::DataSource::FilePath(p) = &job.data_source else {
                                             // In-memory transfer jobs have no on-disk path.
                                             return false;
                                         };
@@ -1629,8 +1622,7 @@ impl<T: InvokeUiSession> Remote<T> {
                             } else {
                                 if let Some(job) = fs::get_job(digest.id, &mut self.write_jobs) {
                                     if let Some(file) = job.files().get(digest.file_num as usize) {
-                                        let fs::DataSource::FilePath(p) = &job.data_source
-                                        else {
+                                        let fs::DataSource::FilePath(p) = &job.data_source else {
                                             // In-memory transfer jobs have no on-disk path.
                                             return false;
                                         };
@@ -1866,26 +1858,7 @@ impl<T: InvokeUiSession> Remote<T> {
                             );
                         }
                     }
-                    #[cfg(all(feature = "flutter", feature = "plugin_framework"))]
-                    #[cfg(not(any(target_os = "android", target_os = "ios")))]
-                    Some(misc::Union::PluginRequest(p)) => {
-                        allow_err!(crate::plugin::handle_server_event(
-                            &p.id,
-                            &self.handler.get_id(),
-                            &p.content
-                        ));
-                        // to-do: show message box on UI when error occurs?
-                    }
-                    #[cfg(all(feature = "flutter", feature = "plugin_framework"))]
-                    #[cfg(not(any(target_os = "android", target_os = "ios")))]
-                    Some(misc::Union::PluginFailure(p)) => {
-                        let name = if p.name.is_empty() {
-                            "plugin".to_string()
-                        } else {
-                            p.name
-                        };
-                        self.handler.msgbox("custom-nocancel", &name, &p.msg, "");
-                    }
+
                     Some(misc::Union::SupportedEncoding(e)) => {
                         log::info!("update supported encoding:{:?}", e);
                         self.handler.lc.write().unwrap().supported_encoding = e;

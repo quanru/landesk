@@ -1,8 +1,8 @@
-use std::{ffi::c_void, rc::Rc};
+use std::ffi::c_void;
 
 #[cfg(target_os = "macos")]
 use cocoa::{
-    appkit::{NSApp, NSApplication, NSApplicationActivationPolicy::*, NSMenu, NSMenuItem},
+    appkit::{NSApp, NSApplication, NSApplicationActivationPolicy::*},
     base::{id, nil, YES},
     foundation::{NSAutoreleasePool, NSString},
 };
@@ -14,7 +14,6 @@ use objc::{
     runtime::{Object, Sel, BOOL},
     sel, sel_impl,
 };
-use sciter::{make_args, Host};
 
 use hbb_common::log;
 
@@ -47,20 +46,6 @@ impl DelegateState {
 }
 
 static mut LAUNCHED: bool = false;
-
-impl AppHandler for Rc<Host> {
-    fn command(&mut self, cmd: u32) {
-        if cmd == SHOW_ABOUT_TAG {
-            let _ = self.call_function("awake", &make_args![]);
-            let _ = self.call_function("showAbout", &make_args![]);
-        } else if cmd == SHOW_SETTINGS_TAG {
-            let _ = self.call_function("awake", &make_args![]);
-            let _ = self.call_function("showSettings", &make_args![]);
-        } else if cmd == AWAKE {
-            let _ = self.call_function("awake", &make_args![]);
-        }
-    }
-}
 
 // https://github.com/xi-editor/druid/blob/master/druid-shell/src/platform/mac/application.rs
 unsafe fn set_delegate(handler: Option<Box<dyn AppHandler>>) {
@@ -213,61 +198,6 @@ fn service_should_handle_reopen(
     std::thread::spawn(move || crate::handle_url_scheme("".to_string()));
     // Prevent default logic.
     NO
-}
-
-unsafe fn make_menu_item(title: &str, key: &str, tag: u32) -> *mut Object {
-    let title = NSString::alloc(nil).init_str(title);
-    let action = sel!(handleMenuItem:);
-    let key = NSString::alloc(nil).init_str(key);
-    let object = NSMenuItem::alloc(nil)
-        .initWithTitle_action_keyEquivalent_(title, action, key)
-        .autorelease();
-    let () = msg_send![object, setTag: tag];
-    object
-}
-
-pub fn make_menubar(host: Rc<Host>, is_index: bool) {
-    unsafe {
-        let _pool = NSAutoreleasePool::new(nil);
-        set_delegate(Some(Box::new(host)));
-        let menubar = NSMenu::new(nil).autorelease();
-        let app_menu_item = NSMenuItem::new(nil).autorelease();
-        menubar.addItem_(app_menu_item);
-        let app_menu = NSMenu::new(nil).autorelease();
-
-        if !is_index {
-            let new_item = make_menu_item("New Window", "n", RUN_ME_TAG);
-            app_menu.addItem_(new_item);
-        } else {
-            // When app launched without argument, is the main panel.
-            let about_item = make_menu_item("About", "", SHOW_ABOUT_TAG);
-            app_menu.addItem_(about_item);
-            let separator = NSMenuItem::separatorItem(nil).autorelease();
-            app_menu.addItem_(separator);
-            let settings_item = make_menu_item("Settings", "s", SHOW_SETTINGS_TAG);
-            app_menu.addItem_(settings_item);
-        }
-        let separator = NSMenuItem::separatorItem(nil).autorelease();
-        app_menu.addItem_(separator);
-        let quit_item = make_menu_item(
-            &format!("Quit {}", crate::get_app_name()),
-            "q",
-            TERMINATE_TAG,
-        );
-        app_menu_item.setSubmenu_(app_menu);
-        /*
-        if !enabled {
-            let () = msg_send![quit_item, setEnabled: NO];
-        }
-
-        if selected {
-            let () = msg_send![quit_item, setState: 1_isize];
-        }
-        let () = msg_send![item, setTag: id as isize];
-        */
-        app_menu.addItem_(quit_item);
-        NSApp().setMainMenu_(menubar);
-    }
 }
 
 pub fn show_dock() {

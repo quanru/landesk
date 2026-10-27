@@ -154,14 +154,6 @@ class RustdeskImpl {
     return 'LAN access credentials are not supported in the web client';
   }
 
-  String sessionLoginLanIdentity(
-      {required UuidValue sessionId,
-      required String identityId,
-      required bool bindOnSuccess,
-      dynamic hint}) {
-    return 'LAN identities are not supported in the web client';
-  }
-
   Future<void> sessionSend2Fa(
       {required UuidValue sessionId,
       required String code,
@@ -831,27 +823,6 @@ class RustdeskImpl {
     return Future(() => js.context.callMethod('getByName', ['version']));
   }
 
-  Future<String> mainGetSoftwareUpdateState({dynamic hint}) async {
-    return '{"state":"disabled","current_version":"","available_version":"","progress":0,"message":"Automatic updates are unavailable on Web","release_notes_url":"","mandatory":false,"auto_check":false,"auto_download":false}';
-  }
-
-  Future<String> mainCheckSoftwareUpdate({dynamic hint}) async {
-    return 'Automatic updates are unavailable on Web';
-  }
-
-  Future<String> mainDownloadSoftwareUpdate({dynamic hint}) async {
-    return 'Automatic updates are unavailable on Web';
-  }
-
-  Future<String> mainInstallSoftwareUpdate({dynamic hint}) async {
-    return 'Automatic updates are unavailable on Web';
-  }
-
-  Future<void> mainSetSoftwareUpdatePreferences(
-      {required bool autoCheck,
-      required bool autoDownload,
-      dynamic hint}) async {}
-
   Future<List<String>> mainGetFav({dynamic hint}) {
     List<String> favs = [];
     try {
@@ -877,69 +848,6 @@ class RustdeskImpl {
 
   Future<String> mainGetLanPeers({dynamic hint}) {
     throw UnimplementedError("mainGetLanPeers");
-  }
-
-  String mainListLanIdentities({dynamic hint}) {
-    return '[]';
-  }
-
-  String mainCreateLanIdentity(
-      {required String name,
-      required String username,
-      required String password,
-      required bool makeDefault,
-      dynamic hint}) {
-    return jsonEncode({
-      'identity_id': '',
-      'error': 'LAN identities are not supported in the web client',
-    });
-  }
-
-  String mainUpdateLanIdentity(
-      {required String identityId,
-      required String name,
-      required String username,
-      required String password,
-      required bool makeDefault,
-      dynamic hint}) {
-    return 'LAN identities are not supported in the web client';
-  }
-
-  String mainDeleteLanIdentity({required String identityId, dynamic hint}) {
-    return 'LAN identities are not supported in the web client';
-  }
-
-  String mainSetDefaultLanIdentity(
-      {required String identityId, dynamic hint}) {
-    return 'LAN identities are not supported in the web client';
-  }
-
-  String mainBindLanIdentity(
-      {required String fingerprint,
-      required String identityId,
-      dynamic hint}) {
-    return 'LAN identities are not supported in the web client';
-  }
-
-  String mainGetBoundLanIdentityId(
-      {required String fingerprint, dynamic hint}) {
-    return '';
-  }
-
-  bool mainHasLegacyLanCredential(
-      {required String fingerprint, dynamic hint}) {
-    return false;
-  }
-
-  String mainImportLegacyLanCredential(
-      {required String fingerprint,
-      required String name,
-      required bool makeDefault,
-      dynamic hint}) {
-    return jsonEncode({
-      'identity_id': '',
-      'error': 'LAN identities are not supported in the web client',
-    });
   }
 
   Future<String> mainGetConnectStatus({dynamic hint}) {
@@ -1220,38 +1128,6 @@ class RustdeskImpl {
 
   Future<String> mainGetLastRemoteId({dynamic hint}) {
     return Future(() => mainGetLocalOption(key: 'last_remote_id'));
-  }
-
-  Future<void> mainGetSoftwareUpdateUrl({dynamic hint}) {
-    throw UnimplementedError("mainGetSoftwareUpdateUrl");
-  }
-
-  Future<String> mainGetHomeDir({dynamic hint}) {
-    return Future.value('');
-  }
-
-  Future<String> mainGetLangs({dynamic hint}) {
-    return Future(() => js.context.callMethod('getByName', ['langs']));
-  }
-
-  Future<String> mainGetTemporaryPassword({dynamic hint}) {
-    return Future.value('');
-  }
-
-  Future<String> mainGetFingerprint({dynamic hint}) {
-    return Future.value('');
-  }
-
-  Future<String> cmGetClientsState({dynamic hint}) {
-    throw UnimplementedError("cmGetClientsState");
-  }
-
-  Future<String?> cmCheckClientsLength({required int length, dynamic hint}) {
-    throw UnimplementedError("cmCheckClientsLength");
-  }
-
-  Future<int> cmGetClientsLength({dynamic hint}) {
-    throw UnimplementedError("cmCheckClientsLength");
   }
 
   Future<void> mainInit({required String appDir, dynamic hint}) {
@@ -1619,27 +1495,6 @@ class RustdeskImpl {
     throw UnimplementedError("installInstallPath");
   }
 
-  Future<void> mainAccountAuth(
-      {required String op, required bool rememberMe, dynamic hint}) {
-    // Safari only allows auth popups while handling the original user gesture.
-    // Use Future.sync so the JS call runs synchronously (pre-opening the OIDC
-    // window) while any interop error still surfaces as a Future error.
-    return Future.sync(() => js.context.callMethod('setByName', [
-          'account_auth',
-          jsonEncode({'op': op, 'remember': rememberMe})
-        ]));
-  }
-
-  Future<void> mainAccountAuthCancel({dynamic hint}) {
-    return Future(
-        () => js.context.callMethod('setByName', ['account_auth_cancel']));
-  }
-
-  Future<String> mainAccountAuthResult({dynamic hint}) {
-    return Future(
-        () => js.context.callMethod('getByName', ['account_auth_result']));
-  }
-
   Future<void> mainOnMainWindowClose({dynamic hint}) {
     throw UnimplementedError("mainOnMainWindowClose");
   }
@@ -1711,11 +1566,6 @@ class RustdeskImpl {
     return mainGetLocalOption(key: "disable-group-panel", hint: hint) == "Y";
   }
 
-  bool isDisableAccount({dynamic hint}) {
-    // Checks HARD_SETTINGS["disable-account"] == "Y"
-    return mainGetHardOption(key: "disable-account", hint: hint) == "Y";
-  }
-
   bool isDisableInstallation({dynamic hint}) {
     return false;
   }
@@ -1726,78 +1576,6 @@ class RustdeskImpl {
 
   Future<void> sendUrlScheme({required String url, dynamic hint}) {
     throw UnimplementedError("sendUrlScheme");
-  }
-
-  Future<void> pluginEvent(
-      {required String id,
-      required String peer,
-      required Uint8List event,
-      dynamic hint}) {
-    throw UnimplementedError("pluginEvent");
-  }
-
-  Stream<EventToUI> pluginRegisterEventStream(
-      {required String id, dynamic hint}) {
-    throw UnimplementedError("pluginRegisterEventStream");
-  }
-
-  String? pluginGetSessionOption(
-      {required String id,
-      required String peer,
-      required String key,
-      dynamic hint}) {
-    throw UnimplementedError("pluginGetSessionOption");
-  }
-
-  Future<void> pluginSetSessionOption(
-      {required String id,
-      required String peer,
-      required String key,
-      required String value,
-      dynamic hint}) {
-    throw UnimplementedError("pluginSetSessionOption");
-  }
-
-  String? pluginGetSharedOption(
-      {required String id, required String key, dynamic hint}) {
-    throw UnimplementedError("pluginGetSharedOption");
-  }
-
-  Future<void> pluginSetSharedOption(
-      {required String id,
-      required String key,
-      required String value,
-      dynamic hint}) {
-    throw UnimplementedError("pluginSetSharedOption");
-  }
-
-  Future<void> pluginReload({required String id, dynamic hint}) {
-    throw UnimplementedError("pluginReload");
-  }
-
-  void pluginEnable({required String id, required bool v, dynamic hint}) {
-    throw UnimplementedError("pluginEnable");
-  }
-
-  bool pluginIsEnabled({required String id, dynamic hint}) {
-    throw UnimplementedError("pluginIsEnabled");
-  }
-
-  bool pluginFeatureIsEnabled({dynamic hint}) {
-    throw UnimplementedError("pluginFeatureIsEnabled");
-  }
-
-  Future<void> pluginSyncUi({required String syncTo, dynamic hint}) {
-    throw UnimplementedError("pluginSyncUi");
-  }
-
-  Future<void> pluginListReload({dynamic hint}) {
-    throw UnimplementedError("pluginListReload");
-  }
-
-  Future<void> pluginInstall(
-      {required String id, required bool b, dynamic hint}) {
-    throw UnimplementedError("pluginInstall");
   }
 
   bool isSupportMultiUiSession({required String version, dynamic hint}) {

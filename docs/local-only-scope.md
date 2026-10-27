@@ -1,30 +1,37 @@
 # Local-only product scope
 
-LocalDesk has no cloud-account sign-in, account registration, cloud address book,
-cloud device synchronization, rendezvous/ID server, NAT punching or relay fallback.
-The SubnetDesk LAN baseline already removed the cloud account workflows. LocalDesk
-also removes updater/plugin UI, startup hooks, HTTP/plugin implementation modules,
-and automatic-update manifest publishing. Public IP endpoints are rejected.
+LocalDesk has no cloud sign-in, registration, cloud address book/device sync,
+rendezvous/ID server, NAT punching or relay fallback. Public IP endpoints are
+rejected. Tailscale private addresses remain supported.
+
+Removed from source, rather than hidden:
+- Native account management UI, Rust identity CRUD/keychain manager, session
+  identity lookup/default binding, shared identity configuration fields and FFI.
+- Online updater and downloadable plugin modules, startup/IPC/session hooks,
+  bridge methods, Cargo feature declarations and direct HTTP/update dependencies.
+- The obsolete Sciter frontend, which contained cloud login and public-server
+  configuration. Desktop builds require the Flutter feature.
+- Update manifest generation/publishing and legacy Web account bridge methods.
 
 Keep these local functions:
 - LAN/private-VPN direct IP connections and LAN discovery.
-- Per-host username/password and fingerprint verification (not a cloud account).
-- Local recents/favorites, per-peer options and virtual-key layouts.
-- Remote desktop, input, clipboard, files and terminal over the local connection.
+- Remote-host username/password authentication and fingerprint verification.
+- Credentials remembered per host, local recents/favorites and virtual-key layouts.
+- Remote desktop, input, clipboard, files, terminal and the LAN web gateway.
+- Built-in Flutter rendering/native integration plugins (not downloaded plugins).
 
-Some generated bridge compatibility methods, disabled feature guards, translations
-and legacy non-shipping frontend references remain. They are not working cloud
-features: enabling `plugin_framework` or `software-update` fails compilation, and
-the implementation modules and native Flutter entrypoints have been removed.
-The old Flutter Web/Sciter release paths remain disabled; the separate LAN web
-gateway uses local authentication and the same incoming private-IP policy.
+Generated Rust/Dart/C bridges must be regenerated from src/flutter_ffi.rs before
+building; the removed account/updater/plugin methods are no longer generated.
+The lockfile can retain TLS dependencies needed by local encrypted transports;
+a dependency name alone is not evidence of an online service.
 
-`scripts/check_lan_only_residuals.sh` checks removed implementation files, public
-transport/config symbols and cloud/plugin/updater entrypoints in the native UI.
-It is a regression guard, not an exhaustive network-capture proof. Tailscale's
-own networking and Apple platform certificate verification are outside LocalDesk.
+Existing retired account metadata is ignored and omitted on the next config save.
+The application no longer reads the retired account keychain namespace. This
+source cleanup does not delete credentials already stored in the OS keychain.
+Per-host remembered credentials remain supported.
 
-The native UI also removes the inherited local identity/account manager: no
-account toolbar, add-account dialog, account selector or peer account menu.
-Connections still request the remote host credentials and can remember them
-per host. Existing stored credentials are not deleted by this UI change.
+The residual check scans implementations, manifest and generated bridge symbols,
+not just UI entrypoints. Old protocol definitions, translation labels and
+configuration rejection rules can still name retired features without implementing
+them. This is not an exhaustive packet-capture proof. Tailscale's own networking
+and Apple platform certificate verification are outside LocalDesk.
