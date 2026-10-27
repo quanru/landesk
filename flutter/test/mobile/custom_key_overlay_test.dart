@@ -128,12 +128,16 @@ void main() {
     });
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField), 'My macro');
+    await tester.tap(find.text('Key appearance'));
+    await tester.pumpAndSettle();
     final sizeSlider =
         tester.widget<Slider>(find.byKey(const ValueKey('key-size')));
     sizeSlider.onChanged!(80);
     final opacitySlider =
         tester.widget<Slider>(find.byKey(const ValueKey('key-opacity')));
     opacitySlider.onChanged!(.8);
+    await tester.tap(find.text('Macro steps'));
+    await tester.pumpAndSettle();
     await tester.ensureVisible(find.text('Add step'));
     await tester.tap(find.text('Add step'));
     await tester.pumpAndSettle();
@@ -155,7 +159,11 @@ void main() {
       await tester.tap(find.text('My macro'));
     });
     await tester.pumpAndSettle();
+    await tester.tap(find.text('Macro steps'));
+    await tester.pumpAndSettle();
     expect(find.text('2. Enter'), findsOneWidget);
+    await tester.tap(find.text('Key appearance'));
+    await tester.pumpAndSettle();
     expect(
         tester.widget<Slider>(find.byKey(const ValueKey('key-opacity'))).value,
         .8);

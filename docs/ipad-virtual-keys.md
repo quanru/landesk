@@ -165,3 +165,37 @@ without changing the chord writer; `remote_page.dart` passes the stable peer ID
 and reports unavailable input as an error so macros stop instead of silently
 continuing. Preview and feature tests change to exercise the new UI. No transport,
 Rust protocol, native build or existing keyboard/pointer handling changed.
+
+## RustDesk visual integration (2026-10-27)
+
+The overlay now inherits RustDesk's `ThemeData`: themed dialog surfaces and text,
+blue secondary color for editing, 8-point key corners consistent with existing
+buttons, keyboard icons, and themed ElevatedButton actions. The editor is divided
+into Key settings / Key appearance / Macro steps tabs. Each page scrolls inside a
+height constrained by the viewport and keyboard; the Save/Cancel actions stay
+outside the scroll area. No app-wide theme was modified.
+
+The remote-page hook passes RustDesk's `translate` callback. New UI strings use
+`src/lang/cn.rs` for Simplified Chinese and English source keys as fallback. Other
+locale files receive empty placeholders as required by AGENTS.md; Italian is not
+machine-translated. Existing translation entries are preserved. The preview
+build generates its Chinese dictionary from that same source, and offers language
+and theme switches. Its lightweight theme matches the relevant RustDesk Material 2
+colors/shapes; the full client's component uses the actual inherited app theme.
+
+Validation: all five feature tests pass after the tab navigation change; targeted
+analysis passes with only the two pre-existing WillPopScope notices. The updated
+Rust native library and full simulator client build successfully. Device Hub
+visually verified the Chinese light editor and English dark macro page, including
+tab navigation and restoration of the existing macro. The initial preview exposed
+invisible light-theme tab labels; explicit theme foregrounds fixed it and the
+corrected screenshots were reviewed. Evidence: `themed-tests.log`,
+`themed-analysis.log`, `themed-native-build.log`, `themed-full-build.log`,
+`themed-preview-build.log`, `themed-light-cn.png`, `themed-dark-en.png`.
+
+Regression surface: the two virtual-key UI files change only appearance,
+localization and editor organization; `remote_page.dart` supplies translation;
+`src/lang/*.rs` append feature strings/placeholders; preview files and the existing
+widget test adapt to the new tabs/theme. Shortcut execution, layout storage,
+connection protocol and existing remote pointer/keyboard handlers are unchanged.
+Real remote-desktop visual acceptance and iPad hardware testing remain pending.

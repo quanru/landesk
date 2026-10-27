@@ -567,6 +567,7 @@ class _RemotePageState extends State<RemotePage> with WidgetsBindingObserver {
         key: ValueKey('virtual-keys-${widget.id}-$isMac'),
         isMac: isMac,
         profileId: widget.id,
+        translate: (text) => translate(text),
         send: (shortcut) async {
           if (!inputModel.keyboardPerm ||
               inputModel.isViewOnly ||

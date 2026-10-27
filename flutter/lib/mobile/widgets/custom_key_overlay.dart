@@ -36,10 +36,12 @@ class CustomKeyOverlay extends StatefulWidget {
       {super.key,
       required this.send,
       this.isMac = true,
-      this.profileId = 'default'});
+      this.profileId = 'default',
+      this.translate = virtualKeyText});
   final Future<void> Function(RemoteShortcut) send;
   final bool isMac;
   final String profileId;
+  final String Function(String) translate;
 
   @override
   State<CustomKeyOverlay> createState() => _CustomKeyOverlayState();
@@ -146,8 +148,8 @@ class _CustomKeyOverlayState extends State<CustomKeyOverlay>
       } catch (e) {
         debugPrint('CustomKeyOverlay layout save failed: $e');
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Could not save key layout')));
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+              content: Text(widget.translate('Could not save key layout'))));
         }
       }
     });
@@ -164,7 +166,9 @@ class _CustomKeyOverlayState extends State<CustomKeyOverlay>
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not send remote shortcut')),
+          SnackBar(
+              content:
+                  Text(widget.translate('Could not send remote shortcut'))),
         );
       }
       debugPrint('Remote shortcut failed: $e');
@@ -182,6 +186,7 @@ class _CustomKeyOverlayState extends State<CustomKeyOverlay>
                 'Key', [const RemoteShortcut('Key', 'VK_ESCAPE')])
             : _spots[index].config,
         canDelete: index != null,
+        translate: widget.translate,
       ),
     );
     if (result == null || !mounted) return;
@@ -207,8 +212,8 @@ class _CustomKeyOverlayState extends State<CustomKeyOverlay>
               top: 6,
               left: 6,
               child: Material(
-                  color: Colors.black54,
-                  borderRadius: BorderRadius.circular(12),
+                  color: Theme.of(context).colorScheme.secondary,
+                  borderRadius: BorderRadius.circular(8),
                   child: InkWell(
                     onTap: _sending
                         ? null
@@ -230,8 +235,8 @@ class _CustomKeyOverlayState extends State<CustomKeyOverlay>
                             }),
                     child: Semantics(
                         label: _edit
-                            ? 'Finish editing keys'
-                            : 'Toggle virtual keys',
+                            ? widget.translate('Finish editing keys')
+                            : widget.translate('Toggle virtual keys'),
                         button: true,
                         child: Padding(
                             padding: const EdgeInsets.all(12),
@@ -239,8 +244,8 @@ class _CustomKeyOverlayState extends State<CustomKeyOverlay>
                               _edit
                                   ? Icons.check
                                   : (_visible
-                                      ? Icons.gamepad
-                                      : Icons.gamepad_outlined),
+                                      ? Icons.keyboard
+                                      : Icons.keyboard_outlined),
                               color: Colors.white,
                               size: 21,
                             ))),
@@ -250,9 +255,9 @@ class _CustomKeyOverlayState extends State<CustomKeyOverlay>
                 top: 6,
                 left: 60,
                 child: Material(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(8),
                     child: IconButton(
-                        tooltip: 'Add key',
+                        tooltip: widget.translate('Add key'),
                         icon: const Icon(Icons.add),
                         onPressed: _spots.length < 40
                             ? () => _editShortcut(null)
@@ -261,10 +266,11 @@ class _CustomKeyOverlayState extends State<CustomKeyOverlay>
             Positioned(
                 top: 6,
                 left: 60,
-                child: FilledButton.icon(
+                child: ElevatedButton.icon(
                     onPressed: () => setState(() => _cancelled = true),
                     icon: const Icon(Icons.stop),
-                    label: Text(_cancelled ? 'Stopping…' : 'Stop macro'))),
+                    label: Text(widget
+                        .translate(_cancelled ? 'Stopping…' : 'Stop macro')))),
           if (_visible)
             ...List.generate(_spots.length, (i) {
               final spot = _spots[i];
@@ -303,15 +309,19 @@ class _CustomKeyOverlayState extends State<CustomKeyOverlay>
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
                       color: _edit
-                          ? Colors.deepOrange.withOpacity(.85)
-                          : Colors.black.withOpacity(spot.config.opacity),
-                      borderRadius: BorderRadius.circular(13),
-                      border: Border.all(color: Colors.white54),
+                          ? Theme.of(context).colorScheme.secondary
+                          : Theme.of(context)
+                              .dialogBackgroundColor
+                              .withOpacity(spot.config.opacity),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Theme.of(context).dividerColor),
                     ),
-                    child: Text(spot.config.title,
+                    child: Text(widget.translate(spot.config.title),
                         textAlign: TextAlign.center,
-                        style: const TextStyle(
-                            color: Colors.white,
+                        style: TextStyle(
+                            color: _edit
+                                ? Colors.white
+                                : Theme.of(context).colorScheme.onSurface,
                             fontSize: 12,
                             fontWeight: FontWeight.w600)),
                   ),
