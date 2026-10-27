@@ -311,6 +311,17 @@ class _RawTouchGestureDetectorRegionState
       return;
     }
 
+    if (!inputModel.keyboardPerm || inputModel.isViewOnly || widget.isCamera) {
+      return;
+    }
+    // In direct-touch mode, right-click where the two-finger tap landed.
+    if (isMobile && ffiModel.touchMode) {
+      if (await ffi.cursorModel.move(
+          _doubleFinerTapPosition.dx, _doubleFinerTapPosition.dy)) {
+        await inputModel.tap(MouseButtons.right);
+      }
+      return;
+    }
     // mobile mouse mode or desktop touch screen
     final isMobileMouseMode = isMobile && !ffiModel.touchMode;
     // We can't use `d.localPosition` here because it's always (0, 0) on desktop.

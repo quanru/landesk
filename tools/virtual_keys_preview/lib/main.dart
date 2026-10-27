@@ -133,9 +133,7 @@ class _PreviewState extends State<Preview> {
           CustomKeyOverlay(
               key: ValueKey(profile),
               profileId: profile,
-              mouseButton: (button, down) async => record('$button ${down ? "DOWN" : "UP"}'),
               mouseScroll: (steps) async => record('WHEEL $steps'),
-              mouseMove: (delta) async => record('DRAG ${delta.dx.toStringAsFixed(1)}, ${delta.dy.toStringAsFixed(1)}'),
               translate: (text) =>
                   widget.chinese ? (previewTranslations[text] ?? text) : text,
               send: (shortcut) async {

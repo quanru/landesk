@@ -1,27 +1,23 @@
-# Virtual mouse controls
+# Virtual wheel and canvas clicks
 
-The iOS virtual-key layer now includes mouse and wheel groups, using the same
-semi-transparent circular style as the supplied UU Remote screenshot.
+The iOS virtual-key layer includes **one independent circular wheel button**.
+Press it and drag upward to scroll up, or downward to scroll down. Holding still
+or tapping does not scroll. There are no separate arrow or left/right mouse buttons.
+The arrows in the wheel icon only indicate the drag directions.
 
-- Left button: press/release at the current remote cursor; hold and slide to drag.
-- Right button: independent right-click, with the highlighted half of the mouse icon.
-- Wheel arrows: one step immediately, then repeat after 350 ms every 80 ms.
-- Wheel centre: vertical drag; 12 logical pixels per wheel step, at most 5 steps
-  per update. This is a scrolling surface, not a middle-click button.
-- Release/cancel stops repeating. Slow scroll transport drops intermediate samples
-  rather than building an unbounded queue. Hiding, editing, disposal and app
-  inactivity release held buttons and cancel wheel timers.
-- Long-press the virtual-key toggle to edit, then drag either mouse group. Positions
-  persist in the existing per-peer layout and adapt to screen dimensions.
-- Input permission/view-only checks are applied before presses, movement and scroll.
-  Releases may still be sent after permission changes to avoid a stuck mouse.
+- 12 logical pixels per wheel step, at most 5 steps per update.
+- Release/cancel ends the gesture. Slow transport drops intermediate samples
+  instead of queuing a scroll tail. Hiding, editing and app inactivity stop it.
+- Long-press the virtual-key toggle to edit, then drag the wheel to position it.
+  Position persists per peer and adapts to screen dimensions.
+- Canvas single-finger tap uses the existing left-click gesture. Two-finger tap
+  right-clicks in both mouse and direct-touch modes. In direct-touch mode it
+  moves to the tap position first; in mouse mode it uses the current cursor.
+- Pinch and movement compete through the existing gesture arena, not an extra
+  full-screen listener. The wheel's touches do not reach the canvas below it.
 
-Validation: 11 Flutter tests passed, including key regression tests and mouse
-ordering, cancellation, hit testing, slow wheel, removal and background cleanup.
-The production iOS simulator app and a separate interactive component preview
-build successfully. The preview logs events and does not connect to a remote host.
-Run `tools/virtual_keys_preview/run_simulator.sh <simulator-UDID>` to try it.
-
-The screenshot establishes appearance, not UU gesture timing. The timing above
-is an initial implementation, not a measured reproduction of UU Remote. Real iPad
-with Mac/Hyprland input, perceived latency and scroll distance still need validation.
+Validation: 12 Flutter tests passed, including key regression tests, wheel
+movement/stationary hold/release/cancellation, secondary-finger isolation, slow
+transport, editing, and canvas single/two-finger taps versus pinch recognition.
+The interactive preview logs wheel events only and does not connect to a host.
+Actual iPad with Mac/Hyprland scrolling and remote click execution remain unverified.

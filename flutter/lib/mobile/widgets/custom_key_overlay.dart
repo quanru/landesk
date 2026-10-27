@@ -35,17 +35,13 @@ class CustomKeyOverlay extends StatefulWidget {
       {super.key,
       required this.send,
       this.write,
-      this.mouseButton,
       this.mouseScroll,
-      this.mouseMove,
       this.isMac = true,
       this.profileId = 'default',
       this.translate = virtualKeyText});
   final Future<void> Function(RemoteShortcut) send;
   final RemoteKeyWriter? write;
-  final Future<void> Function(String, bool)? mouseButton;
   final Future<void> Function(int)? mouseScroll;
-  final Future<void> Function(Offset)? mouseMove;
   final bool isMac;
   final String profileId;
   final String Function(String) translate;
@@ -269,9 +265,9 @@ class _CustomKeyOverlayState extends State<CustomKeyOverlay>
       LayoutBuilder(builder: (context, bounds) {
         if (!_loaded) return const SizedBox.expand();
         return Stack(children: [
-          if (_visible && widget.mouseButton != null && widget.mouseScroll != null && widget.mouseMove != null)
+          if (_visible && widget.mouseScroll != null)
             Positioned.fill(child: VirtualMouseControls(
-              button: widget.mouseButton!, scroll: widget.mouseScroll!, move: widget.mouseMove!,
+              scroll: widget.mouseScroll!,
               translate: widget.translate, editing: _edit, positions: _mousePositions,
               onPositionEnd: _save,
               onPosition: (id, position) {

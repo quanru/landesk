@@ -4,159 +4,120 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_hbb/mobile/widgets/virtual_mouse_controls.dart';
 
 void main() {
-  testWidgets('left drag, right click and cancellation preserve event order', (
-    tester,
-  ) async {
-    final events = <String>[];
-    int background = 0;
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Stack(
-          children: [
-            GestureDetector(
-              onTap: () => background++,
-              behavior: HitTestBehavior.opaque,
-              child: const SizedBox.expand(),
-            ),
-            VirtualMouseControls(
-              button: (b, d) async => events.add('$b:$d'),
-              scroll: (_) async {},
-              move: (_) async => events.add('move'),
-              translate: (s) => s,
-              onPosition: (_, __) {},
-              onPositionEnd: () {},
-            ),
-          ],
+  Widget app(
+    Future<void> Function(int) scroll, {
+    bool editing = false,
+    void Function(String, Offset)? onPosition,
+    VoidCallback? background,
+  }) => MaterialApp(
+    home: Stack(
+      children: [
+        GestureDetector(
+          onTap: background,
+          behavior: HitTestBehavior.opaque,
+          child: const SizedBox.expand(),
         ),
-      ),
-    );
-    final left = find.byKey(const ValueKey('virtual-mouse-left'));
-    final drag = await tester.startGesture(tester.getCenter(left));
-    await tester.pump();
-    await drag.moveBy(const Offset(20, 5));
-    await tester.pump();
-    await drag.cancel();
-    await tester.pump();
-    await tester.tap(find.byKey(const ValueKey('virtual-mouse-right')));
-    await tester.pump();
-    expect(events, [
-      'left:true',
-      'move',
-      'left:false',
-      'right:true',
-      'right:false',
-    ]);
-    expect(background, 0);
-    await tester.tapAt(const Offset(400, 200));
-    expect(background, 1);
-  });
-
-  testWidgets('wheel tap, delayed repeat, release and slide direction', (
-    tester,
-  ) async {
-    final steps = <int>[];
-    await tester.pumpWidget(
-      MaterialApp(
-        home: VirtualMouseControls(
-          button: (_, __) async {},
-          scroll: (n) async => steps.add(n),
-          move: (_) async {},
+        VirtualMouseControls(
+          scroll: scroll,
           translate: (s) => s,
-          onPosition: (_, __) {},
+          editing: editing,
+          onPosition: onPosition ?? (_, __) {},
           onPositionEnd: () {},
         ),
-      ),
-    );
-    final up = find.byKey(const ValueKey('virtual-wheel-up'));
-    final hold = await tester.startGesture(tester.getCenter(up));
-    await tester.pump(const Duration(milliseconds: 300));
-    expect(steps, [1]);
-    await tester.pump(const Duration(milliseconds: 60));
-    expect(steps, [1, 1]);
-    await hold.up();
-    await tester.pump(const Duration(seconds: 1));
-    expect(steps, [1, 1]);
-    final slide = await tester.startGesture(
-      tester.getCenter(find.byKey(const ValueKey('virtual-wheel-slide'))),
-    );
-    await slide.moveBy(const Offset(0, 25));
-    await tester.pump();
-    await slide.up();
-    expect(steps.last, -2);
-  });
+      ],
+    ),
+  );
+  final wheel = find.byKey(const ValueKey('virtual-wheel-slide'));
 
-  testWidgets('slow wheel is bounded and removal releases a held mouse', (
+  testWidgets(
+    'single wheel: hold does nothing, drag both ways, release stops',
+    (tester) async {
+      final steps = <int>[];
+      int canvasTaps = 0;
+      await tester.pumpWidget(
+        app((n) async => steps.add(n), background: () => canvasTaps++),
+      );
+      expect(find.byKey(const ValueKey('virtual-mouse-left')), findsNothing);
+      expect(find.byKey(const ValueKey('virtual-wheel-up')), findsNothing);
+      final drag = await tester.startGesture(tester.getCenter(wheel));
+      await tester.pump(const Duration(seconds: 1));
+      expect(steps, isEmpty);
+      await drag.moveBy(const Offset(0, -24));
+      await tester.pump();
+      await drag.moveBy(const Offset(0, 36));
+      await tester.pump();
+      expect(steps, [2, -3]);
+      await drag.up();
+      await tester.pump(const Duration(seconds: 1));
+      expect(steps, [2, -3]);
+      expect(canvasTaps, 0);
+      await tester.tapAt(const Offset(400, 200));
+      expect(canvasTaps, 1);
+    },
+  );
+
+  testWidgets('slow transport never queues a tail; ignores second finger', (
     tester,
   ) async {
     final pending = Completer<void>();
-    final events = <String>[];
-    int calls = 0;
+    final steps = <int>[];
     await tester.pumpWidget(
-      MaterialApp(
-        home: VirtualMouseControls(
-          button: (b, d) async => events.add('$b:$d'),
-          scroll: (_) {
-            calls++;
-            return pending.future;
-          },
-          move: (_) async {},
-          translate: (s) => s,
-          onPosition: (_, __) {},
-          onPositionEnd: () {},
-        ),
-      ),
+      app((n) {
+        steps.add(n);
+        return pending.future;
+      }),
     );
-    final hold = await tester.startGesture(
-      tester.getCenter(find.byKey(const ValueKey('virtual-wheel-up'))),
-      pointer: 1,
-    );
-    await tester.pump(const Duration(seconds: 2));
-    expect(calls, 1);
-    final mouse = await tester.startGesture(
-      tester.getCenter(find.byKey(const ValueKey('virtual-mouse-left'))),
+    final drag = await tester.startGesture(tester.getCenter(wheel), pointer: 1);
+    final second = await tester.startGesture(
+      tester.getCenter(wheel),
       pointer: 2,
     );
+    await second.moveBy(const Offset(0, 40));
+    await second.up();
+    expect(steps, isEmpty);
+    await drag.moveBy(const Offset(0, -24));
     await tester.pump();
-    await tester.pumpWidget(const SizedBox());
+    await drag.moveBy(const Offset(0, -24));
     await tester.pump();
+    await drag.up();
     pending.complete();
     await tester.pump(const Duration(seconds: 1));
-    expect(calls, 1);
-    expect(events, ['left:true', 'left:false']);
-    await hold.cancel();
-    await mouse.cancel();
+    expect(steps, [2]);
   });
 
-  testWidgets('background releases buttons and stops wheel repeat', (
+  testWidgets('background and cancellation discard the active drag', (
     tester,
   ) async {
-    final events = <String>[];
+    final steps = <int>[];
+    await tester.pumpWidget(app((n) async => steps.add(n)));
+    final drag = await tester.startGesture(tester.getCenter(wheel));
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    await drag.moveBy(const Offset(0, 40));
+    await tester.pump();
+    expect(steps, isEmpty);
+    await drag.cancel();
+    final next = await tester.startGesture(tester.getCenter(wheel));
+    await next.moveBy(const Offset(0, -12));
+    await tester.pump();
+    await next.cancel();
+    expect(steps, [1]);
+  });
+
+  testWidgets('layout editing moves the wheel without scrolling', (
+    tester,
+  ) async {
+    final steps = <int>[];
+    Offset? position;
     await tester.pumpWidget(
-      MaterialApp(
-        home: VirtualMouseControls(
-          button: (b, d) async => events.add('$b:$d'),
-          scroll: (_) async => events.add('wheel'),
-          move: (_) async {},
-          translate: (s) => s,
-          onPosition: (_, __) {},
-          onPositionEnd: () {},
-        ),
+      app(
+        (n) async => steps.add(n),
+        editing: true,
+        onPosition: (_, p) => position = p,
       ),
     );
-    final mouse = await tester.startGesture(
-      tester.getCenter(find.byKey(const ValueKey('virtual-mouse-left'))),
-      pointer: 1,
-    );
-    final wheel = await tester.startGesture(
-      tester.getCenter(find.byKey(const ValueKey('virtual-wheel-up'))),
-      pointer: 2,
-    );
-    await tester.pump();
-    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
-    await tester.pump(const Duration(seconds: 1));
-    expect(events, ['left:true', 'wheel', 'left:false']);
-    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
-    await mouse.cancel();
-    await wheel.cancel();
+    await tester.drag(wheel, const Offset(50, 30));
+    expect(position, isNotNull);
+    expect(steps, isEmpty);
   });
 }

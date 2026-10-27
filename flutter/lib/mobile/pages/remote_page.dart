@@ -1,4 +1,3 @@
-import 'dart:convert';
 import '../widgets/custom_key_overlay.dart';
 import '../widgets/remote_shortcut.dart';
 import 'dart:async';
@@ -562,19 +561,9 @@ class _RemotePageState extends State<RemotePage> with WidgetsBindingObserver {
         key: ValueKey('virtual-keys-${widget.id}-$isMac'),
         isMac: isMac,
         profileId: widget.id,
-        mouseButton: (button, down) async {
-          if (down && (!inputModel.keyboardPerm || inputModel.isViewOnly || gFFI.closed)) return;
-          // Release bypasses permission changes, matching physical mouse cleanup.
-          await bind.sessionSendMouse(sessionId: sessionId, msg: jsonEncode(
-            inputModel.modify({'type': down ? 'down' : 'up', 'buttons': button})));
-        },
         mouseScroll: (steps) async {
           if (!inputModel.keyboardPerm || inputModel.isViewOnly || gFFI.closed) return;
           await inputModel.scroll(steps);
-        },
-        mouseMove: (delta) async {
-          if (!inputModel.keyboardPerm || inputModel.isViewOnly || gFFI.closed) return;
-          await gFFI.cursorModel.updatePan(delta, Offset.zero, false);
         },
         translate: (text) => translate(text),
         write: (name, down, {required ctrl, required alt, required shift, required command}) async {

@@ -26,7 +26,7 @@ Passing these checks proves Flutter interaction and the writer's arguments.
 It does not prove Rust bridge linkage, remote host input, clipboard sync,
 Tailscale connectivity, iPadOS hardware behavior, or release signing.
 
-Mouse controls: tap left/right; hold left and slide to inspect drag events.
-Wheel arrows send one step, repeat after 350 ms at 80 ms intervals, and stop
-on release/cancel. Slide the middle wheel surface to scroll. In edit mode,
-drag the two groups to reposition them; their positions persist per profile.
+Wheel: press the single circular button and drag up/down. Holding still does
+nothing; release stops the gesture. In layout edit mode, drag to reposition it.
+Canvas click recognition is tested in the production Flutter tests; this preview
+only displays wheel/key events and does not emulate a remote host.
