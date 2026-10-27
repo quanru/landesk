@@ -26,6 +26,7 @@ class _VirtualMouseControlsState extends State<VirtualMouseControls>
     with WidgetsBindingObserver {
   int? _pointer;
   double _distance = 0;
+  double _direction = 0;
   bool _busy = false;
 
   @override
@@ -37,12 +38,18 @@ class _VirtualMouseControlsState extends State<VirtualMouseControls>
   void _stop() {
     _pointer = null;
     _distance = 0;
+    _direction = 0;
   }
 
   @override
   void didUpdateWidget(VirtualMouseControls oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.editing && !oldWidget.editing) _stop();
+  }
+
+  @override
+  void didChangeMetrics() {
+    if (mounted) setState(_stop);
   }
 
   @override
@@ -65,6 +72,14 @@ class _VirtualMouseControlsState extends State<VirtualMouseControls>
       await widget.scroll(steps);
     } catch (error) {
       debugPrint('Virtual wheel input failed: $error');
+      if (mounted) {
+        setState(_stop);
+        ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+          SnackBar(
+            content: Text(widget.translate('Could not send remote shortcut')),
+          ),
+        );
+      }
     } finally {
       _busy = false;
     }
@@ -116,6 +131,10 @@ class _VirtualMouseControlsState extends State<VirtualMouseControls>
                       ? null
                       : (event) {
                           if (_pointer != event.pointer) return;
+                          if (event.delta.dy != 0 &&
+                              _direction != event.delta.dy.sign) {
+                            setState(() => _direction = event.delta.dy.sign);
+                          }
                           _distance += event.delta.dy;
                           final steps = (_distance / 12).truncate();
                           if (steps != 0) {
@@ -160,23 +179,32 @@ class _VirtualMouseControlsState extends State<VirtualMouseControls>
                             Icon(
                               Icons.arrow_drop_up,
                               size: size * .29,
-                              color: Theme.of(
-                                context,
-                              ).colorScheme.onSurfaceVariant,
+                              color: _direction < 0
+                                  ? Theme.of(context).colorScheme.primary
+                                  : Theme.of(
+                                      context,
+                                    ).colorScheme.onSurfaceVariant,
                             ),
-                            Icon(
-                              Icons.circle,
-                              size: size * .16,
-                              color: Theme.of(
-                                context,
-                              ).colorScheme.onSurfaceVariant,
+                            AnimatedSlide(
+                              key: const ValueKey('virtual-wheel-direction'),
+                              offset: Offset(0, _direction * .35),
+                              duration: const Duration(milliseconds: 80),
+                              child: Icon(
+                                Icons.circle,
+                                size: size * .16,
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurfaceVariant,
+                              ),
                             ),
                             Icon(
                               Icons.arrow_drop_down,
                               size: size * .29,
-                              color: Theme.of(
-                                context,
-                              ).colorScheme.onSurfaceVariant,
+                              color: _direction > 0
+                                  ? Theme.of(context).colorScheme.primary
+                                  : Theme.of(
+                                      context,
+                                    ).colorScheme.onSurfaceVariant,
                             ),
                           ],
                         ),

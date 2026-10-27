@@ -1,3 +1,5 @@
+import 'package:desktop_multi_window/desktop_multi_window.dart';
+import '../../models/connection_activity.dart';
 import 'dart:async';
 import 'dart:io';
 import 'dart:convert';
@@ -3095,7 +3097,17 @@ class _DesktopHomePageState extends State<DesktopHomePage>
       if (!isChattyMethod(call.method)) {
         debugPrint("[Main] call ${call.method} from window $fromWindowId");
       }
-      if (call.method == kWindowMainWindowOnTop) {
+      if (call.method == connectionActivityMethod) {
+        final activity = ConnectionActivity.fromJson(call.arguments);
+        if (activity != null) connectionActivities.update(activity, onRetry: () async {
+          try {
+            return await DesktopMultiWindow.invokeMethod(fromWindowId, connectionRetryMethod, activity.endpoint) == true;
+          } catch (error) {
+            debugPrint('Connection window is unavailable: $error');
+            return false;
+          }
+        });
+      } else if (call.method == kWindowMainWindowOnTop) {
         windowOnTop(null);
       } else if (call.method == kWindowGetScreenList) {
         return jsonEncode(

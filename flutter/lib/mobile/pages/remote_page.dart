@@ -551,6 +551,9 @@ class _RemotePageState extends State<RemotePage> with WidgetsBindingObserver {
     final phonePortrait = screen.shortestSide < 600 && screen.height >= screen.width;
     if (!isIOS ||
         phonePortrait ||
+        keyboardVisibilityController.isVisible ||
+        MediaQuery.viewInsetsOf(context).bottom > 0 ||
+        _showGestureHelp ||
         !gFFI.ffiModel.pi.isSet.isTrue ||
         gFFI.ffiModel.waitForFirstImage.isTrue ||
         inputModel.isViewCamera) {
@@ -560,6 +563,7 @@ class _RemotePageState extends State<RemotePage> with WidgetsBindingObserver {
     return Stack(fit: StackFit.expand, children: [
       child,
       SafeArea(
+          minimum: const EdgeInsets.all(12),
           child: CustomKeyOverlay(
         key: ValueKey('virtual-keys-${widget.id}-$isMac'),
         isMac: isMac,

@@ -6,7 +6,7 @@ import 'package:flutter_hbb/desktop/pages/desktop_home_page.dart';
 import 'package:flutter_hbb/models/platform_model.dart';
 import 'package:get/get.dart';
 import 'package:provider/provider.dart';
-import 'package:settings_ui/settings_ui.dart';
+import '../../common/widgets/settings_section_card.dart';
 
 import '../../common.dart';
 import '../../consts.dart';
@@ -69,115 +69,135 @@ class _SettingsState extends State<SettingsPage> {
   @override
   Widget build(BuildContext context) {
     Provider.of<FfiModel>(context);
-    return Center(child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 720), child: SettingsList(
-      sections: [
-        SettingsSection(
-          title: const Text('LAN'),
-          tiles: [
-            SettingsTile(
-              title: Text(translate('Network')),
-              description: Text(
-                '${translate('Username')} · ${translate('Local Address')} · ${translate('Port')}',
-              ),
-              leading: const Icon(Icons.lan),
-              onPressed: (context) => showLanSettingsDialog(context),
-            ),
-          ],
-        ),
-        SettingsSection(
-          title: Text(translate('Settings')),
-          tiles: [
-            SettingsTile(
-              title: Text(translate('Language')),
-              leading: const Icon(Icons.translate),
-              onPressed: (context) => showLanguageSettings(gFFI.dialogManager),
-            ),
-            SettingsTile(
-              title: Text(
-                translate(
-                  Theme.of(context).brightness == Brightness.light
-                      ? 'Light Theme'
-                      : 'Dark Theme',
+    Widget entry(
+      String title,
+      IconData icon,
+      VoidCallback action, {
+      String? subtitle,
+    }) => ListTile(
+      leading: Icon(icon, size: 21),
+      title: Text(translate(title)),
+      subtitle: subtitle == null ? null : Text(subtitle),
+      trailing: const Icon(Icons.chevron_right, size: 20),
+      onTap: action,
+    );
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 720),
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
+          children: [
+            SettingsSectionCard(
+              title: translate('Connection'),
+              children: [
+                entry(
+                  'Network',
+                  Icons.lan_outlined,
+                  () => showLanSettingsDialog(context),
+                  subtitle:
+                      '${translate('Local Address')} · ${translate('Port')}',
                 ),
-              ),
-              leading: Icon(
-                Theme.of(context).brightness == Brightness.light
-                    ? Icons.dark_mode
-                    : Icons.light_mode,
-              ),
-              onPressed: (context) => showThemeSettings(gFFI.dialogManager),
+                if (!bind.isIncomingOnly())
+                  SwitchListTile(
+                    title: Text(
+                      translate('keep-awake-during-outgoing-sessions-label'),
+                    ),
+                    value: _preventSleepWhileConnected,
+                    onChanged: (value) async {
+                      await mainSetLocalBoolOption(
+                        kOptionKeepAwakeDuringOutgoingSessions,
+                        value,
+                      );
+                      if (mounted)
+                        setState(() => _preventSleepWhileConnected = value);
+                    },
+                  ),
+              ],
             ),
             if (!bind.isIncomingOnly())
-              SettingsTile.switchTile(
-                title: Text(
-                  translate('keep-awake-during-outgoing-sessions-label'),
+              SettingsSectionCard(
+                title: translate('Display'),
+                children: [
+                  entry(
+                    'Display Settings',
+                    Icons.desktop_windows_outlined,
+                    () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const MobileDisplaySettingsPage(),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            SettingsSectionCard(
+              title: translate('Input Control'),
+              children: [
+                SwitchListTile(
+                  title: Text(translate('Show terminal extra keys')),
+                  value: _showTerminalExtraKeys,
+                  onChanged: (value) async {
+                    await mainSetLocalBoolOption(
+                      kOptionEnableShowTerminalExtraKeys,
+                      value,
+                    );
+                    if (mounted) setState(() => _showTerminalExtraKeys = value);
+                  },
                 ),
-                initialValue: _preventSleepWhileConnected,
-                onToggle: (value) async {
-                  await mainSetLocalBoolOption(
-                    kOptionKeepAwakeDuringOutgoingSessions,
-                    value,
-                  );
-                  if (mounted) {
-                    setState(() => _preventSleepWhileConnected = value);
-                  }
-                },
-              ),
-            SettingsTile.switchTile(
-              title: Text(translate('Show terminal extra keys')),
-              initialValue: _showTerminalExtraKeys,
-              onToggle: (value) async {
-                await mainSetLocalBoolOption(
-                  kOptionEnableShowTerminalExtraKeys,
-                  value,
-                );
-                if (mounted) {
-                  setState(() => _showTerminalExtraKeys = value);
-                }
-              },
+              ],
+            ),
+            SettingsSectionCard(
+              title: translate('Theme'),
+              children: [
+                entry(
+                  'Theme',
+                  Icons.brightness_6_outlined,
+                  () => showThemeSettings(gFFI.dialogManager),
+                  subtitle: translate(
+                    switch (MyTheme.getThemeModePreference()) {
+                      ThemeMode.system => 'Follow System',
+                      ThemeMode.light => 'Light Theme',
+                      ThemeMode.dark => 'Dark Theme',
+                    },
+                  ),
+                ),
+                entry(
+                  'Language',
+                  Icons.translate,
+                  () => showLanguageSettings(gFFI.dialogManager),
+                ),
+              ],
+            ),
+            SettingsSectionCard(
+              title: translate('About'),
+              children: [
+                ListTile(
+                  title: const Text('LanDesk'),
+                  subtitle: Text('${translate('Version')}: $version'),
+                ),
+                ListTile(
+                  title: Text(translate('Build Date')),
+                  subtitle: Text(_buildDate),
+                ),
+                ExpansionTile(
+                  title: Text(translate('Fingerprint')),
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                      child: SelectableText(
+                        _fingerprint,
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ],
         ),
-        if (!bind.isIncomingOnly()) defaultDisplaySection(),
-        SettingsSection(
-          title: Text(translate('About')),
-          tiles: [
-            SettingsTile(
-              title: Text('${translate('Version')}: $version'),
-              leading: const Icon(Icons.info),
-            ),
-            SettingsTile(
-              title: Text(translate('Build Date')),
-              value: Text(_buildDate),
-              leading: const Icon(Icons.query_builder),
-            ),
-            SettingsTile(
-              title: Text(translate('Fingerprint')),
-              value: SelectableText(_fingerprint),
-              leading: const Icon(Icons.fingerprint),
-            ),
-          ],
-        ),
-      ],
-    )));
+      ),
+    );
   }
-
-  SettingsSection defaultDisplaySection() => SettingsSection(
-        title: Text(translate('Display Settings')),
-        tiles: [
-          SettingsTile(
-            title: Text(translate('Display Settings')),
-            leading: const Icon(Icons.desktop_windows_outlined),
-            trailing: const Icon(Icons.arrow_forward_ios),
-            onPressed: (context) => Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => const MobileDisplaySettingsPage(),
-              ),
-            ),
-          ),
-        ],
-      );
 }
 
 class MobileDisplaySettingsPage extends StatefulWidget {
@@ -188,8 +208,7 @@ class MobileDisplaySettingsPage extends StatefulWidget {
       _MobileDisplaySettingsPageState();
 }
 
-class _MobileDisplaySettingsPageState
-    extends State<MobileDisplaySettingsPage> {
+class _MobileDisplaySettingsPageState extends State<MobileDisplaySettingsPage> {
   @override
   Widget build(BuildContext context) {
     final Map codecsJson = jsonDecode(bind.mainSupportedHwdecodings());
@@ -211,83 +230,113 @@ class _MobileDisplaySettingsPageState
           onPressed: () => Navigator.pop(context),
           icon: const Icon(Icons.arrow_back_ios),
         ),
-        title: Text(translate('Display Settings'),
-            maxLines: 1, overflow: TextOverflow.ellipsis),
+        title: Text(
+          translate('Display Settings'),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
         centerTitle: true,
       ),
-      body: SettingsList(sections: [
-        SettingsSection(tiles: [
-          _getPopupDialogRadioEntry(
-            title: 'Default View Style',
-            list: [
-              _RadioEntry('Scale original', kRemoteViewStyleOriginal),
-              _RadioEntry('Scale adaptive', kRemoteViewStyleAdaptive),
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 720),
+          child: ListView(
+            padding: const EdgeInsets.all(24),
+            children: [
+              SettingsSectionCard(
+                title: translate('Display'),
+                children: [
+                  _getPopupDialogRadioEntry(
+                    title: 'Default View Style',
+                    list: [
+                      _RadioEntry('Scale original', kRemoteViewStyleOriginal),
+                      _RadioEntry('Scale adaptive', kRemoteViewStyleAdaptive),
+                    ],
+                    getter: () =>
+                        bind.mainGetUserDefaultOption(key: kOptionViewStyle),
+                    asyncSetter: isOptionFixed(kOptionViewStyle)
+                        ? null
+                        : (value) => bind.mainSetUserDefaultOption(
+                            key: kOptionViewStyle,
+                            value: value,
+                          ),
+                  ),
+                  _getPopupDialogRadioEntry(
+                    title: 'Default Image Quality',
+                    list: [
+                      _RadioEntry(
+                        'Good image quality',
+                        kRemoteImageQualityBest,
+                      ),
+                      _RadioEntry('Balanced', kRemoteImageQualityBalanced),
+                      _RadioEntry(
+                        'Optimize reaction time',
+                        kRemoteImageQualityLow,
+                      ),
+                      _RadioEntry('Custom', kRemoteImageQualityCustom),
+                    ],
+                    getter: () {
+                      final value = bind.mainGetUserDefaultOption(
+                        key: kOptionImageQuality,
+                      );
+                      showCustomImageQuality.value =
+                          value == kRemoteImageQualityCustom;
+                      return value;
+                    },
+                    asyncSetter: isOptionFixed(kOptionImageQuality)
+                        ? null
+                        : (value) async {
+                            await bind.mainSetUserDefaultOption(
+                              key: kOptionImageQuality,
+                              value: value,
+                            );
+                            showCustomImageQuality.value =
+                                value == kRemoteImageQualityCustom;
+                          },
+                    tail: customImageQualitySetting(),
+                    showTail: showCustomImageQuality,
+                    notCloseValue: kRemoteImageQualityCustom,
+                  ),
+                  _getPopupDialogRadioEntry(
+                    title: 'Default Codec',
+                    list: codecList,
+                    getter: () => bind.mainGetUserDefaultOption(
+                      key: kOptionCodecPreference,
+                    ),
+                    asyncSetter: isOptionFixed(kOptionCodecPreference)
+                        ? null
+                        : (value) => bind.mainSetUserDefaultOption(
+                            key: kOptionCodecPreference,
+                            value: value,
+                          ),
+                  ),
+                ],
+              ),
+              SettingsSectionCard(
+                title: translate('Other Default Options'),
+                children: otherDefaultSettings()
+                    .map((entry) => _buildBooleanSetting(entry.$1, entry.$2))
+                    .toList(),
+              ),
             ],
-            getter: () =>
-                bind.mainGetUserDefaultOption(key: kOptionViewStyle),
-            asyncSetter: isOptionFixed(kOptionViewStyle)
-                ? null
-                : (value) => bind.mainSetUserDefaultOption(
-                    key: kOptionViewStyle, value: value),
           ),
-          _getPopupDialogRadioEntry(
-            title: 'Default Image Quality',
-            list: [
-              _RadioEntry('Good image quality', kRemoteImageQualityBest),
-              _RadioEntry('Balanced', kRemoteImageQualityBalanced),
-              _RadioEntry('Optimize reaction time', kRemoteImageQualityLow),
-              _RadioEntry('Custom', kRemoteImageQualityCustom),
-            ],
-            getter: () {
-              final value =
-                  bind.mainGetUserDefaultOption(key: kOptionImageQuality);
-              showCustomImageQuality.value =
-                  value == kRemoteImageQualityCustom;
-              return value;
-            },
-            asyncSetter: isOptionFixed(kOptionImageQuality)
-                ? null
-                : (value) async {
-                    await bind.mainSetUserDefaultOption(
-                        key: kOptionImageQuality, value: value);
-                    showCustomImageQuality.value =
-                        value == kRemoteImageQualityCustom;
-                  },
-            tail: customImageQualitySetting(),
-            showTail: showCustomImageQuality,
-            notCloseValue: kRemoteImageQualityCustom,
-          ),
-          _getPopupDialogRadioEntry(
-            title: 'Default Codec',
-            list: codecList,
-            getter: () =>
-                bind.mainGetUserDefaultOption(key: kOptionCodecPreference),
-            asyncSetter: isOptionFixed(kOptionCodecPreference)
-                ? null
-                : (value) => bind.mainSetUserDefaultOption(
-                    key: kOptionCodecPreference, value: value),
-          ),
-        ]),
-        SettingsSection(
-          title: Text(translate('Other Default Options')),
-          tiles: otherDefaultSettings()
-              .map((entry) => _buildBooleanSetting(entry.$1, entry.$2))
-              .toList(),
         ),
-      ]),
+      ),
     );
   }
 
-  SettingsTile _buildBooleanSetting(String label, String key) {
+  Widget _buildBooleanSetting(String label, String key) {
     final value = bind.mainGetUserDefaultOption(key: key) == 'Y';
-    return SettingsTile.switchTile(
-      initialValue: value,
+    return SwitchListTile(
+      value: value,
       title: Text(translate(label)),
-      onToggle: isOptionFixed(key)
+      onChanged: isOptionFixed(key)
           ? null
           : (enabled) async {
               await bind.mainSetUserDefaultOption(
-                  key: key, value: enabled ? 'Y' : defaultOptionNo);
+                key: key,
+                value: enabled ? 'Y' : defaultOptionNo,
+              );
               if (mounted) setState(() {});
             },
     );
@@ -304,7 +353,7 @@ class _RadioEntry {
 typedef _RadioEntryGetter = String Function();
 typedef _RadioEntrySetter = Future<void> Function(String);
 
-SettingsTile _getPopupDialogRadioEntry({
+Widget _getPopupDialogRadioEntry({
   required String title,
   required List<_RadioEntry> list,
   required _RadioEntryGetter getter,
@@ -315,13 +364,16 @@ SettingsTile _getPopupDialogRadioEntry({
 }) {
   final groupValue = getter().obs;
   final valueText =
-      (list.firstWhereOrNull((entry) => entry.value == groupValue.value)?.label ??
+      (list
+                  .firstWhereOrNull((entry) => entry.value == groupValue.value)
+                  ?.label ??
               groupValue.value)
           .obs;
 
   void refreshValue() {
     groupValue.value = getter();
-    valueText.value = list
+    valueText.value =
+        list
             .firstWhereOrNull((entry) => entry.value == groupValue.value)
             ?.label ??
         groupValue.value;
@@ -330,42 +382,49 @@ SettingsTile _getPopupDialogRadioEntry({
   void showSelectionDialog() {
     gFFI.dialogManager.show(
       (setState, close, context) => CustomAlertDialog(
-        content: Obx(() => Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                ...list.map((entry) => getRadio<String>(
-                      Text(translate(entry.label)),
-                      entry.value,
-                      groupValue.value,
-                      asyncSetter == null
-                          ? null
-                          : (value) async {
-                              if (value == null) return;
-                              await asyncSetter(value);
-                              refreshValue();
-                              if (value != notCloseValue) close();
-                            },
-                    )),
-                if (tail != null && showTail != null)
-                  Obx(() => Offstage(
-                        offstage: !showTail.value,
-                        child: tail,
-                      )),
-              ],
-            )),
+        content: Obx(
+          () => Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ...list.map(
+                (entry) => getRadio<String>(
+                  Text(translate(entry.label)),
+                  entry.value,
+                  groupValue.value,
+                  asyncSetter == null
+                      ? null
+                      : (value) async {
+                          if (value == null) return;
+                          await asyncSetter(value);
+                          refreshValue();
+                          if (value != notCloseValue) close();
+                        },
+                ),
+              ),
+              if (tail != null && showTail != null)
+                Obx(() => Offstage(offstage: !showTail.value, child: tail)),
+            ],
+          ),
+        ),
       ),
       backDismiss: true,
       clickMaskDismiss: true,
     );
   }
 
-  return SettingsTile(
+  return ListTile(
     title: Text(translate(title)),
-    onPressed: asyncSetter == null ? null : (_) => showSelectionDialog(),
-    value: Padding(
+    trailing: const Icon(Icons.chevron_right, size: 20),
+    onTap: asyncSetter == null ? null : showSelectionDialog,
+    subtitle: Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Obx(() => Text(translate(valueText.value),
-          maxLines: 2, overflow: TextOverflow.ellipsis)),
+      child: Obx(
+        () => Text(
+          translate(valueText.value),
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+        ),
+      ),
     ),
   );
 }
@@ -432,10 +491,18 @@ void showThemeSettings(OverlayDialogManager dialogManager) async {
       return CustomAlertDialog(
         content: Column(
           children: [
-            getRadio<ThemeMode>(Text(translate('Light')), ThemeMode.light,
-                themeMode, onChanged),
             getRadio<ThemeMode>(
-                Text(translate('Dark')), ThemeMode.dark, themeMode, onChanged),
+              Text(translate('Light')),
+              ThemeMode.light,
+              themeMode,
+              onChanged,
+            ),
+            getRadio<ThemeMode>(
+              Text(translate('Dark')),
+              ThemeMode.dark,
+              themeMode,
+              onChanged,
+            ),
             getRadio<ThemeMode>(
               Text(translate('Follow System')),
               ThemeMode.system,

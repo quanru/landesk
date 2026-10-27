@@ -143,6 +143,14 @@ class _CustomKeyOverlayState extends State<CustomKeyOverlay>
   }
 
   @override
+  void didChangeMetrics() {
+    // Rotation, window resizing and the software keyboard must never leave a
+    // modifier held at its previous screen position.
+    _cancelled = true;
+    _releaseKeys();
+  }
+
+  @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state != AppLifecycleState.resumed) {
       _cancelled = true;
@@ -447,7 +455,8 @@ class _CustomKeyOverlayState extends State<CustomKeyOverlay>
                         ),
                         onPointerUp: (event) => _releaseKey(event.pointer),
                         onPointerCancel: (event) => _releaseKey(event.pointer),
-                        child: Container(
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 80),
                           width: MediaQuery.sizeOf(context).shortestSide < 600
                               ? 48
                               : 64,
@@ -463,6 +472,7 @@ class _CustomKeyOverlayState extends State<CustomKeyOverlay>
                                     context,
                                   ).colorScheme.surface.withValues(alpha: .60),
                             border: Border.all(
+                              width: _touches.containsValue(code) ? 2 : 1,
                               color: Theme.of(context).colorScheme.outline,
                             ),
                           ),
@@ -553,7 +563,8 @@ class _CustomKeyOverlayState extends State<CustomKeyOverlay>
                     },
                     onPointerUp: (event) => _releaseKey(event.pointer),
                     onPointerCancel: (event) => _releaseKey(event.pointer),
-                    child: Container(
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 80),
                       width: size,
                       height: size,
                       alignment: Alignment.center,
@@ -569,6 +580,12 @@ class _CustomKeyOverlayState extends State<CustomKeyOverlay>
                               ),
                         shape: BoxShape.circle,
                         border: Border.all(
+                          width:
+                              _touches.containsValue(
+                                spot.config.steps.first.key,
+                              )
+                              ? 2
+                              : 1,
                           color: Theme.of(context).colorScheme.outline,
                         ),
                       ),

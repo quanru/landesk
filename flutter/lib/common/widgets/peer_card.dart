@@ -1,3 +1,4 @@
+import 'connection_activity_line.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_hbb/common/widgets/dialog.dart';
@@ -53,8 +54,6 @@ class _PeerCardState extends State<_PeerCard>
   final double _borderWidth = 1;
   bool _favorite = false;
 
-  bool get _isDiscoveredPeer => widget.tab == PeerTabIndex.lan;
-
   @override
   void initState() {
     super.initState();
@@ -92,25 +91,12 @@ class _PeerCardState extends State<_PeerCard>
   }
 
   String _primaryLabel(Peer peer) {
-    if (!_isDiscoveredPeer) {
-      return peer.alias.isEmpty ? formatID(peer.id) : peer.alias;
-    }
     if (peer.alias.isNotEmpty) return peer.alias;
     if (peer.hostname.isNotEmpty) return peer.hostname;
     return formatID(peer.id);
   }
 
-  String _secondaryLabel(Peer peer) {
-    if (!_isDiscoveredPeer) {
-      return hideUsernameOnCard == true
-          ? peer.hostname
-          : '${peer.username}${peer.username.isNotEmpty && peer.hostname.isNotEmpty ? '@' : ''}${peer.hostname}';
-    }
-    return [
-      peer.platform,
-      formatID(peer.id),
-    ].where((value) => value.isNotEmpty).join(' · ');
-  }
+  String _secondaryLabel(Peer peer) => formatID(peer.id);
 
   @override
   Widget build(BuildContext context) {
@@ -291,6 +277,10 @@ class _PeerCardState extends State<_PeerCard>
                           ),
                         ],
                       ),
+                      ConnectionActivityLine(
+                        endpoint: peer.id,
+                        onReconnect: () => widget.connect(context, peer.id),
+                      ),
                       if (isPortrait)
                         Align(
                           alignment: Alignment.centerLeft,
@@ -459,6 +449,10 @@ class _PeerCardState extends State<_PeerCard>
                       style: TextStyle(fontSize: 11, color: muted),
                     ),
                   ),
+                  ConnectionActivityLine(
+                    endpoint: peer.id,
+                    onReconnect: () => widget.connect(context, peer.id),
+                  ),
                   const Spacer(),
                   Row(
                     children: [
@@ -468,8 +462,12 @@ class _PeerCardState extends State<_PeerCard>
                           child: ElevatedButton(
                             onPressed: () => widget.connect(context, peer.id),
                             style: ElevatedButton.styleFrom(
-                              foregroundColor: offline ? muted : Theme.of(context).colorScheme.primary,
-                              backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+                              foregroundColor: offline
+                                  ? muted
+                                  : Theme.of(context).colorScheme.primary,
+                              backgroundColor: Theme.of(
+                                context,
+                              ).colorScheme.surfaceContainerHighest,
                               elevation: 0,
                             ),
                             child: Text(

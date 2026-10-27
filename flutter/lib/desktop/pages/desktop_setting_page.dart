@@ -1,3 +1,4 @@
+import '../../common/widgets/settings_section_card.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -1355,36 +1356,15 @@ Widget _Card({
   required List<Widget> children,
   List<Widget>? title_suffix,
 }) {
-  return Row(
-    children: [
-      Flexible(
-        child: SizedBox(
-          width: _kCardFixedWidth,
-          child: Card(
-            child: Column(
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        translate(title),
-                        textAlign: TextAlign.start,
-                        style: const TextStyle(fontSize: _kTitleFontSize),
-                      ),
-                    ),
-                    ...?title_suffix,
-                  ],
-                ).marginOnly(left: _kContentHMargin, top: 10, bottom: 10),
-                ...children.map(
-                  (e) => e.marginOnly(top: 4, right: _kContentHMargin),
-                ),
-              ],
-            ).marginOnly(bottom: 10),
-          ).marginOnly(left: _kCardLeftMargin, top: 15),
-        ),
+  return Align(alignment: Alignment.topLeft, child: Padding(
+    padding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
+    child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 720),
+      child: SettingsSectionCard(title: translate(title),
+        trailing: title_suffix == null ? null : Row(mainAxisSize: MainAxisSize.min, children: title_suffix),
+        children: children.map((child) => Padding(padding: const EdgeInsets.fromLTRB(0, 6, 16, 6), child: child)).toList(),
       ),
-    ],
-  );
+    ),
+  ));
 }
 
 // ignore: non_constant_identifier_names

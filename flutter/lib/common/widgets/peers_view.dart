@@ -152,7 +152,7 @@ class _PeersViewState extends State<_PeersView> {
               // and the peers change event will trigger _buildPeersView().
               return !isPortrait
                   ? Obx(() => peerCardUiType.value == PeerUiType.list
-                      ? Container(height: 45, child: peerCard)
+                      ? Container(constraints: const BoxConstraints(minHeight: 64), child: peerCard)
                       : peerCardUiType.value == PeerUiType.grid
                           ? SizedBox.expand(child: peerCard)
                           : SizedBox(width: 220, height: 42, child: peerCard))

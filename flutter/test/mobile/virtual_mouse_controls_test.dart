@@ -120,4 +120,21 @@ void main() {
     expect(position, isNotNull);
     expect(steps, isEmpty);
   });
+  testWidgets('direction feedback resets and resize cancels wheel ownership', (tester) async {
+    final steps = <int>[];
+    await tester.pumpWidget(app((n) async => steps.add(n)));
+    final finger = await tester.startGesture(tester.getCenter(wheel));
+    await finger.moveBy(const Offset(0, -24));
+    await tester.pump();
+    final indicator = find.byKey(const ValueKey('virtual-wheel-direction'));
+    expect(tester.widget<AnimatedSlide>(indicator).offset.dy, lessThan(0));
+    tester.view.physicalSize = const Size(900, 700);
+    addTearDown(tester.view.resetPhysicalSize);
+    await tester.pump();
+    expect(tester.widget<AnimatedSlide>(indicator).offset, Offset.zero);
+    await finger.moveBy(const Offset(0, 36));
+    await finger.cancel();
+    expect(steps, [2]);
+  });
+
 }

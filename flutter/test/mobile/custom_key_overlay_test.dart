@@ -221,4 +221,26 @@ void main() {
     await tester.pumpWidget(const SizedBox.shrink());
   });
 
+  testWidgets('resizing releases held modifiers before controls move', (tester) async {
+    final events = <String>[];
+    await tester.runAsync(() async {
+      await tester.pumpWidget(MaterialApp(home: Scaffold(body: CustomKeyOverlay(
+        send: (_) async {},
+        write: (key, down, {required ctrl, required alt, required shift, required command}) async => events.add('$key:$down'),
+      ))));
+      await Future<void>.delayed(const Duration(milliseconds: 200));
+    });
+    await tester.pumpAndSettle();
+    final finger = await tester.startGesture(tester.getCenter(find.text('Cmd')));
+    await tester.runAsync(() async { await Future<void>.delayed(const Duration(milliseconds: 10)); });
+    expect(events, contains('Meta:true'));
+    tester.view.physicalSize = const Size(900, 700);
+    addTearDown(tester.view.resetPhysicalSize);
+    await tester.runAsync(() async { await Future<void>.delayed(const Duration(milliseconds: 10)); });
+    await tester.pumpAndSettle();
+    expect(events.last, 'Meta:false');
+    await finger.cancel();
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
 }

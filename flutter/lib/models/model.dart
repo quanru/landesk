@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'connection_activity.dart';
 import 'dart:convert';
 import 'dart:math';
 import 'dart:typed_data';
@@ -103,6 +104,10 @@ class CachedPeerData {
 }
 
 class FfiModel with ChangeNotifier {
+  VoidCallback? _finishActivity;
+  VoidCallback? _connectingActivity;
+  void finishActivity() => _finishActivity?.call();
+
   CachedPeerData cachedPeerData = CachedPeerData();
   PeerInfo _pi = PeerInfo();
   int? lastUserDisplay;
@@ -457,15 +462,49 @@ class FfiModel with ChangeNotifier {
 
   // todo: why called by two position
   StreamEventHandler startEventListener(SessionID sessionId, String peerId) {
+    final attempt = DateTime.now().microsecondsSinceEpoch;
+    var revision = 0;
+    var phase = ConnectionPhase.connecting;
+    var lastMessage = '';
+    void report(ConnectionPhase next, [String message = '', bool canRetry = true]) {
+      if (canRetry && parent.target?.closed == true) return;
+      lastMessage = message;
+      phase = next;
+      final value = ConnectionActivity(peerId, attempt, ++revision, next,
+          message.length > 300 ? message.substring(0, 300) : message, retryAvailable: canRetry);
+      connectionActivities.update(value, onRetry: () async {
+        final ffi = parent.target;
+        if (ffi == null || ffi.closed) return false;
+        reconnect(ffi.dialogManager, sessionId, true);
+        return true;
+      });
+      if (isDesktop && desktopType != DesktopType.main) {
+        rustDeskWinManager.call(WindowType.Main, connectionActivityMethod, value.toJson())
+            .then<void>((_) {}, onError: (Object error, StackTrace stack) { debugPrint('Could not sync connection feedback: $error'); });
+      }
+    }
+    report(ConnectionPhase.connecting);
+    _connectingActivity = () => report(ConnectionPhase.connecting);
+    _finishActivity = () {
+      report(phase == ConnectionPhase.failed || phase == ConnectionPhase.authentication ? phase : ConnectionPhase.closed, lastMessage, false);
+    };
     return (evt) async {
       var name = evt['name'];
       if (name == 'msgbox') {
+        final type = evt['type']?.toString() ?? '';
+        final next = phaseForSessionEvent(evt, phase);
+        if (next == ConnectionPhase.authentication) {
+          report(next!, type == 're-input-password' ? 'Wrong credentials' : 'Password Required');
+        } else if (next == ConnectionPhase.failed) {
+          report(next!, evt['text']?.toString() ?? 'Connection Error');
+        }
         handleMsgBox(evt, sessionId, peerId);
       } else if (name == 'toast') {
         handleToast(evt, sessionId, peerId);
       } else if (name == 'set_multiple_windows_session') {
         handleMultipleWindowsSession(evt, sessionId, peerId);
       } else if (name == 'peer_info') {
+        report(ConnectionPhase.connected);
         handlePeerInfo(evt, peerId, false);
       } else if (name == 'sync_peer_info') {
         handleSyncPeerInfo(evt, sessionId, peerId);
@@ -1161,6 +1200,7 @@ class FfiModel with ChangeNotifier {
     SessionID sessionId,
     bool _manual,
   ) {
+    _connectingActivity?.call();
     // Disable relative mouse mode before reconnecting to ensure cursor is released.
     parent.target?.inputModel.setRelativeMouseMode(false);
     _cancelPendingMonitorRestore();
@@ -4113,6 +4153,7 @@ class FFI {
     imageModel.callbacksOnFirstImage.clear();
     await imageModel.update(null);
     cursorModel.clear();
+    ffiModel.finishActivity();
     ffiModel.clear();
     canvasModel.clear();
     inputModel.resetModifiers();

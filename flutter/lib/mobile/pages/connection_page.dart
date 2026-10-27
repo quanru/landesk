@@ -1,3 +1,4 @@
+import '../../common/widgets/connection_activity_line.dart';
 import 'dart:async';
 import 'dart:convert';
 
@@ -45,6 +46,9 @@ class _ConnectionPageState extends State<ConnectionPage>
   final TextEditingController _passwordController = TextEditingController();
   bool _rememberPassword = false;
   bool _showPassword = false;
+  bool _showCredentials = false;
+  String? _endpointError;
+  String? _usernameError;
 
   final AllPeersLoader _allPeersLoader = AllPeersLoader();
 
@@ -123,7 +127,7 @@ class _ConnectionPageState extends State<ConnectionPage>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     SizedBox(
-                      width: 320,
+                      width: 296,
                       child: SingleChildScrollView(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -143,8 +147,16 @@ class _ConnectionPageState extends State<ConnectionPage>
                         ),
                       ),
                     ),
-                    const SizedBox(width: 40),
-                    const Expanded(child: PeerTabPage()),
+                    const SizedBox(width: 28),
+                    Expanded(
+                      child: Align(
+                        alignment: Alignment.topLeft,
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 520),
+                          child: const PeerTabPage(),
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -177,9 +189,13 @@ class _ConnectionPageState extends State<ConnectionPage>
     final username = _usernameController.text.trim();
     final password = _passwordController.text;
     if (endpoint.isEmpty || (username.isEmpty && password.isNotEmpty)) {
-      showToast(
-        '${translate('Local Address')} · ${translate('Username')} · ${translate('Password')}',
-      );
+      setState(() {
+        _endpointError = endpoint.isEmpty ? 'IP' : null;
+        _usernameError = username.isEmpty && password.isNotEmpty
+            ? translate('Empty Username')
+            : null;
+        if (_usernameError != null) _showCredentials = true;
+      });
       return;
     }
     await connect(
@@ -279,13 +295,19 @@ class _ConnectionPageState extends State<ConnectionPage>
               enableSuggestions: false,
               keyboardType: TextInputType.url,
               textInputAction: TextInputAction.next,
-              onChanged: (text) => _idController.id = text,
+              onChanged: (text) {
+                _idController.id = text;
+                _passwordController.clear();
+                if (_endpointError != null)
+                  setState(() => _endpointError = null);
+              },
               style: TextStyle(
                 fontSize: 16,
                 color: Theme.of(context).colorScheme.onSurface,
               ),
               decoration: InputDecoration(
                 hintText: '192.168.1.2',
+                errorText: _endpointError,
                 prefixIcon: const Icon(Icons.computer_outlined, size: 20),
                 suffixIcon: IconButton(
                   tooltip: translate('Clear'),
@@ -391,62 +413,90 @@ class _ConnectionPageState extends State<ConnectionPage>
                 label('IP'),
                 address,
                 const SizedBox(height: 18),
-                label(translate('Username')),
-                TextField(
-                  controller: _usernameController,
-                  autocorrect: false,
-                  enableSuggestions: false,
-                  autofillHints: const [AutofillHints.username],
-                  textInputAction: TextInputAction.next,
-                  decoration: const InputDecoration(),
-                ),
-                const SizedBox(height: 18),
-                label(translate('Password')),
-                TextField(
-                  controller: _passwordController,
-                  obscureText: !_showPassword,
-                  autocorrect: false,
-                  enableSuggestions: false,
-                  autofillHints: const [AutofillHints.password],
-                  textInputAction: TextInputAction.go,
-                  decoration: InputDecoration(
-                    prefixIcon: const Icon(
-                      Icons.lock_outline_rounded,
-                      size: 20,
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton.icon(
+                    onPressed: () => setState(() {
+                      _showCredentials = !_showCredentials;
+                      if (!_showCredentials) _passwordController.clear();
+                    }),
+                    icon: Icon(
+                      _showCredentials ? Icons.expand_less : Icons.expand_more,
+                      size: 18,
                     ),
-                    suffixIcon: IconButton(
-                      tooltip: translate(_showPassword ? 'Hide' : 'Show'),
-                      onPressed: () =>
-                          setState(() => _showPassword = !_showPassword),
-                      icon: Icon(
-                        _showPassword
-                            ? Icons.visibility_off_outlined
-                            : Icons.visibility_outlined,
-                        size: 20,
-                      ),
+                    label: Text(
+                      '${translate('Username')} · ${translate('Password')}',
+                    ),
+                    style: TextButton.styleFrom(
+                      foregroundColor: Theme.of(
+                        context,
+                      ).colorScheme.onSurfaceVariant,
                     ),
                   ),
-                  onSubmitted: (_) => onConnect(),
                 ),
-                if (isIOS)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    child: CheckboxListTile(
-                      value: _rememberPassword,
-                      onChanged: (value) =>
-                          setState(() => _rememberPassword = value == true),
-                      title: Text(
-                        translate('Remember password'),
-                        style: Theme.of(context).textTheme.bodyMedium,
+                if (_showCredentials) ...[
+                  label(translate('Username')),
+                  TextField(
+                    controller: _usernameController,
+                    autocorrect: false,
+                    enableSuggestions: false,
+                    autofillHints: const [AutofillHints.username],
+                    textInputAction: TextInputAction.next,
+                    decoration: InputDecoration(errorText: _usernameError),
+                    onChanged: (_) {
+                      if (_usernameError != null)
+                        setState(() => _usernameError = null);
+                    },
+                  ),
+                  const SizedBox(height: 18),
+                  label(translate('Password')),
+                  TextField(
+                    controller: _passwordController,
+                    obscureText: !_showPassword,
+                    autocorrect: false,
+                    enableSuggestions: false,
+                    autofillHints: const [AutofillHints.password],
+                    textInputAction: TextInputAction.go,
+                    decoration: InputDecoration(
+                      prefixIcon: const Icon(
+                        Icons.lock_outline_rounded,
+                        size: 20,
                       ),
-                      contentPadding: EdgeInsets.zero,
-                      tileColor: Colors.transparent,
-                      dense: true,
-                      controlAffinity: ListTileControlAffinity.leading,
+                      suffixIcon: IconButton(
+                        tooltip: translate(_showPassword ? 'Hide' : 'Show'),
+                        onPressed: () =>
+                            setState(() => _showPassword = !_showPassword),
+                        icon: Icon(
+                          _showPassword
+                              ? Icons.visibility_off_outlined
+                              : Icons.visibility_outlined,
+                          size: 20,
+                        ),
+                      ),
                     ),
-                  )
-                else
-                  const SizedBox(height: 20),
+                    onSubmitted: (_) => onConnect(),
+                  ),
+                  if (isIOS)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      child: CheckboxListTile(
+                        value: _rememberPassword,
+                        onChanged: (value) =>
+                            setState(() => _rememberPassword = value == true),
+                        title: Text(
+                          translate('Remember password'),
+                          style: Theme.of(context).textTheme.bodyMedium,
+                        ),
+                        contentPadding: EdgeInsets.zero,
+                        tileColor: Colors.transparent,
+                        dense: true,
+                        controlAffinity: ListTileControlAffinity.leading,
+                      ),
+                    )
+                  else
+                    const SizedBox(height: 20),
+                ],
+                const SizedBox(height: 8),
                 SizedBox(
                   height: 48,
                   child: FilledButton.icon(
@@ -454,6 +504,10 @@ class _ConnectionPageState extends State<ConnectionPage>
                     icon: const Icon(Icons.arrow_forward_rounded, size: 20),
                     label: Text(translate('Connect')),
                   ),
+                ),
+                ConnectionActivityLine(
+                  endpoint: _idController.id,
+                  onReconnect: () => onConnect(),
                 ),
                 const SizedBox(height: 12),
                 Wrap(

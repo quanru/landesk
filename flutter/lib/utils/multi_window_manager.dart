@@ -1,3 +1,4 @@
+import '../models/connection_activity.dart';
 import 'dart:convert';
 
 import 'package:desktop_multi_window/desktop_multi_window.dart';
@@ -416,7 +417,12 @@ class RustDeskMultiWindowManager {
 
   void setMethodHandler(
       Future<dynamic> Function(MethodCall call, int fromWindowId)? handler) {
-    DesktopMultiWindow.setMethodHandler(handler);
+    DesktopMultiWindow.setMethodHandler(handler == null ? null : (call, fromWindowId) async {
+      if (call.method == connectionRetryMethod && call.arguments is String) {
+        return connectionActivities.retry(call.arguments);
+      }
+      return handler(call, fromWindowId);
+    });
   }
 
   Future<void> closeAllSubWindows() async {

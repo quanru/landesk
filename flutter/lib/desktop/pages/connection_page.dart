@@ -540,6 +540,8 @@ class _ConnectionPageState extends State<ConnectionPage> with WindowListener {
   }
 
   Future<void> _showAddDeviceDialog(BuildContext context) async {
+    var showCredentials = false;
+    _passwordController.clear();
     await showDialog<void>(
       context: context,
       builder: (dialogContext) => StatefulBuilder(
@@ -553,8 +555,16 @@ class _ConnectionPageState extends State<ConnectionPage> with WindowListener {
 
           Widget caption(String text) => Padding(
             padding: const EdgeInsets.only(bottom: 8),
-            child: Align(alignment: Alignment.centerLeft, child: Text(text,
-              style: Theme.of(context).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w500, color: Theme.of(context).colorScheme.onSurfaceVariant))),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                text,
+                style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                  fontWeight: FontWeight.w500,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ),
           );
           return AlertDialog(
             title: Text(translate('Connect')),
@@ -577,37 +587,55 @@ class _ConnectionPageState extends State<ConnectionPage> with WindowListener {
                     onSubmitted: (_) => connectNow(),
                   ),
                   const SizedBox(height: 18),
-                  caption(translate('Username')),
-                  TextField(
-                    controller: _usernameController,
-                    autocorrect: false,
-                    enableSuggestions: false,
-                    decoration: InputDecoration(
-                      prefixIcon: const Icon(Icons.person_outline),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: TextButton.icon(
+                      onPressed: () => setDialogState(() {
+                        showCredentials = !showCredentials;
+                        if (!showCredentials) _passwordController.clear();
+                      }),
+                      icon: Icon(
+                        showCredentials ? Icons.expand_less : Icons.expand_more,
+                      ),
+                      label: Text(
+                        '${translate('Username')} · ${translate('Password')}',
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 18),
-                  caption(translate('Password')),
-                  TextField(
-                    controller: _passwordController,
-                    obscureText: true,
-                    autocorrect: false,
-                    enableSuggestions: false,
-                    decoration: InputDecoration(
-                      prefixIcon: const Icon(Icons.lock_outline),
+                  if (showCredentials) ...[
+                    caption(translate('Username')),
+                    TextField(
+                      controller: _usernameController,
+                      autocorrect: false,
+                      enableSuggestions: false,
+                      decoration: InputDecoration(
+                        prefixIcon: const Icon(Icons.person_outline),
+                      ),
                     ),
-                    onSubmitted: (_) => connectNow(),
-                  ),
-                  CheckboxListTile(
-                    value: _rememberPassword,
-                    onChanged: (value) =>
-                        setDialogState(() => _rememberPassword = value == true),
-                    contentPadding: EdgeInsets.zero,
-                    dense: true,
-                    tileColor: Colors.transparent,
-                    controlAffinity: ListTileControlAffinity.leading,
-                    title: Text(translate('Remember password')),
-                  ),
+                    const SizedBox(height: 18),
+                    caption(translate('Password')),
+                    TextField(
+                      controller: _passwordController,
+                      obscureText: true,
+                      autocorrect: false,
+                      enableSuggestions: false,
+                      decoration: InputDecoration(
+                        prefixIcon: const Icon(Icons.lock_outline),
+                      ),
+                      onSubmitted: (_) => connectNow(),
+                    ),
+                    CheckboxListTile(
+                      value: _rememberPassword,
+                      onChanged: (value) => setDialogState(
+                        () => _rememberPassword = value == true,
+                      ),
+                      contentPadding: EdgeInsets.zero,
+                      dense: true,
+                      tileColor: Colors.transparent,
+                      controlAffinity: ListTileControlAffinity.leading,
+                      title: Text(translate('Remember password')),
+                    ),
+                  ],
                 ],
               ),
             ),
