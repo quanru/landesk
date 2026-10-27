@@ -10,8 +10,6 @@ import 'virtual_key_editor.dart';
 
 class _KeySpot {
   _KeySpot(this.config, this.x, this.y);
-  _KeySpot.single(RemoteShortcut shortcut, this.x, this.y)
-      : config = VirtualKeyConfig(shortcut.title, [shortcut]);
   VirtualKeyConfig config;
   double x, y; // normalized coordinates, 0..1
 
@@ -35,10 +33,12 @@ class CustomKeyOverlay extends StatefulWidget {
   const CustomKeyOverlay(
       {super.key,
       required this.send,
+      this.write,
       this.isMac = true,
       this.profileId = 'default',
       this.translate = virtualKeyText});
   final Future<void> Function(RemoteShortcut) send;
+  final RemoteKeyWriter? write;
   final bool isMac;
   final String profileId;
   final String Function(String) translate;
@@ -50,6 +50,18 @@ class CustomKeyOverlay extends StatefulWidget {
 class _CustomKeyOverlayState extends State<CustomKeyOverlay>
     with WidgetsBindingObserver {
   bool _cancelled = false;
+  RemoteAppSwitcher? _switcher;
+  final Set<String> _modifiers = {};
+
+  Future<void> _finishSwitch() async {
+    try {
+      await _switcher?.finish();
+    } catch (e) {
+      debugPrint('Could not release application switcher: $e');
+    }
+    if (mounted) setState(() {});
+  }
+
   String get _filename =>
       'virtual_keys_v3/${base64Url.encode(utf8.encode(widget.profileId))}_${widget.isMac ? 'mac' : 'linux'}.json';
   bool _sending = false;
@@ -59,49 +71,61 @@ class _CustomKeyOverlayState extends State<CustomKeyOverlay>
   bool _edit = false;
   bool _visible = true;
 
-  List<_KeySpot> _defaults() => [
-        _KeySpot.single(const RemoteShortcut('Esc', 'VK_ESCAPE'), .02, .28),
-        _KeySpot.single(const RemoteShortcut('Tab', 'VK_TAB'), .02, .40),
-        _KeySpot.single(
-            RemoteShortcut(widget.isMac ? '⌘ Tab' : 'Alt Tab', 'VK_TAB',
-                command: widget.isMac, alt: !widget.isMac),
-            .02,
-            .52),
-        _KeySpot.single(
-            RemoteShortcut('Copy', 'VK_C',
-                command: widget.isMac, ctrl: !widget.isMac),
-            .02,
-            .64),
-        _KeySpot.single(
-            RemoteShortcut('Paste', 'VK_V',
-                command: widget.isMac, ctrl: !widget.isMac),
-            .83,
-            .28),
-        _KeySpot.single(const RemoteShortcut('↑', 'VK_UP'), .83, .40),
-        _KeySpot.single(const RemoteShortcut('↓', 'VK_DOWN'), .83, .52),
-        _KeySpot.single(const RemoteShortcut('Enter', 'VK_ENTER'), .83, .64),
-        _KeySpot.single(
-            RemoteShortcut(widget.isMac ? '⌘ Space' : 'Super Space', 'VK_SPACE',
-                command: true),
-            .83,
-            .78),
-      ];
+  List<_KeySpot> _defaults() {
+    _KeySpot key(String title, String code, double x, double y,
+            {bool command = false, bool ctrl = false, bool alt = false}) =>
+        _KeySpot(
+            VirtualKeyConfig(
+                title,
+                [
+                  RemoteShortcut(title, code,
+                      command: command, ctrl: ctrl, alt: alt)
+                ],
+                size: 64,
+                opacity: .60),
+            x,
+            y);
+    return [
+      key('Esc', 'VK_ESCAPE', .02, .10),
+      key('Tab', 'VK_TAB', .94, .25),
+      key(widget.isMac ? '⌘ Tab' : 'Alt Tab', 'VK_TAB', .82, .25,
+          command: widget.isMac, alt: !widget.isMac),
+      key('Copy', 'VK_C', .94, .39, command: widget.isMac, ctrl: !widget.isMac),
+      key('Paste', 'VK_V', .94, .53,
+          command: widget.isMac, ctrl: !widget.isMac),
+      key('↑', 'VK_UP', .02, .40),
+      key('↓', 'VK_DOWN', .02, .54),
+      key('Enter', 'VK_ENTER', .82, .85),
+      key(widget.isMac ? '⌘ Space' : 'Super Space', 'VK_SPACE', .58, .85,
+          command: true),
+      key('Space', 'VK_SPACE', .70, .85),
+      key('Back', 'VK_BACK', .94, .85),
+    ];
+  }
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    if (widget.write != null) {
+      _switcher = RemoteAppSwitcher(widget.write!, isMac: widget.isMac);
+    }
     _load();
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state != AppLifecycleState.resumed) _cancelled = true;
+    if (state != AppLifecycleState.resumed) {
+      _cancelled = true;
+      _modifiers.clear();
+      _finishSwitch();
+    }
   }
 
   @override
   void dispose() {
     _cancelled = true;
+    _finishSwitch();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -161,7 +185,25 @@ class _CustomKeyOverlayState extends State<CustomKeyOverlay>
     _cancelled = false;
     setState(() => _sending = true);
     try {
-      await sendRemoteMacro(config.steps, config.delayMs, widget.send,
+      final first = config.steps.first;
+      final switching = config.steps.length == 1 &&
+          first.key == 'VK_TAB' &&
+          (widget.isMac
+              ? first.command || _modifiers.contains('Cmd')
+              : first.alt || _modifiers.contains('Opt'));
+      if (switching && _switcher != null) {
+        await _switcher!.next();
+        return;
+      }
+      await _finishSwitch();
+      await sendRemoteMacro(
+          config.steps,
+          config.delayMs,
+          (step) => widget.send(RemoteShortcut(step.title, step.key,
+              ctrl: step.ctrl || _modifiers.contains('Ctrl'),
+              alt: step.alt || _modifiers.contains('Opt'),
+              shift: step.shift,
+              command: step.command || _modifiers.contains('Cmd'))),
           cancelled: () => !mounted || _cancelled);
     } catch (e) {
       if (mounted) {
@@ -178,6 +220,7 @@ class _CustomKeyOverlayState extends State<CustomKeyOverlay>
   }
 
   Future<void> _editShortcut(int? index) async {
+    await _finishSwitch();
     final result = await showDialog<VirtualKeyEditResult>(
       context: context,
       builder: (_) => VirtualKeyEditor(
@@ -218,6 +261,7 @@ class _CustomKeyOverlayState extends State<CustomKeyOverlay>
                     onTap: _sending
                         ? null
                         : () {
+                            _finishSwitch();
                             setState(() {
                               if (_edit) {
                                 _edit = false;
@@ -271,6 +315,64 @@ class _CustomKeyOverlayState extends State<CustomKeyOverlay>
                     icon: const Icon(Icons.stop),
                     label: Text(widget
                         .translate(_cancelled ? 'Stopping…' : 'Stop macro')))),
+          if (_switcher?.active == true)
+            Positioned(
+                top: 6,
+                right: 6,
+                child: ElevatedButton.icon(
+                    onPressed: _finishSwitch,
+                    icon: const Icon(Icons.check),
+                    label: Text(widget.translate('Enter')))),
+          if (_visible && !_edit)
+            Positioned(
+                left: 12,
+                bottom: bounds.maxHeight * .10,
+                child: Row(
+                    children: ['Ctrl', 'Opt', 'Cmd']
+                        .map((name) => Padding(
+                            padding: const EdgeInsets.only(right: 10),
+                            child: Semantics(
+                                button: true,
+                                selected: _modifiers.contains(name),
+                                child: InkWell(
+                                    onTap: () => setState(() {
+                                          if (!_modifiers.remove(name)) {
+                                            _modifiers.add(name);
+                                          }
+                                        }),
+                                    customBorder: const CircleBorder(),
+                                    child: Container(
+                                        width: 56,
+                                        height: 56,
+                                        alignment: Alignment.center,
+                                        decoration: BoxDecoration(
+                                            shape: BoxShape.circle,
+                                            color: _modifiers.contains(name)
+                                                ? Theme.of(context)
+                                                    .colorScheme
+                                                    .secondary
+                                                : Colors.black.withOpacity(.50),
+                                            border: Border.all(
+                                                color: Colors.white54)),
+                                        child: Text(
+                                            name == 'Cmd' && !widget.isMac
+                                                ? 'Super'
+                                                : name,
+                                            style: const TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 16)))))))
+                        .toList())),
+          if (_edit && !_sending)
+            Positioned(
+                top: 6,
+                left: 116,
+                child: IconButton(
+                    tooltip: widget.translate('Reset'),
+                    icon: const Icon(Icons.restore),
+                    onPressed: () {
+                      setState(() => _spots = _defaults());
+                      _save();
+                    })),
           if (_visible)
             ...List.generate(_spots.length, (i) {
               final spot = _spots[i];
@@ -310,19 +412,15 @@ class _CustomKeyOverlayState extends State<CustomKeyOverlay>
                     decoration: BoxDecoration(
                       color: _edit
                           ? Theme.of(context).colorScheme.secondary
-                          : Theme.of(context)
-                              .dialogBackgroundColor
-                              .withOpacity(spot.config.opacity),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Theme.of(context).dividerColor),
+                          : Colors.black.withOpacity(spot.config.opacity),
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white54),
                     ),
                     child: Text(widget.translate(spot.config.title),
                         textAlign: TextAlign.center,
                         style: TextStyle(
-                            color: _edit
-                                ? Colors.white
-                                : Theme.of(context).colorScheme.onSurface,
-                            fontSize: 12,
+                            color: Colors.white,
+                            fontSize: 16,
                             fontWeight: FontWeight.w600)),
                   ),
                 ),

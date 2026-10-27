@@ -44,6 +44,41 @@ void main() {
         throwsStateError);
     expect(releases, ['VK_P', 'Meta', 'VK_SHIFT']);
   });
+  test('app switcher keeps Command across taps and releases on finish',
+      () async {
+    final events = <String>[];
+    final switcher = RemoteAppSwitcher((key, down,
+        {required ctrl, required alt, required shift, required command}) async {
+      events.add('$key:$down:$command');
+    }, isMac: true);
+    await switcher.next();
+    await switcher.next();
+    expect(switcher.active, isTrue);
+    expect(events.where((e) => e == 'Meta:false:false'), isEmpty);
+    await switcher.finish();
+    expect(events, [
+      'Meta:true:true',
+      'VK_TAB:true:true',
+      'VK_TAB:false:true',
+      'VK_TAB:true:true',
+      'VK_TAB:false:true',
+      'Meta:false:false'
+    ]);
+    expect(switcher.active, isFalse);
+  });
+
+  test('queued finish releases Command even when Tab fails', () async {
+    final events = <String>[];
+    final switcher = RemoteAppSwitcher((key, down,
+        {required ctrl, required alt, required shift, required command}) async {
+      events.add('$key:$down');
+      if (key == 'VK_TAB' && down) throw StateError('failed');
+    }, isMac: true);
+    await expectLater(switcher.next(), throwsStateError);
+    await switcher.finish();
+    expect(events, ['Meta:true', 'VK_TAB:true', 'VK_TAB:false', 'Meta:false']);
+  });
+
   test('macro order, cancellation and failure stop subsequent steps', () async {
     const steps = [
       RemoteShortcut('Copy', 'VK_C', command: true),

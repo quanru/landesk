@@ -272,6 +272,15 @@ impl RendezvousMediator {
     }
 
     pub async fn start_all() {
+        if crate::localdesk::ENABLED {
+            if config::is_outgoing_only() {
+                std::future::pending::<()>().await;
+                return;
+            }
+            check_zombie();
+            direct_server(new_server()).await;
+            return;
+        }
         crate::test_nat_type();
         if config::is_outgoing_only() {
             loop {
@@ -1392,6 +1401,9 @@ async fn direct_server(server: ServerPtr) {
                 continue;
             }
             if let Ok(Ok((stream, addr))) = hbb_common::timeout(1000, l.accept()).await {
+                if crate::localdesk::ENABLED && !crate::localdesk::allowed_ip(addr.ip()) {
+                    continue;
+                }
                 stream.set_nodelay(true).ok();
                 log::info!("direct access from {}", addr);
                 let local_addr = stream

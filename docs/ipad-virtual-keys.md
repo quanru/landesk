@@ -199,3 +199,69 @@ localization and editor organization; `remote_page.dart` supplies translation;
 widget test adapt to the new tabs/theme. Shortcut execution, layout storage,
 connection protocol and existing remote pointer/keyboard handlers are unchanged.
 Real remote-desktop visual acceptance and iPad hardware testing remain pending.
+
+## Physical iPad launch validation (2026-10-27)
+
+Installed the ARM64 Release build as `RustDesk Keys` on an iPad mini A17 Pro
+running iPadOS 27.0. The initial launch denial was not enough to establish a
+developer-trust problem. Once launch was permitted, the crash report identified
+`UIApplicationEvaluateRuntimeIssueForNoSceneLifecycleAdoption`: Xcode 27 builds
+must adopt the scene lifecycle. See Apple's
+[migration guidance](https://developer.apple.com/documentation/uikit/transitioning-to-the-uikit-scene-based-life-cycle).
+
+The compatibility host retains Flutter 3.24 and creates one engine and one scene
+window. It forwards scene activity and URL events to the existing Flutter host.
+After rebuilding and signing, Device Hub showed the actual device's Chinese
+connection homepage. Background/foreground switching retained the same running
+process and returned to that page. No developer-trust setting was changed by the
+agent. Actual remote sessions and virtual-key effects are still unverified.
+
+Regression surface: `Runner/AppDelegate.swift` changes iOS engine creation,
+plugin registration and lifecycle/URL forwarding; `Runner/Info.plist` replaces
+the main storyboard launch with a single-scene configuration. These changes are
+necessary to launch on iPadOS 27 with Xcode 27. Older iOS versions, cold-start
+deep links, file pickers and remote-session background recovery need regression
+coverage before release. The legacy bridge should be replaced with Flutter's
+native scene delegate when upgrading Flutter. Network code is unchanged.
+
+Local evidence is under `artifacts/virtual-keys/`: `device-scene-build.log`,
+`device-scene-sign.log`, `device-security.log`, and `device-crashes/`.
+The local test signing profile omits push and Wi-Fi-information entitlements.
+Provisioning profiles, device identifiers and signing credentials are not
+committed.
+
+## Circular layout and application switching (2026-10-27)
+
+The screenshot-inspired layout uses dark translucent circular keys, with Esc and
+arrows on the left, Tab/Copy/Paste on the right, and Space/Enter/Back near the
+bottom. Ctrl/Opt/Cmd buttons select modifiers locally for subsequent virtual
+keys; they do not hold a modifier on the remote host. Tap again to deselect.
+Existing saved positions are retained; edit mode offers Reset to apply the new
+layout. The screenshot's separate mouse controls/sidebar are not reproduced.
+
+On a real session, a single Cmd+Tab (Alt+Tab for Linux) now keeps the switcher
+modifier down. Repeated taps cycle; the checkmark/Enter control releases the
+modifier. Unrelated virtual shortcuts, hiding the overlay, backgrounding and
+disposal also request release. Lost transport can prevent delivery of any release;
+the host's connection cleanup remains responsible in that case. Macros still use
+complete chords. Cmd+Space remains a complete one-tap chord.
+
+Seven targeted shortcut/widget tests pass, including retained Command across two
+Tab presses, release on failure, and layout editing/persistence. Targeted analysis
+has only the existing WillPopScope deprecation notices. Regression surface is
+limited to the custom overlay, shortcut helper, its tests, and the raw-key callback
+in remote_page.dart. Existing remote mouse, network and password handling are not
+changed. Real-host switching and the new layout still need device acceptance.
+
+No comparative UU latency measurements or password-failure trace were captured.
+Tailscale direct-IP addressing does not establish whether its transport is direct
+or relayed. Collect the active codec, resolution, FPS, delay and Tailscale peer
+path for the same iPad/host before drawing a performance conclusion. The client
+password-error branch is login-response handling; temporary-password rotation
+is a hypothesis for reauthentication failures, not a verified cause here.
+
+The circular-layout Release build compiled and installed on the physical iPad.
+The device then displayed “Unable to Verify App” requiring an internet connection
+to validate the Apple Development identity. A later devicectl launch returned
+success and the process existed, but the system validation alert remained on
+screen. Do not count this as visual acceptance of the new remote-key UI.

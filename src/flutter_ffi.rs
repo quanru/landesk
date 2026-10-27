@@ -2521,15 +2521,15 @@ pub fn is_disable_settings() -> SyncReturn<bool> {
 }
 
 pub fn is_disable_ab() -> SyncReturn<bool> {
-    SyncReturn(config::is_disable_ab())
+    SyncReturn(crate::localdesk::ENABLED || config::is_disable_ab())
 }
 
 pub fn is_disable_account() -> SyncReturn<bool> {
-    SyncReturn(config::is_disable_account())
+    SyncReturn(crate::localdesk::ENABLED || config::is_disable_account())
 }
 
 pub fn is_disable_group_panel() -> SyncReturn<bool> {
-    SyncReturn(LocalConfig::get_option("disable-group-panel") == "Y")
+    SyncReturn(crate::localdesk::ENABLED || LocalConfig::get_option("disable-group-panel") == "Y")
 }
 
 // windows only

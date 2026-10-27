@@ -237,7 +237,8 @@ class _ConnectionPageState extends State<ConnectionPage> {
                           color: MyTheme.idColor,
                         ),
                         decoration: InputDecoration(
-                          labelText: translate('Remote ID'),
+                          labelText: 'LocalDesk · IP',
+                          hintText: '192.168.1.20 / 100.64.0.10',
                           // hintText: 'Enter your remote ID',
                           border: InputBorder.none,
                           helperStyle: const TextStyle(
@@ -252,7 +253,7 @@ class _ConnectionPageState extends State<ConnectionPage> {
                             color: MyTheme.darkGray,
                           ),
                         ),
-                        inputFormatters: [IDTextInputFormatter()],
+                        inputFormatters: [],
                         onSubmitted: (_) {
                           onConnect();
                         },

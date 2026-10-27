@@ -1,3 +1,19 @@
+# LocalDesk
+
+An experimental RustDesk fork for direct private-IP connections, with customizable
+iPad virtual keys. No RustDesk ID lookup, rendezvous registration, NAT punching,
+or relay fallback. Default direct TCP port: 21118.
+
+**Development build, not a stability fix.** See [build and validation notes](docs/localdesk.md).
+The iPad client connects to existing RustDesk hosts with Direct IP Access enabled.
+An unmodified host may still contact its own RustDesk servers independently.
+Tailscale addresses work, but Tailscale may itself use DERP: LocalDesk cannot
+control the VPN transport. Authentication and remote permissions are retained.
+
+Based on RustDesk, under the existing AGPL-3.0 license. This is an independent fork.
+
+---
+
 <p align="center">
   <img src="res/logo-header.svg" alt="RustDesk - Your remote desktop"><br>
   <a href="#raw-steps-to-build">Build</a> •

@@ -424,6 +424,17 @@ impl Client {
         if config::is_incoming_only() && !is_switch_sides_back(conn_type, &interface).await {
             bail!("Incoming only mode");
         }
+        if crate::localdesk::ENABLED {
+            let target = crate::localdesk::target(peer).map_err(|e| anyhow!(e))?;
+            // Use a literal socket address and bypass saved SOCKS/WebSocket settings.
+            // A failed connection returns here; no rendezvous or relay fallback.
+            let stream = hbb_common::tcp::FramedStream::new(target, None, CONNECT_TIMEOUT).await?;
+            return Ok((
+                (Stream::Tcp(stream), true, None, None, "TCP"),
+                (0, String::new()),
+                false,
+            ));
+        }
         // to-do: remember the port for each peer, so that we can retry easier
         if hbb_common::is_ip_str(peer) {
             return Ok((
@@ -5305,6 +5316,10 @@ pub mod peer_online {
     };
 
     pub async fn query_online_states<F: FnOnce(Vec<String>, Vec<String>)>(ids: Vec<String>, f: F) {
+        if crate::localdesk::ENABLED {
+            f(Vec::new(), Vec::new());
+            return;
+        }
         let test = false;
         if test {
             sleep(1.5).await;

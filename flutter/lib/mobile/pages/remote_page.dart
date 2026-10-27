@@ -568,6 +568,15 @@ class _RemotePageState extends State<RemotePage> with WidgetsBindingObserver {
         isMac: isMac,
         profileId: widget.id,
         translate: (text) => translate(text),
+        write: (name, down, {required ctrl, required alt, required shift, required command}) async {
+          if (down && (!inputModel.keyboardPerm || inputModel.isViewOnly ||
+              !inputModel.keyboardInputAllowed || gFFI.closed ||
+              inputModel.ctrl || inputModel.alt || inputModel.shift || inputModel.command)) {
+            throw StateError('Remote keyboard is unavailable');
+          }
+          await bind.sessionInputKey(sessionId: sessionId, name: name,
+            down: down, press: false, ctrl: ctrl, alt: alt, shift: shift, command: command);
+        },
         send: (shortcut) async {
           if (!inputModel.keyboardPerm ||
               inputModel.isViewOnly ||

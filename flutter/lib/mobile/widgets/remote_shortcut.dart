@@ -103,3 +103,50 @@ Future<void> sendRemoteMacro(List<RemoteShortcut> steps, int delayMs,
     }
   }
 }
+
+/// Owns only the modifier used by the on-screen application switcher.
+/// Call finish before unrelated input, hiding the overlay or leaving the app.
+class RemoteAppSwitcher {
+  RemoteAppSwitcher(this.write, {required this.isMac});
+  final RemoteKeyWriter write;
+  final bool isMac;
+  bool active = false;
+  Future<void> _pending = Future.value();
+
+  Future<void> _emit(String key, bool down) => write(key, down,
+      ctrl: false,
+      alt: active && !isMac,
+      shift: false,
+      command: active && isMac);
+
+  Future<void> _queue(Future<void> Function() operation) {
+    final result = _pending.then((_) => operation());
+    _pending = result.catchError((Object _) {});
+    return result;
+  }
+
+  Future<void> next() => _queue(() async {
+        try {
+          if (!active) {
+            active = true;
+            await _emit(isMac ? 'Meta' : 'VK_MENU', true);
+          }
+          try {
+            await _emit('VK_TAB', true);
+          } finally {
+            await _emit('VK_TAB', false);
+          }
+        } catch (_) {
+          await _release();
+          rethrow;
+        }
+      });
+
+  Future<void> _release() async {
+    if (!active) return;
+    active = false;
+    await _emit(isMac ? 'Meta' : 'VK_MENU', false);
+  }
+
+  Future<void> finish() => _queue(_release);
+}

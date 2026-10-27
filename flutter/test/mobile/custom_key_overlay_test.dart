@@ -148,7 +148,7 @@ void main() {
     await flush();
     expect(find.text('My macro'), findsOneWidget);
     expect(
-        tester.getSize(find.byKey(const ValueKey('virtual-key-9'))).width, 80);
+        tester.getSize(find.ancestor(of: find.text('My macro'), matching: find.byType(GestureDetector)).first).width, 80);
     await open('host-b');
     expect(find.text('My macro'), findsNothing);
     await open('host-a');
