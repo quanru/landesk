@@ -56,7 +56,11 @@ its layouts and saved connections start fresh.
 - iOS ARM64 Rust release library compiled successfully with flutter + hwcodec.
 - Seven existing shortcut/layout Flutter tests pass.
 - Targeted Flutter analysis: only two existing WillPopScope deprecation notices.
-- Full iOS package signing/build results are recorded locally in artifacts/virtual-keys.
+- Full iOS release app built (70.9 MB), development-signed and codesign-verified;
+  installed on the physical iPad as dev.quanru.localdesk.
+- Launch was refused by iPadOS with a security/signature/profile-trust error.
+  Installation is confirmed, but successful launch and remote operation are not.
+  Build/signing evidence is recorded locally in artifacts/virtual-keys.
 - No packet capture has yet established absence of all unintended network traffic.
 - Remote-session stability, Mac/Linux host builds and their runtime policy are not
   yet verified. iPadOS lifecycle bridging and other prior limitations remain in
