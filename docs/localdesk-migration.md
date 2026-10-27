@@ -66,3 +66,18 @@ Xcode selects the matching library through `RUSTDESK_TARGET`.
 Only private IPv4/IPv6 literals are accepted; hostnames are intentionally rejected
 to prevent DNS from selecting a public endpoint. Link-local IPv6 scope identifiers
 are not yet supported; use a LAN IPv4 or ULA IPv6 address instead.
+
+## Development signing and launch failures
+
+`tools/localdesk/sign-ios.py --identity <certificate-SHA1> --profile <profile-path>`
+signs the built device app and its embedded frameworks, then verifies the result.
+The Runner entitlement file does not request unused push/Wi-Fi-information
+capabilities. The signing helper derives application/team/keychain entitlements
+from the selected local profile. No certificate or provisioning profile is committed.
+
+A successful `devicectl` installation is not proof that iPadOS permits launch.
+A CoreDevice launch denial mentioning invalid signature, inadequate entitlements
+or an untrusted profile must be resolved before claiming real-device validation.
+The user may need to trust/verify the developer in Settings > General > VPN &
+Device Management. Do not delete other apps, reset device trust or revoke working
+certificates as a speculative workaround.
