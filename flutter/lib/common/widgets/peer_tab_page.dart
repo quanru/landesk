@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../common.dart';
 import 'package:flutter_hbb/common/widgets/peers_view.dart';
 import 'package:flutter_hbb/models/peer_tab_model.dart';
 import 'package:flutter_hbb/models/platform_model.dart';
@@ -35,10 +36,21 @@ class PeerTabPage extends StatelessWidget {
       child: Column(
         children: [
           TabBar(
-            tabs: const [
-              Tab(icon: Icon(Icons.access_time_filled)),
-              Tab(icon: Icon(Icons.star)),
-              Tab(icon: Icon(Icons.explore)),
+            isScrollable: true,
+            tabAlignment: TabAlignment.start,
+            dividerColor: Colors.transparent,
+            indicatorSize: TabBarIndicatorSize.label,
+            indicator: UnderlineTabIndicator(
+              borderSide: BorderSide(
+                color: Theme.of(context).colorScheme.primary,
+                width: 2,
+              ),
+            ),
+            labelPadding: const EdgeInsets.symmetric(horizontal: 16),
+            tabs: [
+              Tab(height: 44, text: translate('Recent sessions')),
+              Tab(height: 44, text: translate('Favorites')),
+              Tab(height: 44, text: translate('LAN')),
             ],
             onTap: (index) async {
               model.setCurrentTab(index);
@@ -55,6 +67,7 @@ class PeerTabPage extends StatelessWidget {
               }
             },
           ),
+          const SizedBox(height: 16),
           Expanded(
             child: TabBarView(
               children: [

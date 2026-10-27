@@ -109,9 +109,9 @@ class _PeersViewState extends State<_PeersView> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Icon(
-                  Icons.sentiment_very_dissatisfied_rounded,
-                  color: Theme.of(context).tabBarTheme.labelColor,
-                  size: 40,
+                  Icons.devices_outlined,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  size: 28,
                 ).paddingOnly(bottom: 10),
                 Text(
                   translate(
@@ -119,7 +119,9 @@ class _PeersViewState extends State<_PeersView> {
                   ),
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    color: Theme.of(context).tabBarTheme.labelColor,
+                    fontSize: 12,
+                    height: 1.5,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
                 ),
               ],

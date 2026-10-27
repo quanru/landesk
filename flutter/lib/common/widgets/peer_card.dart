@@ -215,9 +215,7 @@ class _PeerCardState extends State<_PeerCard>
       children: [
         Container(
           decoration: BoxDecoration(
-            color: peer.online == false
-                ? Colors.grey.withValues(alpha: 0.25)
-                : str2color('${peer.id}${peer.platform}', 0x7f),
+            color: Theme.of(context).colorScheme.surfaceContainerHighest,
             borderRadius: isPortrait
                 ? BorderRadius.circular(_tileRadius)
                 : BorderRadius.only(
@@ -230,10 +228,13 @@ class _PeerCardState extends State<_PeerCard>
           height: isPortrait ? 50 : null,
           child: Stack(
             children: [
-              getPlatformImage(
-                peer.platform,
-                size: isPortrait ? 38 : 30,
-              ).paddingAll(6),
+              Icon(
+                peer.platform == 'Mac OS'
+                    ? Icons.desktop_mac_outlined
+                    : Icons.computer_outlined,
+                size: 24,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ).paddingAll(10),
               if (_shouldBuildPasswordIcon(peer))
                 Positioned(
                   top: 1,
@@ -246,7 +247,7 @@ class _PeerCardState extends State<_PeerCard>
         Expanded(
           child: Container(
             decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.background,
+              color: Colors.transparent,
               borderRadius: BorderRadius.only(
                 topRight: Radius.circular(_tileRadius),
                 bottomRight: Radius.circular(_tileRadius),
@@ -340,7 +341,6 @@ class _PeerCardState extends State<_PeerCard>
         bind.mainGetBuildinOption(key: kHideUsernameOnCard) == 'Y';
     final primaryLabel = _primaryLabel(peer);
     final secondaryLabel = _secondaryLabel(peer);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final surface = SuyaPalette.of(context).surface;
     final border = SuyaPalette.of(context).border;
     final muted = SuyaPalette.of(context).secondary;
@@ -371,23 +371,9 @@ class _PeerCardState extends State<_PeerCard>
                     height: 72,
                     width: double.infinity,
                     decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: offline
-                            ? (isDark
-                                  ? const [Color(0xFF30343C), Color(0xFF282C33)]
-                                  : const [
-                                      Color(0xFFF1F2F4),
-                                      Color(0xFFE5E8EC),
-                                    ])
-                            : (isDark
-                                  ? const [Color(0xFF253A61), Color(0xFF1D2940)]
-                                  : const [
-                                      Color(0xFFF1F6FF),
-                                      Color(0xFFE4EEFF),
-                                    ]),
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.surfaceContainerHighest,
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Stack(
@@ -482,16 +468,8 @@ class _PeerCardState extends State<_PeerCard>
                           child: ElevatedButton(
                             onPressed: () => widget.connect(context, peer.id),
                             style: ElevatedButton.styleFrom(
-                              foregroundColor: offline
-                                  ? muted
-                                  : const Color(0xFF1677FF),
-                              backgroundColor: offline
-                                  ? (isDark
-                                        ? const Color(0xFF30343C)
-                                        : const Color(0xFFF1F2F4))
-                                  : (isDark
-                                        ? const Color(0xFF26354D)
-                                        : const Color(0xFFF0F6FF)),
+                              foregroundColor: offline ? muted : Theme.of(context).colorScheme.primary,
+                              backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
                               elevation: 0,
                             ),
                             child: Text(

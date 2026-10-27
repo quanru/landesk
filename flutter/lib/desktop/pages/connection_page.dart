@@ -310,8 +310,7 @@ class _ConnectionPageState extends State<ConnectionPage> with WindowListener {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final border = isDark ? Colors.white12 : const Color(0xFFE4E8F0);
+    final border = Theme.of(context).colorScheme.outlineVariant;
     String sectionTitle() => switch (widget.selectedPeerTab) {
       PeerTabIndex.recent => translate('Recent sessions'),
       PeerTabIndex.fav =>
@@ -345,7 +344,7 @@ class _ConnectionPageState extends State<ConnectionPage> with WindowListener {
                 icon: const Icon(Icons.add, size: 20),
                 label: Text(translate('Add')),
                 style: ElevatedButton.styleFrom(
-                  foregroundColor: Colors.white,
+                  foregroundColor: Theme.of(context).colorScheme.onPrimary,
                   padding: const EdgeInsets.symmetric(
                     horizontal: 18,
                     vertical: 13,
@@ -552,43 +551,49 @@ class _ConnectionPageState extends State<ConnectionPage> with WindowListener {
             }
           }
 
+          Widget caption(String text) => Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Align(alignment: Alignment.centerLeft, child: Text(text,
+              style: Theme.of(context).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w500, color: Theme.of(context).colorScheme.onSurfaceVariant))),
+          );
           return AlertDialog(
-            title: Text(translate('Add')),
+            title: Text(translate('Connect')),
             content: SizedBox(
               width: 440,
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  caption('IP'),
                   TextField(
                     controller: _idEditingController,
                     focusNode: _idFocusNode,
                     autocorrect: false,
                     enableSuggestions: false,
                     decoration: InputDecoration(
-                      labelText: '${translate('Local Address')} (IP)',
+                      hintText: '192.168.1.2',
                       prefixIcon: const Icon(Icons.desktop_windows_outlined),
                     ),
                     onChanged: (value) => _idController.id = value,
                     onSubmitted: (_) => connectNow(),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 18),
+                  caption(translate('Username')),
                   TextField(
                     controller: _usernameController,
                     autocorrect: false,
                     enableSuggestions: false,
                     decoration: InputDecoration(
-                      labelText: translate('Username'),
                       prefixIcon: const Icon(Icons.person_outline),
                     ),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 18),
+                  caption(translate('Password')),
                   TextField(
                     controller: _passwordController,
                     obscureText: true,
                     autocorrect: false,
                     enableSuggestions: false,
                     decoration: InputDecoration(
-                      labelText: translate('Password'),
                       prefixIcon: const Icon(Icons.lock_outline),
                     ),
                     onSubmitted: (_) => connectNow(),
@@ -599,6 +604,7 @@ class _ConnectionPageState extends State<ConnectionPage> with WindowListener {
                         setDialogState(() => _rememberPassword = value == true),
                     contentPadding: EdgeInsets.zero,
                     dense: true,
+                    tileColor: Colors.transparent,
                     controlAffinity: ListTileControlAffinity.leading,
                     title: Text(translate('Remember password')),
                   ),

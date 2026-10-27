@@ -18,7 +18,7 @@ class SettingsPage extends StatefulWidget implements PageShape {
   final title = translate('Settings');
 
   @override
-  final icon = const Icon(Icons.settings);
+  final icon = const Icon(Icons.tune_rounded);
 
   @override
   final appBarActions = const <Widget>[];
@@ -69,7 +69,7 @@ class _SettingsState extends State<SettingsPage> {
   @override
   Widget build(BuildContext context) {
     Provider.of<FfiModel>(context);
-    return SettingsList(
+    return Center(child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 720), child: SettingsList(
       sections: [
         SettingsSection(
           title: const Text('LAN'),
@@ -159,7 +159,7 @@ class _SettingsState extends State<SettingsPage> {
           ],
         ),
       ],
-    );
+    )));
   }
 
   SettingsSection defaultDisplaySection() => SettingsSection(

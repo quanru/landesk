@@ -3815,7 +3815,8 @@ void updateTextAndPreserveSelection(
 String _appName = '';
 String get appName {
   if (_appName.isEmpty) {
-    _appName = bind.mainGetAppNameSync();
+    final name = bind.mainGetAppNameSync();
+    _appName = (name == 'LocalDesk' || name == 'landesk') ? 'LanDesk' : name;
   }
   return _appName;
 }

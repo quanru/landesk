@@ -716,7 +716,7 @@ pub fn get_app_name() -> String {
 // Keep the internal app name stable for existing config, IPC and credentials.
 pub fn get_app_display_name() -> String {
     match get_app_name().as_str() {
-        "LocalDesk" => "landesk".to_owned(),
+        "LocalDesk" => "LanDesk".to_owned(),
         name => name.to_owned(),
     }
 }

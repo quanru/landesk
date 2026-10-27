@@ -59,6 +59,21 @@ class HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
+    final wide = MediaQuery.sizeOf(context).width >= 900;
+    void selectPage(int index) {
+      setState(() {
+        if (_selectedIndex == index) return;
+        _selectedIndex = index;
+        if (isChatPageCurrentTab) {
+          gFFI.chatModel.hideChatIconOverlay();
+          gFFI.chatModel.hideChatWindowOverlay();
+          gFFI.chatModel.mobileClearClientUnread(
+            gFFI.chatModel.currentKey.connId,
+          );
+        }
+      });
+    }
+
     return WillPopScope(
       onWillPop: () async {
         if (_selectedIndex != 0) {
@@ -73,37 +88,62 @@ class HomePageState extends State<HomePage> {
       child: Scaffold(
         // backgroundColor: MyTheme.grayBg,
         appBar: AppBar(
-          centerTitle: true,
-          title: appTitle(),
+          centerTitle: false,
+          toolbarHeight: 64,
+          titleSpacing: 24,
+          title: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: Image.asset('assets/icon.png', width: 28, height: 28),
+              ),
+              const SizedBox(width: 10),
+              Flexible(child: appTitle()),
+            ],
+          ),
           actions: _pages.elementAt(_selectedIndex).appBarActions,
         ),
-        bottomNavigationBar: BottomNavigationBar(
-          key: navigationBarKey,
-          items: _pages
-              .map(
-                (page) =>
-                    BottomNavigationBarItem(icon: page.icon, label: page.title),
-              )
-              .toList(),
-          currentIndex: _selectedIndex,
-          type: BottomNavigationBarType.fixed,
-          selectedItemColor: Theme.of(context).colorScheme.primary, //
-          unselectedItemColor: MyTheme.darkGray,
-          onTap: (index) => setState(() {
-            // close chat overlay when go chat page
-            if (_selectedIndex != index) {
-              _selectedIndex = index;
-              if (isChatPageCurrentTab) {
-                gFFI.chatModel.hideChatIconOverlay();
-                gFFI.chatModel.hideChatWindowOverlay();
-                gFFI.chatModel.mobileClearClientUnread(
-                  gFFI.chatModel.currentKey.connId,
-                );
-              }
-            }
-          }),
+        bottomNavigationBar: wide
+            ? null
+            : NavigationBar(
+                key: navigationBarKey,
+                height: 64,
+                selectedIndex: _selectedIndex,
+                onDestinationSelected: selectPage,
+                destinations: _pages
+                    .map(
+                      (page) => NavigationDestination(
+                        icon: page.icon,
+                        label: page.title,
+                      ),
+                    )
+                    .toList(),
+              ),
+        body: Row(
+          children: [
+            if (wide)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 16, 8, 16),
+                child: NavigationRail(
+                  minWidth: 72,
+                  labelType: NavigationRailLabelType.all,
+                  groupAlignment: -1,
+                  selectedIndex: _selectedIndex,
+                  onDestinationSelected: selectPage,
+                  destinations: _pages
+                      .map(
+                        (page) => NavigationRailDestination(
+                          icon: page.icon,
+                          label: Text(page.title),
+                        ),
+                      )
+                      .toList(),
+                ),
+              ),
+            Expanded(child: _pages.elementAt(_selectedIndex)),
+          ],
         ),
-        body: _pages.elementAt(_selectedIndex),
       ),
     );
   }
@@ -159,11 +199,7 @@ class HomePageState extends State<HomePage> {
         ],
       );
     }
-    return Text(
-      bind.mainGetAppNameSync(),
-      maxLines: 1,
-      overflow: TextOverflow.ellipsis,
-    );
+    return Text(appName, maxLines: 1, overflow: TextOverflow.ellipsis);
   }
 }
 
@@ -180,7 +216,7 @@ class WebHomePage extends StatelessWidget {
       // backgroundColor: MyTheme.grayBg,
       appBar: AppBar(
         centerTitle: true,
-        title: Text("${bind.mainGetAppNameSync()} (Preview)"),
+        title: Text("${appName} (Preview)"),
         actions: connectionPage.appBarActions,
       ),
       body: connectionPage,

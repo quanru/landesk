@@ -1,5 +1,5 @@
 [Unit]
-Description=landesk
+Description=LanDesk
 Requires=network.target
 After=systemd-user-sessions.service
 

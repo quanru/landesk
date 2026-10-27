@@ -4,7 +4,7 @@ version = "1.3.0"
 authors = ["landesk contributors"]
 edition = "2021"
 build= "build.rs"
-description = "landesk LAN/VPN Remote Desktop"
+description = "LanDesk LAN/VPN Remote Desktop"
 default-run = "rustdesk"
 rust-version = "1.75"
 
@@ -221,8 +221,8 @@ libxdo-sys = { path = "libs/libxdo-sys-stub" }
 
 [package.metadata.winres]
 LegalCopyright = "Copyright © 2026 landesk contributors."
-ProductName = "landesk"
-FileDescription = "landesk LAN/VPN Remote Desktop"
+ProductName = "LanDesk"
+FileDescription = "LanDesk LAN/VPN Remote Desktop"
 OriginalFilename = "rustdesk.exe"
 
 [target.'cfg(target_os="windows")'.build-dependencies]
