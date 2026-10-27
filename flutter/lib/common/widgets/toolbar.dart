@@ -313,7 +313,7 @@ void showWaylandKeyboardInputWarningDialog({
                       }
                     },
               style: TextButton.styleFrom(
-                foregroundColor: Colors.blue,
+                foregroundColor: Theme.of(context).colorScheme.primary,
                 padding: EdgeInsets.zero,
                 minimumSize: Size.zero,
                 tapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -405,7 +405,7 @@ List<TTextMenu> toolbarControls(BuildContext context, String id, FFI ffi) {
                 handleOsPasswordEditIcon(sessionId, ffi.dialogManager);
               }
             },
-            icon: Icon(Icons.edit, color: isMobile ? MyTheme.accent : null),
+            icon: Icon(Icons.edit, color: isMobile ? Theme.of(context).colorScheme.primary : null),
           ),
         ),
         onPressed: () => pi.isHeadless
@@ -638,7 +638,7 @@ List<TTextMenu> toolbarControls(BuildContext context, String id, FFI ffi) {
                 ffi.recordingModel.start
                     ? Icons.pause_circle_filled
                     : Icons.videocam_outlined,
-                color: MyTheme.accent,
+                color: Theme.of(context).colorScheme.primary,
               ),
             ),
           ],

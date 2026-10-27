@@ -48,9 +48,9 @@ class _PeerCard extends StatefulWidget {
 class _PeerCardState extends State<_PeerCard>
     with AutomaticKeepAliveClientMixin {
   var _menuPos = RelativeRect.fill;
-  final double _cardRadius = 16;
-  final double _tileRadius = 5;
-  final double _borderWidth = 2;
+  final double _cardRadius = LandeskTheme.cardRadius;
+  final double _tileRadius = LandeskTheme.controlRadius;
+  final double _borderWidth = 1;
   bool _favorite = false;
 
   bool get _isDiscoveredPeer => widget.tab == PeerTabIndex.lan;
@@ -341,16 +341,16 @@ class _PeerCardState extends State<_PeerCard>
     final primaryLabel = _primaryLabel(peer);
     final secondaryLabel = _secondaryLabel(peer);
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final surface = isDark ? const Color(0xFF24262D) : Colors.white;
-    final border = isDark ? Colors.white12 : const Color(0xFFE1E5EC);
-    final muted = isDark ? Colors.white60 : const Color(0xFF737B8C);
+    final surface = SuyaPalette.of(context).surface;
+    final border = SuyaPalette.of(context).border;
+    final muted = SuyaPalette.of(context).secondary;
     final offline = peer.online == false;
     final deviceColor = offline
         ? const Color(0xFF77808E)
-        : const Color(0xFF1677FF);
+        : SuyaPalette.of(context).accent;
     final child = Card(
       color: surface,
-      elevation: isDark ? 0 : 2,
+      elevation: 0,
       shadowColor: Colors.black.withOpacity(0.08),
       margin: EdgeInsets.zero,
       shape: RoundedRectangleBorder(
@@ -567,7 +567,10 @@ class _PeerCardState extends State<_PeerCard>
       return Padding(
         padding: const EdgeInsets.all(12),
         child: selected
-            ? Icon(Icons.check_box, color: MyTheme.accent)
+            ? Icon(
+                Icons.check_box,
+                color: Theme.of(context).colorScheme.primary,
+              )
             : Icon(Icons.check_box_outline_blank),
       );
     } else {
@@ -593,14 +596,17 @@ class _PeerCardState extends State<_PeerCard>
     final selected = peerTabModel.isPeerSelected(peer.id);
     if (peerTabModel.multiSelectionMode) {
       final icon = selected
-          ? Icon(Icons.check_box, color: MyTheme.accent)
+          ? Icon(Icons.check_box, color: Theme.of(context).colorScheme.primary)
           : Icon(Icons.check_box_outline_blank);
       bool last = peerTabModel.isShiftDown && peer.id == peerTabModel.lastId;
       double right = isTile ? 4 : 0;
       if (last) {
         return Container(
           decoration: BoxDecoration(
-            border: Border.all(color: MyTheme.accent, width: 1),
+            border: Border.all(
+              color: Theme.of(context).colorScheme.primary,
+              width: 1,
+            ),
           ),
           child: icon,
         ).marginOnly(right: right);

@@ -459,9 +459,9 @@ class _RemotePageState extends State<RemotePage> with WidgetsBindingObserver {
                     (keyboardIsVisible || _showGestureHelp)
                         ? Icons.expand_more
                         : Icons.expand_less,
-                    color: Colors.white,
+                    color: Theme.of(context).colorScheme.onPrimary,
                   ),
-                  backgroundColor: MyTheme.accent,
+                  backgroundColor: Theme.of(context).colorScheme.primary,
                   onPressed: () {
                     setState(() {
                       if (keyboardIsVisible) {
@@ -616,7 +616,7 @@ class _RemotePageState extends State<RemotePage> with WidgetsBindingObserver {
     final ffiModel = Provider.of<FfiModel>(context);
     return BottomAppBar(
       elevation: 10,
-      color: MyTheme.accent,
+      color: Theme.of(context).colorScheme.primary,
       child: Row(
         mainAxisSize: MainAxisSize.max,
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -897,7 +897,7 @@ class _RemotePageState extends State<RemotePage> with WidgetsBindingObserver {
       VoiceCallStatus.connected
     ].contains(gFFI.chatModel.voiceCallStatus.value);
     final menus = [
-      makeTextMenu('Text chat', Icon(Icons.message, color: MyTheme.accent),
+      makeTextMenu('Text chat', Icon(Icons.message, color: Theme.of(context).colorScheme.primary),
           () => onPressedTextChat(widget.id)),
       isInVoice
           ? makeTextMenu(
@@ -913,7 +913,7 @@ class _RemotePageState extends State<RemotePage> with WidgetsBindingObserver {
               'Voice call',
               SvgPicture.asset(
                 'assets/call_wait.svg',
-                colorFilter: ColorFilter.mode(MyTheme.accent, BlendMode.srcIn),
+                colorFilter: ColorFilter.mode(Theme.of(context).colorScheme.primary, BlendMode.srcIn),
               ),
               onPressVoiceCall),
     ];
@@ -1012,7 +1012,7 @@ class _KeyHelpToolsState extends State<KeyHelpTools> {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(5.0),
           ),
-          backgroundColor: active == true ? MyTheme.accent80 : null,
+          backgroundColor: active == true ? Theme.of(context).colorScheme.primary.withValues(alpha: .8) : null,
         ),
         child: icon != null
             ? Icon(icon, size: 14, color: Colors.white)

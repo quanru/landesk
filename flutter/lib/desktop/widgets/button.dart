@@ -1,22 +1,12 @@
 import 'package:auto_size_text/auto_size_text.dart';
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
-
 import '../../common.dart';
 
-class Button extends StatefulWidget {
-  final GestureTapCallback onTap;
-  final String text;
-  final double? textSize;
-  final double? minWidth;
-  final bool isOutline;
-  final double? padding;
-  final Color? textColor;
-  final double? radius;
-  final Color? borderColor;
-
-  Button({
-    Key? key,
+/// Legacy call sites share native themed buttons, including keyboard activation,
+/// focus, disabled/hover/pressed states and the same touch target as mobile.
+class Button extends StatelessWidget {
+  const Button({
+    super.key,
     this.minWidth,
     this.isOutline = false,
     this.textSize,
@@ -26,78 +16,31 @@ class Button extends StatefulWidget {
     this.borderColor,
     required this.onTap,
     required this.text,
-  }) : super(key: key);
-
-  @override
-  State<Button> createState() => _ButtonState();
-}
-
-class _ButtonState extends State<Button> {
-  RxBool hover = false.obs;
-  RxBool pressed = false.obs;
-
-  @override
-  Widget build(BuildContext context) {
-    return Obx(() => InkWell(
-          onTapDown: (_) => pressed.value = true,
-          onTapUp: (_) => pressed.value = false,
-          onTapCancel: () => pressed.value = false,
-          onHover: (value) => hover.value = value,
-          onTap: widget.onTap,
-          child: ConstrainedBox(
-              constraints: BoxConstraints(
-                minWidth: widget.minWidth ?? 70.0,
-              ),
-              child: Container(
-                padding: EdgeInsets.all(widget.padding ?? 4.5),
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: pressed.value
-                      ? MyTheme.accent
-                      : (widget.isOutline
-                          ? Colors.transparent
-                          : MyTheme.button),
-                  border: Border.all(
-                    color: pressed.value
-                        ? MyTheme.accent
-                        : hover.value
-                            ? MyTheme.hoverBorder
-                            : (widget.isOutline
-                                ? widget.borderColor ?? MyTheme.border
-                                : MyTheme.button),
-                  ),
-                  borderRadius: BorderRadius.circular(widget.radius ?? 5),
-                ),
-                child: Text(
-                  translate(
-                    widget.text,
-                  ),
-                  style: TextStyle(
-                      fontSize: widget.textSize ?? 12.0,
-                      color: widget.isOutline
-                          ? widget.textColor ??
-                              Theme.of(context).textTheme.titleLarge?.color
-                          : Colors.white),
-                ).marginSymmetric(horizontal: 12),
-              )),
-        ));
-  }
-}
-
-class FixedWidthButton extends StatefulWidget {
+  });
   final GestureTapCallback onTap;
   final String text;
-  final double? textSize;
-  final double width;
+  final double? textSize, minWidth, padding, radius;
   final bool isOutline;
-  final double? padding;
-  final Color? textColor;
-  final double? radius;
-  final Color? borderColor;
-  final int? maxLines;
+  final Color? textColor, borderColor;
 
-  FixedWidthButton({
-    Key? key,
+  @override
+  Widget build(BuildContext context) => _themedButton(
+    context,
+    onTap: onTap,
+    text: text,
+    isOutline: isOutline,
+    textSize: textSize,
+    padding: padding,
+    textColor: textColor,
+    radius: radius,
+    borderColor: borderColor,
+    minWidth: minWidth,
+  );
+}
+
+class FixedWidthButton extends StatelessWidget {
+  const FixedWidthButton({
+    super.key,
     required this.width,
     this.maxLines,
     this.isOutline = false,
@@ -108,64 +51,79 @@ class FixedWidthButton extends StatefulWidget {
     this.borderColor,
     required this.onTap,
     required this.text,
-  }) : super(key: key);
+  });
+  final GestureTapCallback onTap;
+  final String text;
+  final double width;
+  final double? textSize, padding, radius;
+  final bool isOutline;
+  final Color? textColor, borderColor;
+  final int? maxLines;
 
   @override
-  State<FixedWidthButton> createState() => _FixedWidthButtonState();
+  Widget build(BuildContext context) => SizedBox(
+    width: width,
+    child: _themedButton(
+      context,
+      onTap: onTap,
+      text: text,
+      isOutline: isOutline,
+      textSize: textSize,
+      padding: padding,
+      textColor: textColor,
+      radius: radius,
+      borderColor: borderColor,
+      maxLines: maxLines,
+    ),
+  );
 }
 
-class _FixedWidthButtonState extends State<FixedWidthButton> {
-  RxBool hover = false.obs;
-  RxBool pressed = false.obs;
-
-  @override
-  Widget build(BuildContext context) {
-    return Obx(() => InkWell(
-          onTapDown: (_) => pressed.value = true,
-          onTapUp: (_) => pressed.value = false,
-          onTapCancel: () => pressed.value = false,
-          onHover: (value) => hover.value = value,
-          onTap: widget.onTap,
-          child: Container(
-            width: widget.width,
-            padding: EdgeInsets.all(widget.padding ?? 4.5),
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: pressed.value
-                  ? MyTheme.accent
-                  : (widget.isOutline ? Colors.transparent : MyTheme.button),
-              border: Border.all(
-                color: pressed.value
-                    ? MyTheme.accent
-                    : hover.value
-                        ? MyTheme.hoverBorder
-                        : (widget.isOutline
-                            ? widget.borderColor ?? MyTheme.border
-                            : MyTheme.button),
-              ),
-              borderRadius: BorderRadius.circular(widget.radius ?? 5),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Flexible(
-                  child: AutoSizeText(
-                    translate(
-                      widget.text,
-                    ),
-                    maxLines: widget.maxLines ?? 1,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                        fontSize: widget.textSize ?? 12.0,
-                        color: widget.isOutline
-                            ? widget.textColor ??
-                                Theme.of(context).textTheme.titleLarge?.color
-                            : Colors.white),
-                  ).marginSymmetric(horizontal: 12),
-                ),
-              ],
+Widget _themedButton(
+  BuildContext context, {
+  required GestureTapCallback onTap,
+  required String text,
+  required bool isOutline,
+  double? textSize,
+  double? padding,
+  Color? textColor,
+  double? radius,
+  Color? borderColor,
+  double? minWidth,
+  int? maxLines,
+}) {
+  final style = ButtonStyle(
+    minimumSize: minWidth == null
+        ? null
+        : WidgetStatePropertyAll(
+            Size(
+              minWidth,
+              Theme.of(context).elevatedButtonTheme.style?.minimumSize?.resolve({})?.height ?? 44,
             ),
           ),
-        ));
-  }
+    padding: padding == null
+        ? null
+        : WidgetStatePropertyAll(
+            EdgeInsets.symmetric(horizontal: 16, vertical: padding),
+          ),
+    foregroundColor: textColor == null
+        ? null
+        : WidgetStatePropertyAll(textColor),
+    shape: radius == null
+        ? null
+        : WidgetStatePropertyAll(
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(radius)),
+          ),
+    side: borderColor == null
+        ? null
+        : WidgetStatePropertyAll(BorderSide(color: borderColor)),
+  );
+  final child = AutoSizeText(
+    translate(text),
+    maxLines: maxLines ?? 1,
+    textAlign: TextAlign.center,
+    style: TextStyle(fontSize: textSize ?? 14),
+  );
+  return isOutline
+      ? OutlinedButton(onPressed: onTap, style: style, child: child)
+      : ElevatedButton(onPressed: onTap, style: style, child: child);
 }

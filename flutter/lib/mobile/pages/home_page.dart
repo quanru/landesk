@@ -87,7 +87,7 @@ class HomePageState extends State<HomePage> {
               .toList(),
           currentIndex: _selectedIndex,
           type: BottomNavigationBarType.fixed,
-          selectedItemColor: MyTheme.accent, //
+          selectedItemColor: Theme.of(context).colorScheme.primary, //
           unselectedItemColor: MyTheme.darkGray,
           onTap: (index) => setState(() {
             // close chat overlay when go chat page

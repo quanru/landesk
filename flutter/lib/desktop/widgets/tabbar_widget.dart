@@ -1453,29 +1453,21 @@ class TabbarTheme extends ThemeExtension<TabbarTheme> {
       required this.closeHoverColor,
       required this.selectedTabBackgroundColor});
 
-  static const light = TabbarTheme(
-      selectedTabIconColor: MyTheme.accent,
-      unSelectedTabIconColor: Color.fromARGB(255, 162, 203, 241),
-      selectedTextColor: Colors.black,
-      unSelectedTextColor: Color.fromARGB(255, 112, 112, 112),
-      selectedIconColor: Color.fromARGB(255, 26, 26, 26),
-      unSelectedIconColor: Color.fromARGB(255, 96, 96, 96),
-      dividerColor: Color.fromARGB(255, 238, 238, 238),
-      hoverColor: Colors.white54,
-      closeHoverColor: Colors.white,
-      selectedTabBackgroundColor: Colors.white54);
+  static final light = _suya(SuyaPalette.light);
+  static final dark = _suya(SuyaPalette.dark);
 
-  static const dark = TabbarTheme(
-      selectedTabIconColor: MyTheme.accent,
-      unSelectedTabIconColor: Color.fromARGB(255, 30, 65, 98),
-      selectedTextColor: Colors.white,
-      unSelectedTextColor: Color.fromARGB(255, 192, 192, 192),
-      selectedIconColor: Color.fromARGB(255, 192, 192, 192),
-      unSelectedIconColor: Color.fromARGB(255, 255, 255, 255),
-      dividerColor: Color.fromARGB(255, 64, 64, 64),
-      hoverColor: Colors.black26,
-      closeHoverColor: Colors.black,
-      selectedTabBackgroundColor: Colors.black26);
+  static TabbarTheme _suya(SuyaPalette p) => TabbarTheme(
+    selectedTabIconColor: p.accent,
+    unSelectedTabIconColor: p.secondary,
+    selectedTextColor: p.text,
+    unSelectedTextColor: p.secondary,
+    selectedIconColor: p.accent,
+    unSelectedIconColor: p.secondary,
+    dividerColor: p.border,
+    hoverColor: p.inset,
+    closeHoverColor: p.selection,
+    selectedTabBackgroundColor: p.surface,
+  );
 
   @override
   ThemeExtension<TabbarTheme> copyWith({

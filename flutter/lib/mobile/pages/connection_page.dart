@@ -183,7 +183,8 @@ class _ConnectionPageState extends State<ConnectionPage>
         child: Ink(
           decoration: BoxDecoration(
             color: Theme.of(context).cardColor,
-            borderRadius: BorderRadius.all(Radius.circular(13)),
+            borderRadius: BorderRadius.circular(LandeskTheme.cardRadius),
+            border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
           ),
           child: Row(
             children: <Widget>[

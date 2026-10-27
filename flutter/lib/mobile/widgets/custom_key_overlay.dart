@@ -344,9 +344,11 @@ class _CustomKeyOverlayState extends State<CustomKeyOverlay>
             top: bottomRowTop,
             left: 12,
             child: Material(
-              color: const Color(0xFF484848).withValues(alpha: .60),
-              shape: const CircleBorder(
-                side: BorderSide(color: Colors.white54),
+              color: Theme.of(
+                context,
+              ).colorScheme.surface.withValues(alpha: .85),
+              shape: CircleBorder(
+                side: BorderSide(color: Theme.of(context).colorScheme.outline),
               ),
               clipBehavior: Clip.antiAlias,
               child: InkWell(
@@ -387,7 +389,7 @@ class _CustomKeyOverlayState extends State<CustomKeyOverlay>
                           : (_visible
                                 ? Icons.keyboard
                                 : Icons.keyboard_outlined),
-                      color: Colors.white,
+                      color: Theme.of(context).colorScheme.onSurface,
                       size: 21,
                     ),
                   ),
@@ -457,15 +459,19 @@ class _CustomKeyOverlayState extends State<CustomKeyOverlay>
                             shape: BoxShape.circle,
                             color: _touches.containsValue(code)
                                 ? Theme.of(context).colorScheme.secondary
-                                : const Color(
-                                    0xFF484848,
-                                  ).withValues(alpha: .60),
-                            border: Border.all(color: Colors.white54),
+                                : Theme.of(
+                                    context,
+                                  ).colorScheme.surface.withValues(alpha: .60),
+                            border: Border.all(
+                              color: Theme.of(context).colorScheme.outline,
+                            ),
                           ),
                           child: Text(
                             name == 'Cmd' && !widget.isMac ? 'Super' : name,
-                            style: const TextStyle(
-                              color: Colors.white,
+                            style: TextStyle(
+                              color: _touches.containsValue(code)
+                                  ? Theme.of(context).colorScheme.onSecondary
+                                  : Theme.of(context).colorScheme.onSurface,
                               fontSize: 16,
                             ),
                           ),
@@ -558,17 +564,25 @@ class _CustomKeyOverlayState extends State<CustomKeyOverlay>
                                   spot.config.steps.first.key,
                                 ))
                             ? Theme.of(context).colorScheme.secondary
-                            : const Color(
-                                0xFF484848,
-                              ).withValues(alpha: spot.config.opacity),
+                            : Theme.of(context).colorScheme.surface.withValues(
+                                alpha: spot.config.opacity,
+                              ),
                         shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white54),
+                        border: Border.all(
+                          color: Theme.of(context).colorScheme.outline,
+                        ),
                       ),
                       child: Text(
                         widget.translate(spot.config.title),
                         textAlign: TextAlign.center,
                         style: TextStyle(
-                          color: Colors.white,
+                          color:
+                              (_edit ||
+                                  _touches.containsValue(
+                                    spot.config.steps.first.key,
+                                  ))
+                              ? Theme.of(context).colorScheme.onSecondary
+                              : Theme.of(context).colorScheme.onSurface,
                           fontSize: phone ? 13 : 16,
                           fontWeight: FontWeight.w400,
                         ),

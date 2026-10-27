@@ -1305,7 +1305,7 @@ class _AboutState extends State<_About> {
                     ),
                   if (!isWeb) _diagnosticsSection(),
                   Container(
-                    decoration: const BoxDecoration(color: Color(0xFF2c8cff)),
+                    decoration: BoxDecoration(color: Theme.of(context).colorScheme.primary),
                     padding: const EdgeInsets.symmetric(
                       vertical: 24,
                       horizontal: 8,

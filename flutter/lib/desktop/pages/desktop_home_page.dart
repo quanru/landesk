@@ -30,7 +30,6 @@ class DesktopHomePage extends StatefulWidget {
   State<DesktopHomePage> createState() => _DesktopHomePageState();
 }
 
-const borderColor = Color(0xFF2F65BA);
 const _showSelinuxHelpTipOption = 'show-selinux-help-tip';
 const _selinuxHelpUrl =
     'https://github.com/quanru/landesk/blob/master/docs/linux-host-readiness.md#selinux';
@@ -190,7 +189,7 @@ class _LanServerInfoPanelState extends State<LanServerInfoPanel> {
     final webEndpoints = webEndpointValues.join('\n');
     final fingerprint = info['fingerprint']?.toString() ?? '';
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final muted = isDark ? Colors.white54 : const Color(0xFF7A8290);
+    final muted = SuyaPalette.of(context).secondary;
     final statusColor = switch (displayStatus) {
       LanServerDisplayStatus.ready => const Color(0xFF27B980),
       LanServerDisplayStatus.authenticationRequired => Theme.of(
@@ -203,14 +202,12 @@ class _LanServerInfoPanelState extends State<LanServerInfoPanel> {
     };
     if (widget.compact) {
       return Card(
-        color: isDark ? const Color(0xFF24262D) : Colors.white,
+        color: SuyaPalette.of(context).surface,
         elevation: 0,
         margin: EdgeInsets.zero,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: BorderSide(
-            color: isDark ? Colors.white12 : const Color(0xFFE3E8F0),
-          ),
+          borderRadius: BorderRadius.circular(LandeskTheme.cardRadius),
+          side: BorderSide(color: SuyaPalette.of(context).border),
         ),
         child: Padding(
           padding: const EdgeInsets.fromLTRB(14, 14, 14, 12),
@@ -222,13 +219,13 @@ class _LanServerInfoPanelState extends State<LanServerInfoPanel> {
                     width: 34,
                     height: 34,
                     decoration: BoxDecoration(
-                      color: const Color(0xFFEAF3FF),
+                      color: SuyaPalette.of(context).selection,
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.laptop_mac_rounded,
                       size: 18,
-                      color: Color(0xFF1677FF),
+                      color: Theme.of(context).colorScheme.primary,
                     ),
                   ),
                   const SizedBox(width: 9),
@@ -282,9 +279,9 @@ class _LanServerInfoPanelState extends State<LanServerInfoPanel> {
                     const SizedBox(width: 4),
                     IconButton(
                       tooltip: 'LAN · ${translate('Settings')}',
-                    visualDensity: VisualDensity.compact,
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints.tightFor(
+                      visualDensity: VisualDensity.compact,
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints.tightFor(
                         width: 28,
                         height: 28,
                       ),
@@ -320,73 +317,70 @@ class _LanServerInfoPanelState extends State<LanServerInfoPanel> {
                 if (offerRemoteActivation || offerPortableInstall) ...[
                   const SizedBox(height: 9),
                   _buildRemoteActions(
-                  windowsPortable: windowsPortable,
-                  offerRemoteActivation: offerRemoteActivation,
-                  offerPortableInstall: offerPortableInstall,
-                ),
-              ],
-              const SizedBox(height: 12),
-              Divider(
-                height: 1,
-                color: isDark ? Colors.white10 : const Color(0xFFF0F2F6),
-              ),
-              const SizedBox(height: 4),
-              _buildCompactInfoRow(
-                icon: Icons.badge_outlined,
-                label: translate('Name'),
-                value: info['device_name']?.toString() ?? '-',
-                muted: muted,
-                trailing: IconButton(
-                  tooltip: translate('Change'),
-                  visualDensity: VisualDensity.compact,
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints.tightFor(
-                    width: 28,
-                    height: 28,
+                    windowsPortable: windowsPortable,
+                    offerRemoteActivation: offerRemoteActivation,
+                    offerPortableInstall: offerPortableInstall,
                   ),
-                  onPressed: () => _showDeviceNameDialog(
-                    context,
-                    systemName: info['system_device_name']?.toString() ?? '',
-                  ),
-                  icon: const Icon(Icons.edit_outlined, size: 15),
-                ),
-              ),
-              _buildCompactInfoRow(
-                icon: Icons.person_outline_rounded,
-                label: translate('Username'),
-                value: info['username']?.toString() ?? '-',
-                muted: muted,
-              ),
-              _buildCompactInfoRow(
-                icon: Icons.lan_outlined,
-                label: translate('Local Address'),
-                value: primaryAddress == null
-                    ? '-'
-                    : _formatEndpoint(primaryAddress, port),
-                muted: muted,
-                trailing: hiddenAddressCount > 0
-                    ? TextButton(
-                        onPressed: () =>
-                            _showAddressList(context, addresses, port),
-                        style: TextButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(horizontal: 5),
-                          minimumSize: const Size(0, 26),
-                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        ),
-                        child: Text(
-                          '+$hiddenAddressCount',
-                          style: const TextStyle(fontSize: 11),
-                        ),
-                      )
-                    : null,
-              ),
-              if (webAccessEnabled)
+                ],
+                const SizedBox(height: 12),
+                Divider(height: 1, color: SuyaPalette.of(context).inset),
+                const SizedBox(height: 4),
                 _buildCompactInfoRow(
-                  icon: Icons.language_rounded,
-                  label: 'Web remote access',
-                  value: webEndpointValues.isEmpty
-                      ? webRuntimeState.toUpperCase()
-                      : '${webRuntimeState.toUpperCase()} · ${webEndpointValues.first}',
+                  icon: Icons.badge_outlined,
+                  label: translate('Name'),
+                  value: info['device_name']?.toString() ?? '-',
+                  muted: muted,
+                  trailing: IconButton(
+                    tooltip: translate('Change'),
+                    visualDensity: VisualDensity.compact,
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints.tightFor(
+                      width: 28,
+                      height: 28,
+                    ),
+                    onPressed: () => _showDeviceNameDialog(
+                      context,
+                      systemName: info['system_device_name']?.toString() ?? '',
+                    ),
+                    icon: const Icon(Icons.edit_outlined, size: 15),
+                  ),
+                ),
+                _buildCompactInfoRow(
+                  icon: Icons.person_outline_rounded,
+                  label: translate('Username'),
+                  value: info['username']?.toString() ?? '-',
+                  muted: muted,
+                ),
+                _buildCompactInfoRow(
+                  icon: Icons.lan_outlined,
+                  label: translate('Local Address'),
+                  value: primaryAddress == null
+                      ? '-'
+                      : _formatEndpoint(primaryAddress, port),
+                  muted: muted,
+                  trailing: hiddenAddressCount > 0
+                      ? TextButton(
+                          onPressed: () =>
+                              _showAddressList(context, addresses, port),
+                          style: TextButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(horizontal: 5),
+                            minimumSize: const Size(0, 26),
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          ),
+                          child: Text(
+                            '+$hiddenAddressCount',
+                            style: const TextStyle(fontSize: 11),
+                          ),
+                        )
+                      : null,
+                ),
+                if (webAccessEnabled)
+                  _buildCompactInfoRow(
+                    icon: Icons.language_rounded,
+                    label: 'Web remote access',
+                    value: webEndpointValues.isEmpty
+                        ? webRuntimeState.toUpperCase()
+                        : '${webRuntimeState.toUpperCase()} · ${webEndpointValues.first}',
                     muted: muted,
                   ),
               ],
@@ -400,9 +394,7 @@ class _LanServerInfoPanelState extends State<LanServerInfoPanel> {
       margin: widget.compact ? EdgeInsets.zero : const EdgeInsets.all(12),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: BorderSide(
-          color: isDark ? Colors.white12 : const Color(0xFFDDE2EA),
-        ),
+        side: BorderSide(color: SuyaPalette.of(context).border),
       ),
       child: Padding(
         padding: const EdgeInsets.all(14),
@@ -535,7 +527,7 @@ class _LanServerInfoPanelState extends State<LanServerInfoPanel> {
                   children: [
                     TextButton.icon(
                       onPressed: () => launchUrl(
-                          Uri.parse(runtimeEndpoints.first),
+                        Uri.parse(runtimeEndpoints.first),
                         mode: LaunchMode.externalApplication,
                       ),
                       icon: const Icon(Icons.open_in_browser_rounded, size: 16),
@@ -670,9 +662,7 @@ class _LanServerInfoPanelState extends State<LanServerInfoPanel> {
     required Color muted,
   }) {
     final warning = Theme.of(context).colorScheme.error;
-    final fieldColor = isDark
-        ? Colors.white.withValues(alpha: 0.05)
-        : const Color(0xFFF7F9FC);
+    final fieldColor = SuyaPalette.of(context).inset;
     final usernameValue = username.trim().isEmpty
         ? translate('Not available')
         : username;
@@ -715,10 +705,10 @@ class _LanServerInfoPanelState extends State<LanServerInfoPanel> {
             icon: const Icon(Icons.lock_outline_rounded, size: 17),
             label: Text(translate('Set Password')),
             style: ElevatedButton.styleFrom(
-              foregroundColor: Colors.white,
+              foregroundColor: Theme.of(context).colorScheme.onPrimary,
               padding: const EdgeInsets.symmetric(vertical: 11),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(9),
+                borderRadius: BorderRadius.circular(LandeskTheme.controlRadius),
               ),
             ),
           ),
@@ -739,7 +729,7 @@ class _LanServerInfoPanelState extends State<LanServerInfoPanel> {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
       decoration: BoxDecoration(
         color: fieldColor,
-        borderRadius: BorderRadius.circular(9),
+        borderRadius: BorderRadius.circular(LandeskTheme.controlRadius),
       ),
       child: Row(
         children: [
@@ -843,7 +833,7 @@ class _LanServerInfoPanelState extends State<LanServerInfoPanel> {
       builder: (dialogContext) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(LandeskTheme.cardRadius),
           ),
           title: Row(
             children: [
@@ -851,12 +841,12 @@ class _LanServerInfoPanelState extends State<LanServerInfoPanel> {
                 width: 38,
                 height: 38,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFEAF3FF),
+                  color: SuyaPalette.of(context).selection,
                   borderRadius: BorderRadius.circular(11),
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.badge_outlined,
-                  color: Color(0xFF1677FF),
+                  color: Theme.of(context).colorScheme.primary,
                   size: 20,
                 ),
               ),
@@ -1041,11 +1031,9 @@ Future<void> showLanSettingsDialog(
         final useDesktopLayout = isDesktop || isWebDesktop;
         final isDark = Theme.of(context).brightness == Brightness.dark;
         final primary = Theme.of(context).colorScheme.primary;
-        final muted = isDark ? Colors.white60 : const Color(0xFF737B8C);
-        final fieldFill = isDark
-            ? const Color(0xFF292C33)
-            : const Color(0xFFF7F9FC);
-        final border = isDark ? Colors.white12 : const Color(0xFFE1E6EE);
+        final muted = SuyaPalette.of(context).secondary;
+        final fieldFill = SuyaPalette.of(context).inset;
+        final border = SuyaPalette.of(context).border;
 
         InputDecoration fieldDecoration({
           required String label,
@@ -1123,7 +1111,7 @@ Future<void> showLanSettingsDialog(
             horizontal: useDesktopLayout ? 40 : 16,
             vertical: 24,
           ),
-          backgroundColor: isDark ? const Color(0xFF202228) : Colors.white,
+          backgroundColor: SuyaPalette.of(context).surface,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(18),
           ),
@@ -1579,13 +1567,17 @@ Future<void> showLanSettingsDialog(
                             : const Icon(Icons.check_rounded, size: 18),
                         label: Text(translate('Save')),
                         style: ElevatedButton.styleFrom(
-                          foregroundColor: Colors.white,
+                          foregroundColor: Theme.of(
+                            context,
+                          ).colorScheme.onPrimary,
                           padding: const EdgeInsets.symmetric(
                             horizontal: 18,
                             vertical: 13,
                           ),
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(9),
+                            borderRadius: BorderRadius.circular(
+                              LandeskTheme.controlRadius,
+                            ),
                           ),
                         ),
                       ),
@@ -1675,11 +1667,8 @@ class _DesktopHomePageState extends State<DesktopHomePage>
   }
 
   Widget _buildNavigationSidebar(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final muted = isDark ? Colors.white60 : const Color(0xFF6F7786);
-    final panelColor = isDark
-        ? const Color(0xFF1E2026)
-        : const Color(0xFFFBFCFE);
+    final muted = SuyaPalette.of(context).secondary;
+    final panelColor = SuyaPalette.of(context).background;
     final setupIssues = _setupReadinessIssues;
     return Container(
       width: 280,
@@ -1690,28 +1679,13 @@ class _DesktopHomePageState extends State<DesktopHomePage>
             padding: const EdgeInsets.fromLTRB(22, 20, 18, 18),
             child: Row(
               children: [
-                Container(
-                  width: 46,
-                  height: 46,
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF2684FF), Color(0xFF1266E3)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.circular(13),
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFF1677FF).withOpacity(0.22),
-                        blurRadius: 12,
-                        offset: const Offset(0, 5),
-                      ),
-                    ],
-                  ),
-                  child: const Icon(
-                    Icons.desktop_windows_rounded,
-                    color: Colors.white,
-                    size: 26,
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(14),
+                  child: Image.asset(
+                    'assets/icon.png',
+                    width: 46,
+                    height: 46,
+                    semanticLabel: 'landesk',
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -1742,7 +1716,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
             height: 1,
             indent: 18,
             endIndent: 18,
-            color: isDark ? Colors.white10 : const Color(0xFFF0F2F6),
+            color: SuyaPalette.of(context).inset,
           ),
           Expanded(
             child: SingleChildScrollView(
@@ -2036,7 +2010,9 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                     height: 30,
                     decoration: BoxDecoration(
                       color: warningColor.withOpacity(0.13),
-                      borderRadius: BorderRadius.circular(9),
+                      borderRadius: BorderRadius.circular(
+                        LandeskTheme.controlRadius,
+                      ),
                     ),
                     child: Icon(
                       _setupIssueIcon(firstIssue),
@@ -2149,7 +2125,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                   color: const Color(0xFFFFF4DD),
                   borderRadius: BorderRadius.circular(11),
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.fact_check_outlined,
                   color: Color(0xFFF59E0B),
                   size: 21,
@@ -2185,7 +2161,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                         height: 1,
                         color: isDark
                             ? Colors.white10
-                            : const Color(0xFFE8ECF2),
+                            : SuyaPalette.of(context).border,
                       ),
                   ],
                 ],
@@ -2446,8 +2422,8 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                   id == null
                       ? Icons.all_inbox_outlined
                       : id == favoriteUngroupedId
-                          ? Icons.folder_off_outlined
-                          : Icons.folder_outlined,
+                      ? Icons.folder_off_outlined
+                      : Icons.folder_outlined,
                   size: 16,
                   color: foreground,
                 ),
@@ -3252,6 +3228,4 @@ class _DesktopHomePageState extends State<DesktopHomePage>
       _checkingLocalNetworkPermission = false;
     }
   }
-
-
 }

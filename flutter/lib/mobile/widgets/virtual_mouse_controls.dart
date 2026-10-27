@@ -137,26 +137,47 @@ class _VirtualMouseControlsState extends State<VirtualMouseControls>
                       shape: BoxShape.circle,
                       color: _pointer != null
                           ? Theme.of(context).colorScheme.primary
-                          : const Color(0xFF484848).withValues(alpha: .60),
-                      border: Border.all(color: Colors.white54),
+                          : Theme.of(
+                              context,
+                            ).colorScheme.surface.withValues(alpha: .85),
+                      border: Border.all(
+                        color: Theme.of(context).colorScheme.outline,
+                      ),
                     ),
                     child: Center(
                       child: Container(
                         width: size * .36,
                         height: size * .80,
                         decoration: BoxDecoration(
-                          color: Colors.white70,
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.surfaceContainerHighest,
                           borderRadius: BorderRadius.circular(size),
                         ),
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.arrow_drop_up, size: size * .29,
-                                color: const Color(0xFF888888)),
-                            Icon(Icons.circle, size: size * .16,
-                                color: const Color(0xFF888888)),
-                            Icon(Icons.arrow_drop_down, size: size * .29,
-                                color: const Color(0xFF888888)),
+                            Icon(
+                              Icons.arrow_drop_up,
+                              size: size * .29,
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onSurfaceVariant,
+                            ),
+                            Icon(
+                              Icons.circle,
+                              size: size * .16,
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onSurfaceVariant,
+                            ),
+                            Icon(
+                              Icons.arrow_drop_down,
+                              size: size * .29,
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onSurfaceVariant,
+                            ),
                           ],
                         ),
                       ),

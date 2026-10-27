@@ -435,7 +435,7 @@ _connectDialog(
       title: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.password_rounded, color: MyTheme.accent),
+          Icon(Icons.password_rounded, color: Theme.of(context).colorScheme.primary),
           Text(
             translate(
               lanAccess ? 'LAN access credentials' : 'Password Required',
@@ -821,7 +821,7 @@ showSetOSPassword(
       title: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.password_rounded, color: MyTheme.accent),
+          Icon(Icons.password_rounded, color: Theme.of(context).colorScheme.primary),
           Text(translate('OS Password')).paddingOnly(left: 10),
         ],
       ),
@@ -910,7 +910,7 @@ showSetOSAccount(
       title: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.password_rounded, color: MyTheme.accent),
+          Icon(Icons.password_rounded, color: Theme.of(context).colorScheme.primary),
           Text(translate('OS Account')).paddingOnly(left: 10),
         ],
       ),
@@ -1211,7 +1211,7 @@ void renameDialog({
       title: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.edit_rounded, color: MyTheme.accent),
+          Icon(Icons.edit_rounded, color: Theme.of(context).colorScheme.primary),
           Text(translate('Rename')).paddingOnly(left: 10),
         ],
       ),
