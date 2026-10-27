@@ -90,3 +90,16 @@ Future<void> sendRemoteShortcut(
     if (releaseError != null) throw releaseError;
   }
 }
+
+/// Runs complete chords in order; cancellation never interrupts key release.
+Future<void> sendRemoteMacro(List<RemoteShortcut> steps, int delayMs,
+    Future<void> Function(RemoteShortcut) send,
+    {required bool Function() cancelled}) async {
+  for (var i = 0; i < steps.length; i++) {
+    if (cancelled()) return;
+    await send(steps[i]);
+    if (i + 1 < steps.length) {
+      await Future<void>.delayed(Duration(milliseconds: delayMs));
+    }
+  }
+}

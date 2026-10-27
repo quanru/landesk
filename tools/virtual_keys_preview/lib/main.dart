@@ -12,13 +12,23 @@ class Preview extends StatefulWidget {
 
 class _PreviewState extends State<Preview> {
   final events = <String>[];
+  String profile = 'Mac A';
   int taps = 0;
   int pans = 0;
   double zoom = 1;
   @override
   Widget build(BuildContext context) => Scaffold(
         backgroundColor: const Color(0xff152033),
-        appBar: AppBar(title: const Text('Virtual keys · simulator preview')),
+        appBar: AppBar(
+            title: const Text('Virtual keys · simulator preview'),
+            actions: [
+              DropdownButton<String>(
+                  value: profile,
+                  items: ['Mac A', 'Mac B']
+                      .map((p) => DropdownMenuItem(value: p, child: Text(p)))
+                      .toList(),
+                  onChanged: (p) => setState(() => profile = p!)),
+            ]),
         body: SafeArea(
             child: Stack(fit: StackFit.expand, children: [
           GestureDetector(
@@ -44,22 +54,29 @@ class _PreviewState extends State<Preview> {
                       const TextStyle(color: Colors.greenAccent, fontSize: 16)),
               const SizedBox(height: 24),
               const Text(
-                  'Long press a key to edit. Drag to move.\nTap ✓ to finish. Controller toggles visibility.',
+                  'Long press a key to edit. Drag to move.\nTap ✓ to finish. Use + to add keys / macros. Switch Mac A / B to test profiles.',
                   textAlign: TextAlign.center,
                   style: TextStyle(color: Colors.white70)),
             ])),
           ),
-          CustomKeyOverlay(send: (shortcut) async {
-            setState(events.clear);
-            await sendRemoteShortcut(shortcut, (key, down,
-                {required ctrl,
-                required alt,
-                required shift,
-                required command}) async {
-              setState(() => events.add('$key ${down ? "DOWN" : "UP"}  '
-                  '${ctrl ? "Ctrl " : ""}${alt ? "Alt " : ""}${shift ? "Shift " : ""}${command ? "Cmd" : ""}'));
-            });
-          }),
+          CustomKeyOverlay(
+              key: ValueKey(profile),
+              profileId: profile,
+              send: (shortcut) async {
+                if (!mounted) return;
+                await sendRemoteShortcut(shortcut, (key, down,
+                    {required ctrl,
+                    required alt,
+                    required shift,
+                    required command}) async {
+                  if (!mounted) return;
+                  setState(() {
+                    if (events.length >= 8) events.removeAt(0);
+                    events.add('$key ${down ? "DOWN" : "UP"}  '
+                        '${ctrl ? "Ctrl " : ""}${alt ? "Alt " : ""}${shift ? "Shift " : ""}${command ? "Cmd" : ""}');
+                  });
+                });
+              }),
         ])),
       );
 }

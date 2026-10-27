@@ -13,13 +13,13 @@ The archive contained a widget and integration instructions, not a built client.
 
 - Nine keys including Cmd Space, configurable key/modifier combinations.
 - Long press to edit; drag to position; tap the checkmark to finish editing.
-- Visibility toggle and normalized layout persistence, separate Mac/Linux files.
+- Visibility toggle and normalized layout persistence per peer ID and remote OS; existing v2 OS layouts seed new profiles.
 - Mac Cmd Copy/Paste and Linux Ctrl Copy/Paste defaults. Linux terminal users can
   explicitly add Shift in the editor; active remote applications are not detected.
 - Remote writer sends modifiers down, main key down/up, modifiers up in reverse
   order, including best-effort releases after a bridge exception.
 - One in-flight shortcut at a time; existing held modifiers prevent a shortcut
-  from starting. Sticky/held modifiers and macros are not implemented.
+  from starting. Sticky/held modifiers are not implemented. Macros execute complete chords sequentially.
 - iOS-only integration outside remote pointer and touch listeners. Permission,
   view-only, Wayland consent and session-closed checks are retained.
 
@@ -123,5 +123,45 @@ for Rust build scripts; do not mix macOS, simulator and device archives.
   compiler path; device and other platform branches are unchanged.
 
 No protocol, connection, Tailscale, host permission, signing or remote settings
-were changed. P1 size/opacity/per-connection profiles and P2 macros/import/export
-remain outside this initial implementation.
+were changed. Layout import/export and sticky modifiers remain outside this implementation.
+
+
+## Customization update (2026-10-27)
+
+- Long press any key or the controller to edit. Use **+** to add a key; tap a key
+  to edit or delete it. The controller remains available even after deleting all keys.
+- Each key has a label, size (44–120 logical points), background opacity (15–100%),
+  and 1–20 shortcut steps. Text remains opaque for readability. Up/down controls
+  reorder steps; each step has its own key and modifiers. A shared interval
+  (0–2000 ms) separates steps. Each tap runs the sequence once, without loops.
+- **Stop macro** cancels subsequent steps after the current chord is released.
+  Leaving the overlay or backgrounding the app also cancels subsequent steps.
+  A failed send stops the sequence. Timing is local and does not wait for a remote
+  application to finish responding; no real-host macro timing claim is made.
+- Up to 40 keys per layout. Profiles use the connection's peer ID, not the transient
+  session UUID. Connecting to the same machine through a different ID/IP creates
+  a separate profile. All edits persist locally; there is no cloud sync.
+- Preview's Mac A / Mac B switch demonstrates independent profiles; neither is a
+  real remote host. Its production modules remain symlinked, not copied.
+
+Validation: five automated tests pass, including add/edit/delete, appearance and
+macro disk round-trip, independent peer profiles, macro order/cancellation/failure,
+and the original input/drag tests. Full client and preview simulator builds pass;
+the updated full client is installed. Targeted analysis has no errors/warnings;
+three info notices remain (two upstream WillPopScope deprecations and the existing
+test's transitive path_provider_platform_interface import).
+
+Device Hub UI verification: created a two-step Esc/Enter macro, observed the four
+ordered down/up events, switched to Mac B (macro absent) and back to Mac A (macro
+restored), and changed its size to 82 pt and background opacity to 58% using sliders.
+After terminating and relaunching the preview, the editor still showed 82 pt, 58%,
+and both macro steps.
+Evidence: `extended-tests.log`, `extended-analysis.log`, `extended-full-build.log`,
+`extended-preview-build.log`, `extended-macro.png` in the local evidence directory.
+
+Regression surface for this update: `custom_key_overlay.dart` changes only this
+feature's layout/editor/send flow; `remote_shortcut.dart` adds the macro runner
+without changing the chord writer; `remote_page.dart` passes the stable peer ID
+and reports unavailable input as an error so macros stop instead of silently
+continuing. Preview and feature tests change to exercise the new UI. No transport,
+Rust protocol, native build or existing keyboard/pointer handling changed.

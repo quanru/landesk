@@ -6,20 +6,23 @@ import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 
 import 'remote_shortcut.dart';
+import 'virtual_key_editor.dart';
 
 class _KeySpot {
-  _KeySpot(this.shortcut, this.x, this.y);
-  RemoteShortcut shortcut;
+  _KeySpot(this.config, this.x, this.y);
+  _KeySpot.single(RemoteShortcut shortcut, this.x, this.y)
+      : config = VirtualKeyConfig(shortcut.title, [shortcut]);
+  VirtualKeyConfig config;
   double x, y; // normalized coordinates, 0..1
 
   Map<String, dynamic> toJson() => {
-        ...shortcut.toJson(),
+        ...config.toJson(),
         'x': x,
         'y': y,
       };
 
   factory _KeySpot.fromJson(Map<String, dynamic> j) => _KeySpot(
-        RemoteShortcut.fromJson(j),
+        VirtualKeyConfig.fromJson(j),
         (j['x'] as num?)?.toDouble() ?? .5,
         (j['y'] as num?)?.toDouble() ?? .5,
       );
@@ -29,18 +32,24 @@ class _KeySpot {
 /// Short tap sends the remote key; long press enters layout edit mode.
 /// Layout is local to the iPad and persists across sessions.
 class CustomKeyOverlay extends StatefulWidget {
-  const CustomKeyOverlay({super.key, required this.send, this.isMac = true});
+  const CustomKeyOverlay(
+      {super.key,
+      required this.send,
+      this.isMac = true,
+      this.profileId = 'default'});
   final Future<void> Function(RemoteShortcut) send;
   final bool isMac;
+  final String profileId;
 
   @override
   State<CustomKeyOverlay> createState() => _CustomKeyOverlayState();
 }
 
-class _CustomKeyOverlayState extends State<CustomKeyOverlay> {
-  static const _size = 49.0;
+class _CustomKeyOverlayState extends State<CustomKeyOverlay>
+    with WidgetsBindingObserver {
+  bool _cancelled = false;
   String get _filename =>
-      'rustdesk_mobile_virtual_keys_v2_${widget.isMac ? 'mac' : 'linux'}.json';
+      'virtual_keys_v3/${base64Url.encode(utf8.encode(widget.profileId))}_${widget.isMac ? 'mac' : 'linux'}.json';
   bool _sending = false;
   bool _loaded = false;
   Future<void> _pendingSave = Future.value();
@@ -49,27 +58,27 @@ class _CustomKeyOverlayState extends State<CustomKeyOverlay> {
   bool _visible = true;
 
   List<_KeySpot> _defaults() => [
-        _KeySpot(const RemoteShortcut('Esc', 'VK_ESCAPE'), .02, .28),
-        _KeySpot(const RemoteShortcut('Tab', 'VK_TAB'), .02, .40),
-        _KeySpot(
+        _KeySpot.single(const RemoteShortcut('Esc', 'VK_ESCAPE'), .02, .28),
+        _KeySpot.single(const RemoteShortcut('Tab', 'VK_TAB'), .02, .40),
+        _KeySpot.single(
             RemoteShortcut(widget.isMac ? '⌘ Tab' : 'Alt Tab', 'VK_TAB',
                 command: widget.isMac, alt: !widget.isMac),
             .02,
             .52),
-        _KeySpot(
+        _KeySpot.single(
             RemoteShortcut('Copy', 'VK_C',
                 command: widget.isMac, ctrl: !widget.isMac),
             .02,
             .64),
-        _KeySpot(
+        _KeySpot.single(
             RemoteShortcut('Paste', 'VK_V',
                 command: widget.isMac, ctrl: !widget.isMac),
             .83,
             .28),
-        _KeySpot(const RemoteShortcut('↑', 'VK_UP'), .83, .40),
-        _KeySpot(const RemoteShortcut('↓', 'VK_DOWN'), .83, .52),
-        _KeySpot(const RemoteShortcut('Enter', 'VK_ENTER'), .83, .64),
-        _KeySpot(
+        _KeySpot.single(const RemoteShortcut('↑', 'VK_UP'), .83, .40),
+        _KeySpot.single(const RemoteShortcut('↓', 'VK_DOWN'), .83, .52),
+        _KeySpot.single(const RemoteShortcut('Enter', 'VK_ENTER'), .83, .64),
+        _KeySpot.single(
             RemoteShortcut(widget.isMac ? '⌘ Space' : 'Super Space', 'VK_SPACE',
                 command: true),
             .83,
@@ -79,7 +88,20 @@ class _CustomKeyOverlayState extends State<CustomKeyOverlay> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _load();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed) _cancelled = true;
+  }
+
+  @override
+  void dispose() {
+    _cancelled = true;
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
   }
 
   Future<File> _file() async =>
@@ -87,12 +109,16 @@ class _CustomKeyOverlayState extends State<CustomKeyOverlay> {
 
   Future<void> _load() async {
     try {
-      final file = await _file();
+      var file = await _file();
+      if (!await file.exists()) {
+        file = File(
+            '${(await getApplicationSupportDirectory()).path}/rustdesk_mobile_virtual_keys_v2_${widget.isMac ? 'mac' : 'linux'}.json');
+      }
       if (!await file.exists()) return;
       final data =
           jsonDecode(await file.readAsString()) as Map<String, dynamic>;
       final rows = (data['spots'] as List).cast<Map<String, dynamic>>();
-      if (!mounted || rows.length != 9) return;
+      if (!mounted || rows.length > 40) return;
       setState(() {
         _spots = rows.map(_KeySpot.fromJson).toList();
         _visible = data['visible'] != false;
@@ -105,29 +131,36 @@ class _CustomKeyOverlayState extends State<CustomKeyOverlay> {
   }
 
   Future<void> _save() {
+    final destination = _file();
     final data = jsonEncode({
       'spots': _spots.map((s) => s.toJson()).toList(),
       'visible': _visible,
     });
     _pendingSave = _pendingSave.then((_) async {
       try {
-        final file = await _file();
+        final file = await destination;
         await file.parent.create(recursive: true);
         final temporary = File('${file.path}.tmp');
         await temporary.writeAsString(data, flush: true);
         await temporary.rename(file.path);
       } catch (e) {
         debugPrint('CustomKeyOverlay layout save failed: $e');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Could not save key layout')));
+        }
       }
     });
     return _pendingSave;
   }
 
-  Future<void> _send(RemoteShortcut shortcut) async {
+  Future<void> _send(VirtualKeyConfig config) async {
     if (_sending) return;
+    _cancelled = false;
     setState(() => _sending = true);
     try {
-      await widget.send(shortcut);
+      await sendRemoteMacro(config.steps, config.delayMs, widget.send,
+          cancelled: () => !mounted || _cancelled);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -140,90 +173,33 @@ class _CustomKeyOverlayState extends State<CustomKeyOverlay> {
     }
   }
 
-  Future<void> _editShortcut(int index) async {
-    final item = _spots[index].shortcut;
-    final title = TextEditingController(text: item.title);
-    String selectedKey = item.key;
-    bool ctrl = item.ctrl,
-        alt = item.alt,
-        shift = item.shift,
-        command = item.command;
-    final result = await showDialog<RemoteShortcut>(
+  Future<void> _editShortcut(int? index) async {
+    final result = await showDialog<VirtualKeyEditResult>(
       context: context,
-      builder: (dialogContext) => StatefulBuilder(
-          builder: (context, update) => AlertDialog(
-                title: const Text('Edit remote shortcut'),
-                content: SingleChildScrollView(
-                    child: Column(mainAxisSize: MainAxisSize.min, children: [
-                  TextField(
-                      controller: title,
-                      maxLength: 10,
-                      decoration:
-                          const InputDecoration(labelText: 'Button label')),
-                  DropdownButtonFormField<String>(
-                    value: remoteKeyLabels.containsKey(selectedKey)
-                        ? selectedKey
-                        : 'VK_ESCAPE',
-                    decoration: const InputDecoration(labelText: 'Key'),
-                    items: remoteKeyLabels.entries
-                        .map((e) => DropdownMenuItem(
-                            value: e.key, child: Text(e.value)))
-                        .toList(),
-                    onChanged: (value) =>
-                        update(() => selectedKey = value ?? 'VK_ESCAPE'),
-                  ),
-                  CheckboxListTile(
-                      dense: true,
-                      title: const Text('Ctrl'),
-                      value: ctrl,
-                      onChanged: (v) => update(() => ctrl = v ?? false)),
-                  CheckboxListTile(
-                      dense: true,
-                      title: const Text('Alt'),
-                      value: alt,
-                      onChanged: (v) => update(() => alt = v ?? false)),
-                  CheckboxListTile(
-                      dense: true,
-                      title: const Text('Shift'),
-                      value: shift,
-                      onChanged: (v) => update(() => shift = v ?? false)),
-                  CheckboxListTile(
-                      dense: true,
-                      title: const Text('Command / Super'),
-                      value: command,
-                      onChanged: (v) => update(() => command = v ?? false)),
-                ])),
-                actions: [
-                  TextButton(
-                      onPressed: () => Navigator.pop(dialogContext),
-                      child: const Text('Cancel')),
-                  FilledButton(
-                      onPressed: () => Navigator.pop(
-                          dialogContext,
-                          RemoteShortcut(
-                              title.text.trim().isEmpty
-                                  ? 'Key'
-                                  : title.text.trim(),
-                              selectedKey,
-                              ctrl: ctrl,
-                              alt: alt,
-                              shift: shift,
-                              command: command)),
-                      child: const Text('Save')),
-                ],
-              )),
+      builder: (_) => VirtualKeyEditor(
+        initial: index == null
+            ? VirtualKeyConfig(
+                'Key', [const RemoteShortcut('Key', 'VK_ESCAPE')])
+            : _spots[index].config,
+        canDelete: index != null,
+      ),
     );
-    title.dispose();
     if (result == null || !mounted) return;
-    setState(() => _spots[index].shortcut = result);
+    setState(() {
+      if (result.delete) {
+        _spots.removeAt(index!);
+      } else if (index == null) {
+        _spots.add(_KeySpot(result.config!, .5, .5));
+      } else {
+        _spots[index].config = result.config!;
+      }
+    });
     await _save();
   }
 
   @override
   Widget build(BuildContext context) =>
       LayoutBuilder(builder: (context, bounds) {
-        final width = math.max(0.0, bounds.maxWidth - _size);
-        final height = math.max(0.0, bounds.maxHeight - _size);
         if (!_loaded) return const SizedBox.expand();
         return Stack(children: [
           // Always-available small toggle (even with the keys hidden).
@@ -234,20 +210,24 @@ class _CustomKeyOverlayState extends State<CustomKeyOverlay> {
                   color: Colors.black54,
                   borderRadius: BorderRadius.circular(12),
                   child: InkWell(
-                    onTap: () {
-                      setState(() {
-                        if (_edit) {
-                          _edit = false;
-                        } else {
-                          _visible = !_visible;
-                        }
-                      });
-                      _save();
-                    },
-                    onLongPress: () => setState(() {
-                      _visible = true;
-                      _edit = !_edit;
-                    }),
+                    onTap: _sending
+                        ? null
+                        : () {
+                            setState(() {
+                              if (_edit) {
+                                _edit = false;
+                              } else {
+                                _visible = !_visible;
+                              }
+                            });
+                            _save();
+                          },
+                    onLongPress: _sending
+                        ? null
+                        : () => setState(() {
+                              _visible = true;
+                              _edit = !_edit;
+                            }),
                     child: Semantics(
                         label: _edit
                             ? 'Finish editing keys'
@@ -265,17 +245,42 @@ class _CustomKeyOverlayState extends State<CustomKeyOverlay> {
                               size: 21,
                             ))),
                   ))),
+          if (_edit && !_sending)
+            Positioned(
+                top: 6,
+                left: 60,
+                child: Material(
+                    borderRadius: BorderRadius.circular(12),
+                    child: IconButton(
+                        tooltip: 'Add key',
+                        icon: const Icon(Icons.add),
+                        onPressed: _spots.length < 40
+                            ? () => _editShortcut(null)
+                            : null))),
+          if (_sending)
+            Positioned(
+                top: 6,
+                left: 60,
+                child: FilledButton.icon(
+                    onPressed: () => setState(() => _cancelled = true),
+                    icon: const Icon(Icons.stop),
+                    label: Text(_cancelled ? 'Stopping…' : 'Stop macro'))),
           if (_visible)
             ...List.generate(_spots.length, (i) {
               final spot = _spots[i];
+              final size = math.min(spot.config.size,
+                  math.min(bounds.maxWidth, bounds.maxHeight));
+              final width = math.max(0.0, bounds.maxWidth - size);
+              final height = math.max(0.0, bounds.maxHeight - size);
               return Positioned(
                 left: spot.x.clamp(0.0, 1.0).toDouble() * width,
                 top: spot.y.clamp(0.0, 1.0).toDouble() * height,
                 child: GestureDetector(
                   key: ValueKey('virtual-key-$i'),
                   behavior: HitTestBehavior.opaque,
-                  onLongPress:
-                      _edit ? null : () => setState(() => _edit = true),
+                  onLongPress: (_edit || _sending)
+                      ? null
+                      : () => setState(() => _edit = true),
                   onPanUpdate: _edit
                       ? (details) {
                           setState(() {
@@ -291,19 +296,19 @@ class _CustomKeyOverlayState extends State<CustomKeyOverlay> {
                         }
                       : null,
                   onPanEnd: _edit ? (_) => _save() : null,
-                  onTap: () => _edit ? _editShortcut(i) : _send(spot.shortcut),
+                  onTap: () => _edit ? _editShortcut(i) : _send(spot.config),
                   child: Container(
-                    width: _size,
-                    height: _size,
+                    width: size,
+                    height: size,
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
                       color: _edit
                           ? Colors.deepOrange.withOpacity(.85)
-                          : Colors.black.withOpacity(.56),
+                          : Colors.black.withOpacity(spot.config.opacity),
                       borderRadius: BorderRadius.circular(13),
                       border: Border.all(color: Colors.white54),
                     ),
-                    child: Text(spot.shortcut.title,
+                    child: Text(spot.config.title,
                         textAlign: TextAlign.center,
                         style: const TextStyle(
                             color: Colors.white,

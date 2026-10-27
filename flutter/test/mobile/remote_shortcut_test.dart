@@ -44,4 +44,26 @@ void main() {
         throwsStateError);
     expect(releases, ['VK_P', 'Meta', 'VK_SHIFT']);
   });
+  test('macro order, cancellation and failure stop subsequent steps', () async {
+    const steps = [
+      RemoteShortcut('Copy', 'VK_C', command: true),
+      RemoteShortcut('Paste', 'VK_V', command: true)
+    ];
+    final sent = <String>[];
+    await sendRemoteMacro(steps, 0, (s) async => sent.add(s.key),
+        cancelled: () => false);
+    expect(sent, ['VK_C', 'VK_V']);
+    sent.clear();
+    await sendRemoteMacro(steps, 0, (s) async => sent.add(s.key),
+        cancelled: () => sent.isNotEmpty);
+    expect(sent, ['VK_C']);
+    sent.clear();
+    await expectLater(
+        sendRemoteMacro(steps, 0, (s) async {
+          sent.add(s.key);
+          throw StateError('disconnected');
+        }, cancelled: () => false),
+        throwsStateError);
+    expect(sent, ['VK_C']);
+  });
 }

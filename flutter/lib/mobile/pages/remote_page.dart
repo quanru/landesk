@@ -566,6 +566,7 @@ class _RemotePageState extends State<RemotePage> with WidgetsBindingObserver {
           child: CustomKeyOverlay(
         key: ValueKey('virtual-keys-${widget.id}-$isMac'),
         isMac: isMac,
+        profileId: widget.id,
         send: (shortcut) async {
           if (!inputModel.keyboardPerm ||
               inputModel.isViewOnly ||
@@ -575,7 +576,7 @@ class _RemotePageState extends State<RemotePage> with WidgetsBindingObserver {
               inputModel.alt ||
               inputModel.shift ||
               inputModel.command) {
-            return;
+            throw StateError('Remote keyboard is unavailable');
           }
           final targetSession = sessionId;
           await sendRemoteShortcut(shortcut, (name, down,
