@@ -1,0 +1,12 @@
+name: virtual_keys_preview
+description: Simulator interaction harness for the production RustDesk overlay, without a remote transport.
+publish_to: none
+version: 0.1.0+1
+environment:
+  sdk: '>=3.5.0 <4.0.0'
+dependencies:
+  flutter:
+    sdk: flutter
+  path_provider: ^2.1.1
+flutter:
+  uses-material-design: true

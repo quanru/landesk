@@ -23,6 +23,8 @@ import '../../models/model.dart';
 import '../../models/platform_model.dart';
 import '../../utils/image.dart';
 import '../widgets/dialog.dart';
+import '../widgets/custom_key_overlay.dart';
+import '../widgets/remote_shortcut.dart';
 import '../widgets/custom_scale_widget.dart';
 
 final initText = '1' * 1024;
@@ -536,7 +538,7 @@ class _RemotePageState extends State<RemotePage> with WidgetsBindingObserver {
 
   Widget getRawPointerAndKeyBody(Widget child) {
     final ffiModel = Provider.of<FfiModel>(context);
-    return RawPointerMouseRegion(
+    return _withVirtualKeys(RawPointerMouseRegion(
       cursor: ffiModel.keyboard ? SystemMouseCursors.none : MouseCursor.defer,
       inputModel: inputModel,
       // Disable RawKeyFocusScope before the connecting is established.
@@ -547,7 +549,54 @@ class _RemotePageState extends State<RemotePage> with WidgetsBindingObserver {
               inputModel: inputModel,
               child: child)
           : child,
-    );
+    ));
+  }
+
+  Widget _withVirtualKeys(Widget child) {
+    if (!isIOS ||
+        !gFFI.ffiModel.pi.isSet.isTrue ||
+        gFFI.ffiModel.waitForFirstImage.isTrue ||
+        inputModel.isViewCamera) {
+      return child;
+    }
+    final isMac = gFFI.ffiModel.pi.platform == kPeerPlatformMacOS;
+    return Stack(fit: StackFit.expand, children: [
+      child,
+      SafeArea(
+          child: CustomKeyOverlay(
+        key: ValueKey('virtual-keys-${widget.id}-$isMac'),
+        isMac: isMac,
+        send: (shortcut) async {
+          if (!inputModel.keyboardPerm ||
+              inputModel.isViewOnly ||
+              !inputModel.keyboardInputAllowed ||
+              gFFI.closed ||
+              inputModel.ctrl ||
+              inputModel.alt ||
+              inputModel.shift ||
+              inputModel.command) {
+            return;
+          }
+          final targetSession = sessionId;
+          await sendRemoteShortcut(shortcut, (name, down,
+              {required ctrl,
+              required alt,
+              required shift,
+              required command}) async {
+            await bind.sessionInputKey(
+              sessionId: targetSession,
+              name: name,
+              down: down,
+              press: false,
+              ctrl: ctrl,
+              alt: alt,
+              shift: shift,
+              command: command,
+            );
+          });
+        },
+      )),
+    ]);
   }
 
   Widget getBottomAppBar() {
