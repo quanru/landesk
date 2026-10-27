@@ -214,7 +214,16 @@ else()
             set(LIBVPX_TARGET "${LIBVPX_TARGET_ARCH}-darwin17-gcc") # enable latest CPU instructions for best performance and less CPU usage on MacOS
         endif()
     elseif(VCPKG_TARGET_IS_IOS)
-        if(VCPKG_TARGET_ARCHITECTURE STREQUAL arm)
+        if(VCPKG_OSX_SYSROOT STREQUAL "iphonesimulator" AND VCPKG_TARGET_ARCHITECTURE STREQUAL "arm64")
+            # libvpx's arm64-darwin target forces the device SDK. Use portable
+            # C for simulator validation; device builds keep their SIMD path.
+            set(LIBVPX_TARGET "generic-gnu")
+            set(SIM_FLAGS "--target=arm64-apple-ios${VCPKG_OSX_DEPLOYMENT_TARGET}-simulator -isysroot ${VCPKG_DETECTED_CMAKE_OSX_SYSROOT}")
+            set(ENV{CFLAGS} "${SIM_FLAGS}")
+            set(ENV{CXXFLAGS} "${SIM_FLAGS}")
+            set(ENV{LDFLAGS} "${SIM_FLAGS}")
+            set(ENV{LD} "${VCPKG_DETECTED_CMAKE_C_COMPILER}")
+        elseif(VCPKG_TARGET_ARCHITECTURE STREQUAL arm)
             set(LIBVPX_TARGET "armv7-darwin-gcc")
         elseif(VCPKG_TARGET_ARCHITECTURE STREQUAL arm64)
             set(LIBVPX_TARGET "arm64-darwin-gcc")

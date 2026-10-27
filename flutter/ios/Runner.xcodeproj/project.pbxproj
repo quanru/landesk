@@ -371,17 +371,19 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
+				RUSTDESK_TARGET = "aarch64-apple-ios";
+				"RUSTDESK_TARGET[sdk=iphonesimulator*]" = "aarch64-apple-ios-sim";
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
 					"\"${DT_TOOLCHAIN_DIR}/usr/lib/swift/${PLATFORM_NAME}\"",
 					/usr/lib/swift,
 					"$(TOOLCHAIN_DIR)/usr/lib/swift/$(PLATFORM_NAME)/",
 					"$(SDKROOT)/usr/lib/swift",
-					"$(PROJECT_DIR)/../../target/aarch64-apple-ios/release/",
+					"$(PROJECT_DIR)/../../target/$(RUSTDESK_TARGET)/release/",
 				);
 				OTHER_LDFLAGS = (
 					"$(inherited)",
-					"$(PROJECT_DIR)/../../target/aarch64-apple-ios/release/liblibrustdesk.a",
+					"$(PROJECT_DIR)/../../target/$(RUSTDESK_TARGET)/release/liblibrustdesk.a",
 					"-ObjC",
 					"-l\"c++\"",
 					"-l\"sqlite3\"",
@@ -567,17 +569,19 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
+				RUSTDESK_TARGET = "aarch64-apple-ios";
+				"RUSTDESK_TARGET[sdk=iphonesimulator*]" = "aarch64-apple-ios-sim";
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
 					"\"${DT_TOOLCHAIN_DIR}/usr/lib/swift/${PLATFORM_NAME}\"",
 					/usr/lib/swift,
 					"$(TOOLCHAIN_DIR)/usr/lib/swift/$(PLATFORM_NAME)/",
 					"$(SDKROOT)/usr/lib/swift",
-					"$(PROJECT_DIR)/../../target/aarch64-apple-ios/release/",
+					"$(PROJECT_DIR)/../../target/$(RUSTDESK_TARGET)/release/",
 				);
 				OTHER_LDFLAGS = (
 					"$(inherited)",
-					"$(PROJECT_DIR)/../../target/aarch64-apple-ios/release/liblibrustdesk.a",
+					"$(PROJECT_DIR)/../../target/$(RUSTDESK_TARGET)/release/liblibrustdesk.a",
 					"-ObjC",
 					"-l\"c++\"",
 					"-l\"sqlite3\"",
@@ -655,17 +659,19 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
+				RUSTDESK_TARGET = "aarch64-apple-ios";
+				"RUSTDESK_TARGET[sdk=iphonesimulator*]" = "aarch64-apple-ios-sim";
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
 					"\"${DT_TOOLCHAIN_DIR}/usr/lib/swift/${PLATFORM_NAME}\"",
 					/usr/lib/swift,
 					"$(TOOLCHAIN_DIR)/usr/lib/swift/$(PLATFORM_NAME)/",
 					"$(SDKROOT)/usr/lib/swift",
-					"$(PROJECT_DIR)/../../target/aarch64-apple-ios/release/",
+					"$(PROJECT_DIR)/../../target/$(RUSTDESK_TARGET)/release/",
 				);
 				OTHER_LDFLAGS = (
 					"$(inherited)",
-					"$(PROJECT_DIR)/../../target/aarch64-apple-ios/release/liblibrustdesk.a",
+					"$(PROJECT_DIR)/../../target/$(RUSTDESK_TARGET)/release/liblibrustdesk.a",
 					"-ObjC",
 					"-l\"c++\"",
 					"-l\"sqlite3\"",
