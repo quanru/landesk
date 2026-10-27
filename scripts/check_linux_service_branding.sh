@@ -45,7 +45,7 @@ if [[ -e res/rustdesk.service ]]; then
   exit 1
 fi
 
-require_fixed "$service_resource" 'Description=LocalDesk'
+require_fixed "$service_resource" 'Description=landesk'
 require_fixed "$service_resource" 'ExecStart=/usr/bin/localdesk --service'
 require_fixed "$service_resource" 'ExecStop=/usr/bin/pkill -f "localdesk --"'
 require_fixed build.py 'Package: localdesk'

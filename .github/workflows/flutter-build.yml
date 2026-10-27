@@ -1,4 +1,4 @@
-name: Build LocalDesk native packages
+name: Build landesk native packages
 
 on:
   workflow_call:
@@ -219,7 +219,7 @@ jobs:
         shell: bash
         run: echo "SODIUM_LIB_DIR=$VCPKG_ROOT/installed/${{ matrix.job.vcpkg-triplet }}/lib" >> "$GITHUB_ENV"
 
-      - name: Build LocalDesk
+      - name: Build landesk
         run: |
           # Windows: build RustDesk
           # --hwcodec is shared by all Windows targets; per-target extras (e.g. --vram) come from the matrix
@@ -264,7 +264,7 @@ jobs:
           name: localdesk-unsigned-windows-${{ matrix.job.arch }}
           path: rustdesk
 
-      - name: Sign LocalDesk files
+      - name: Sign landesk files
         if: env.UPLOAD_ARTIFACT == 'true' && env.SIGN_BASE_URL != '-2'
         shell: bash
         run: |
@@ -293,7 +293,7 @@ jobs:
         if: env.UPLOAD_ARTIFACT == 'true'
         run: |
           pushd ./res/msi
-          python preprocess.py --arp --app-name LocalDesk --manufacturer LocalDesk -d ../../rustdesk
+          python preprocess.py --arp --app-name LocalDesk --manufacturer landesk -d ../../rustdesk
           if ($LASTEXITCODE -ne 0) { throw "MSI preprocessing failed with exit code $LASTEXITCODE" }
           nuget restore msi.sln
           $msiPlatform = if ('${{ matrix.job.arch }}' -eq 'aarch64') { 'ARM64' } else { 'x64' }
@@ -302,7 +302,7 @@ jobs:
           mv $msi.FullName ../../SignOutput/localdesk-${{ env.VERSION }}-${{ matrix.job.arch }}.msi
           sha256sum ../../SignOutput/localdesk-*.msi
 
-      - name: Sign LocalDesk self-extracted file
+      - name: Sign landesk self-extracted file
         if: env.UPLOAD_ARTIFACT == 'true' && env.SIGN_BASE_URL != '-2'
         shell: bash
         run: |
@@ -404,7 +404,7 @@ jobs:
           head -n 100 "${VCPKG_ROOT}/buildtrees/ffmpeg/build-${{ matrix.job.vcpkg-triplet }}-rel-out.log" || true
         shell: bash
 
-      - name: Build LocalDesk
+      - name: Build landesk
         id: build
         shell: bash
         run: |
@@ -448,7 +448,7 @@ jobs:
           name: localdesk-unsigned-windows-${{ matrix.job.arch }}
           path: Release
 
-      - name: Sign LocalDesk files
+      - name: Sign landesk files
         if: env.UPLOAD_ARTIFACT == 'true' && env.SIGN_BASE_URL != '-2'
         shell: bash
         run: |
@@ -466,7 +466,7 @@ jobs:
           mkdir -p ./SignOutput
           mv ./target/release/rustdesk-portable-packer.exe ./SignOutput/localdesk-${{ env.VERSION }}-${{ matrix.job.arch }}-sciter.exe
 
-      - name: Sign LocalDesk self-extracted file
+      - name: Sign landesk self-extracted file
         if: env.UPLOAD_ARTIFACT == 'true' && env.SIGN_BASE_URL != '-2'
         shell: bash
         run: |
@@ -484,7 +484,7 @@ jobs:
 
   build-rustdesk-ios:
     if: ${{ inputs.upload-artifact && inputs.build-mobile }}
-    name: Build LocalDesk ios ipa
+    name: Build landesk ios ipa
     runs-on: ${{ matrix.job.os }}
     needs: [generate-bridge]
     strategy:
@@ -561,7 +561,7 @@ jobs:
           name: bridge-artifact
           path: ./
 
-      - name: Build LocalDesk lib
+      - name: Build landesk lib
         run: |
           rustup target add ${{ matrix.job.target }}
           cargo build --locked --features flutter,hwcodec --release --target aarch64-apple-ios --lib
@@ -572,7 +572,7 @@ jobs:
           name: liblibrustdesk.a
           path: target/aarch64-apple-ios/release/liblibrustdesk.a
 
-      - name: Build LocalDesk
+      - name: Build landesk
         shell: bash
         run: |
           pushd flutter
@@ -750,7 +750,7 @@ jobs:
           cargo -V
           rustc -V
 
-      - name: Build LocalDesk
+      - name: Build landesk
         run: |
           if [ "${{ matrix.job.target }}" = "aarch64-apple-darwin" ]; then
             MIN_MACOS_VERSION="12.3"
@@ -767,7 +767,7 @@ jobs:
           CREATE_DMG="$(command -v create-dmg)"
           CREATE_DMG="$(readlink -f "$CREATE_DMG")"
           sed -i -e 's/MAXIMUM_UNMOUNTING_ATTEMPTS=3/MAXIMUM_UNMOUNTING_ATTEMPTS=7/' "$CREATE_DMG"
-          create-dmg --icon "LocalDesk.app" 200 190 --hide-extension "LocalDesk.app" --window-size 800 400 --app-drop-link 600 185 localdesk-${{ env.VERSION }}-${{ matrix.job.arch }}.dmg ./flutter/build/macos/Build/Products/Release/LocalDesk.app
+          create-dmg --icon "landesk.app" 200 190 --hide-extension "landesk.app" --window-size 800 400 --app-drop-link 600 185 localdesk-${{ env.VERSION }}-${{ matrix.job.arch }}.dmg ./flutter/build/macos/Build/Products/Release/landesk.app
 
       - name: Upload unsigned macOS app
         if: env.UPLOAD_ARTIFACT == 'true'
@@ -788,10 +788,10 @@ jobs:
           security unlock-keychain -p ${{ secrets.MACOS_P12_PASSWORD }} rustdesk.keychain
           # start sign the rustdesk.app and dmg
           rm -rf *.dmg || true
-          codesign --force --options runtime -s ${{ secrets.MACOS_CODESIGN_IDENTITY }} --deep --strict --entitlements ./flutter/macos/Runner/Release.entitlements ./flutter/build/macos/Build/Products/Release/LocalDesk.app -vvv
-          create-dmg --icon "LocalDesk.app" 200 190 --hide-extension "LocalDesk.app" --window-size 800 400 --app-drop-link 600 185 localdesk-${{ env.VERSION }}-${{ matrix.job.arch }}.dmg ./flutter/build/macos/Build/Products/Release/LocalDesk.app
+          codesign --force --options runtime -s ${{ secrets.MACOS_CODESIGN_IDENTITY }} --deep --strict --entitlements ./flutter/macos/Runner/Release.entitlements ./flutter/build/macos/Build/Products/Release/landesk.app -vvv
+          create-dmg --icon "landesk.app" 200 190 --hide-extension "landesk.app" --window-size 800 400 --app-drop-link 600 185 localdesk-${{ env.VERSION }}-${{ matrix.job.arch }}.dmg ./flutter/build/macos/Build/Products/Release/landesk.app
           codesign --force --options runtime -s ${{ secrets.MACOS_CODESIGN_IDENTITY }} --deep --strict localdesk-${{ env.VERSION }}-${{ matrix.job.arch }}.dmg -vvv
-          # notarize the architecture-specific LocalDesk DMG
+          # notarize the architecture-specific landesk DMG
           rcodesign notary-submit --api-key-path ${{ github.workspace }}/rustdesk.json --staple localdesk-${{ env.VERSION }}-${{ matrix.job.arch }}.dmg
 
       - name: Upload macOS installer
@@ -853,7 +853,7 @@ jobs:
   build-rustdesk-android:
     if: ${{ inputs.build-mobile }}
     needs: [generate-bridge]
-    name: Build LocalDesk android apk ${{ matrix.job.target }}
+    name: Build landesk android apk ${{ matrix.job.target }}
     runs-on: ${{ matrix.job.os }}
     strategy:
       fail-fast: false
@@ -1003,7 +1003,7 @@ jobs:
           prefix-key: rustdesk-lib-cache-android # TODO: drop '-android' part after caches are invalidated
           key: ${{ matrix.job.target }}
 
-      - name: Build LocalDesk lib
+      - name: Build landesk lib
         env:
           ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
           ANDROID_NDK_ROOT: ${{ steps.setup-ndk.outputs.ndk-path }}
@@ -1039,7 +1039,7 @@ jobs:
           name: librustdesk.so.${{ matrix.job.target }}
           path: ./target/${{ matrix.job.target }}/release/liblibrustdesk.so
 
-      - name: Build LocalDesk
+      - name: Build landesk
         shell: bash
         env:
           JAVA_HOME: /usr/lib/jvm/java-17-openjdk-amd64
@@ -1175,7 +1175,7 @@ jobs:
 
   build-rustdesk-android-universal:
     needs: [build-rustdesk-android]
-    name: Build LocalDesk android universal apk
+    name: Build landesk android universal apk
     if: ${{ inputs.upload-artifact && inputs.build-mobile }}
     runs-on: ubuntu-24.04
     env:
@@ -1278,7 +1278,7 @@ jobs:
           name: librustdesk.so.i686-linux-android
           path: ./flutter/android/app/src/main/jniLibs/x86
 
-      - name: Build LocalDesk
+      - name: Build landesk
         shell: bash
         env:
           JAVA_HOME: /usr/lib/jvm/java-17-openjdk-amd64
@@ -1389,7 +1389,7 @@ jobs:
 
   build-rustdesk-linux:
     needs: [generate-bridge]
-    name: Build LocalDesk linux ${{ matrix.job.target }}
+    name: Build landesk linux ${{ matrix.job.target }}
     runs-on: ${{ matrix.job.on }}
     strategy:
       fail-fast: false
@@ -1508,7 +1508,7 @@ jobs:
           path: ./
 
       - uses: rustdesk-org/run-on-arch-action@d3fcfbb632b84cf7f6bc772bfaaa2c2f4f8789a8 # no release tag; commit 2026-05-26
-        name: Build LocalDesk
+        name: Build landesk
         id: vcpkg
         if: matrix.job.arch == 'x86_64' || env.UPLOAD_ARTIFACT == 'true'
         with:
@@ -2055,7 +2055,7 @@ jobs:
           echo "RUST_TOOLCHAIN_VERSION=$RUST_TOOLCHAIN_VERSION" >> $GITHUB_ENV
 
       - uses: rustdesk-org/run-on-arch-action@d3fcfbb632b84cf7f6bc772bfaaa2c2f4f8789a8 # no release tag; commit 2026-05-26
-        name: Build LocalDesk sciter binary for ${{ matrix.job.arch }}
+        name: Build landesk sciter binary for ${{ matrix.job.arch }}
         id: vcpkg
         with:
           arch: ${{ matrix.job.arch }}
@@ -2190,7 +2190,7 @@ jobs:
             export DEB_ARCH=${{ matrix.job.deb_arch }}
             ./build.py --package ./Release
 
-      - name: Rename LocalDesk
+      - name: Rename landesk
         shell: bash
         run: |
           for name in localdesk-*.deb; do
@@ -2318,7 +2318,7 @@ jobs:
           mv localdesk-${{ env.VERSION }}-${{ matrix.job.arch }}${{ matrix.job.suffix }}.deb flatpak/localdesk.deb
 
       - uses: rustdesk-org/run-on-arch-action@d3fcfbb632b84cf7f6bc772bfaaa2c2f4f8789a8 # no release tag; commit 2026-05-26
-        name: Build LocalDesk flatpak package for ${{ matrix.job.arch }}
+        name: Build landesk flatpak package for ${{ matrix.job.arch }}
         id: flatpak
         with:
           arch: ${{ matrix.job.arch }}
@@ -2489,7 +2489,7 @@ jobs:
             await github.rest.repos.updateRelease({
               ...context.repo,
               release_id: release.id,
-              name: tag === 'nightly' ? 'LocalDesk Nightly' : release.name,
+              name: tag === 'nightly' ? 'landesk Nightly' : release.name,
               body,
               prerelease: tag === 'nightly' || tag.includes('-'),
             });

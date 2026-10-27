@@ -364,8 +364,8 @@ Section: net
 Priority: optional
 Version: %s
 Architecture: %s
-Maintainer: LocalDesk contributors
-Homepage: https://github.com/quanru/localdesk
+Maintainer: landesk contributors
+Homepage: https://github.com/quanru/landesk
 Depends: libgtk-3-0t64 | libgtk-3-0, libxcb-randr0, libxdo3 | libxdo4, libxfixes3, libxcb-shape0, libxcb-xfixes0, libasound2t64 | libasound2, libsystemd0, curl, libva2, libva-drm2, libva-x11-2, libgstreamer-plugins-base1.0-0, libpam0g, gstreamer1.0-pipewire%s
 Recommends: libayatana-appindicator3-1, xdotool
 Description: A remote control software.
@@ -917,11 +917,11 @@ def build_flutter_dmg(version, features):
     mac_arch = 'arm64' if platform.machine().lower() in ('arm64', 'aarch64') else 'x86_64'
     system2(
         f'FLUTTER_XCODE_ARCHS={mac_arch} FLUTTER_XCODE_ONLY_ACTIVE_ARCH=YES flutter build macos --release')
-    system2('cp -rf ../target/release/service ./build/macos/Build/Products/Release/LocalDesk.app/Contents/MacOS/')
+    system2('cp -rf ../target/release/service ./build/macos/Build/Products/Release/landesk.app/Contents/MacOS/')
     # Flutter signs the app before the service binary is copied. Sign the new nested
     # executable, refresh the outer ad-hoc signature, and fail before packaging if
     # the resulting bundle seal is invalid. Release CI may replace this signature.
-    app_path = './build/macos/Build/Products/Release/LocalDesk.app'
+    app_path = './build/macos/Build/Products/Release/landesk.app'
     service_path = f'{app_path}/Contents/MacOS/service'
     system2(f'codesign --force --sign - --options runtime "{service_path}"')
     system2(
@@ -930,7 +930,7 @@ def build_flutter_dmg(version, features):
     system2(f'codesign --verify --deep --strict --verbose=4 "{app_path}"')
     '''
     system2(
-        "create-dmg --volname \"LocalDesk Installer\" --window-pos 200 120 --window-size 800 400 --icon-size 100 --app-drop-link 600 185 --icon LocalDesk.app 200 190 --hide-extension LocalDesk.app localdesk.dmg ./build/macos/Build/Products/Release/LocalDesk.app")
+        "create-dmg --volname \"landesk Installer\" --window-pos 200 120 --window-size 800 400 --icon-size 100 --app-drop-link 600 185 --icon landesk.app 200 190 --hide-extension landesk.app localdesk.dmg ./build/macos/Build/Products/Release/landesk.app")
     os.rename("localdesk.dmg", f"../localdesk-{version}.dmg")
     '''
     os.chdir("..")
@@ -997,7 +997,7 @@ def main():
         return
 
     if not args.flutter:
-        raise SystemExit('LocalDesk requires --flutter; the legacy Sciter frontend was removed')
+        raise SystemExit('landesk requires --flutter; the legacy Sciter frontend was removed')
 
     if os.path.exists(exe_path):
         os.unlink(exe_path)
@@ -1082,9 +1082,9 @@ def main():
             system2('cargo --locked bundle --release --features ' + features)
             if osx:
                 system2(
-                    'strip target/release/bundle/osx/LocalDesk.app/Contents/MacOS/rustdesk')
+                    'strip target/release/bundle/osx/landesk.app/Contents/MacOS/rustdesk')
                 system2(
-                    'cp libsciter.dylib target/release/bundle/osx/LocalDesk.app/Contents/MacOS/')
+                    'cp libsciter.dylib target/release/bundle/osx/landesk.app/Contents/MacOS/')
                 # https://github.com/sindresorhus/create-dmg
                 system2('/bin/rm -rf *.dmg')
                 pa = os.environ.get('P')
@@ -1092,16 +1092,16 @@ def main():
                     system2('''
     # buggy: rcodesign sign ... path/*, have to sign one by one
     # install rcodesign via cargo install apple-codesign
-    #rcodesign sign --p12-file ~/.p12/localdesk-developer-id.p12 --p12-password-file ~/.p12/.cert-pass --code-signature-flags runtime ./target/release/bundle/osx/LocalDesk.app/Contents/MacOS/rustdesk
-    #rcodesign sign --p12-file ~/.p12/localdesk-developer-id.p12 --p12-password-file ~/.p12/.cert-pass --code-signature-flags runtime ./target/release/bundle/osx/LocalDesk.app/Contents/MacOS/libsciter.dylib
-    #rcodesign sign --p12-file ~/.p12/localdesk-developer-id.p12 --p12-password-file ~/.p12/.cert-pass --code-signature-flags runtime ./target/release/bundle/osx/LocalDesk.app
+    #rcodesign sign --p12-file ~/.p12/localdesk-developer-id.p12 --p12-password-file ~/.p12/.cert-pass --code-signature-flags runtime ./target/release/bundle/osx/landesk.app/Contents/MacOS/rustdesk
+    #rcodesign sign --p12-file ~/.p12/localdesk-developer-id.p12 --p12-password-file ~/.p12/.cert-pass --code-signature-flags runtime ./target/release/bundle/osx/landesk.app/Contents/MacOS/libsciter.dylib
+    #rcodesign sign --p12-file ~/.p12/localdesk-developer-id.p12 --p12-password-file ~/.p12/.cert-pass --code-signature-flags runtime ./target/release/bundle/osx/landesk.app
     # goto "Keychain Access" -> "My Certificates" for below id which starts with "Developer ID Application:"
-    codesign -s "Developer ID Application: {0}" --force --options runtime  ./target/release/bundle/osx/LocalDesk.app/Contents/MacOS/*
-    codesign -s "Developer ID Application: {0}" --force --options runtime  ./target/release/bundle/osx/LocalDesk.app
+    codesign -s "Developer ID Application: {0}" --force --options runtime  ./target/release/bundle/osx/landesk.app/Contents/MacOS/*
+    codesign -s "Developer ID Application: {0}" --force --options runtime  ./target/release/bundle/osx/landesk.app
     '''.format(pa))
                 system2(
-                    'create-dmg "LocalDesk %s.dmg" "target/release/bundle/osx/LocalDesk.app"' % version)
-                os.rename('LocalDesk %s.dmg' %
+                    'create-dmg "landesk %s.dmg" "target/release/bundle/osx/landesk.app"' % version)
+                os.rename('landesk %s.dmg' %
                           version, 'localdesk-%s.dmg' % version)
                 if pa:
                     system2('''
@@ -1115,7 +1115,7 @@ def main():
     # https://gregoryszorc.com/docs/apple-codesign/stable/apple_codesign_getting_started.html#apple-codesign-app-store-connect-api-key
     # p8 file is generated when you generate api key (can download only once)
     rcodesign notary-submit --api-key-path ../.p12/api-key.json  --staple localdesk-{1}.dmg
-    # verify:  spctl -a -t exec -v /Applications/LocalDesk.app
+    # verify:  spctl -a -t exec -v /Applications/landesk.app
     '''.format(pa, version))
                 else:
                     print('Not signed')

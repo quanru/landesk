@@ -17,7 +17,7 @@ cp target/release/liblibrustdesk.dylib target/release/librustdesk.dylib
 cd flutter
 XCODE_XCCONFIG_FILE="$repo_dir/tools/localdesk/macos-arm64.xcconfig" \
   "$FLUTTER_BIN" build macos --release
-app_path=build/macos/Build/Products/Release/LocalDesk.app
+app_path=build/macos/Build/Products/Release/landesk.app
 cp ../target/release/service "$app_path/Contents/MacOS/service"
 codesign --force --sign - --options runtime "$app_path/Contents/MacOS/service"
 codesign --force --sign - --options runtime \

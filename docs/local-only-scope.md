@@ -1,6 +1,6 @@
 # Local-only product scope
 
-LocalDesk has no cloud sign-in, registration, cloud address book/device sync,
+landesk has no cloud sign-in, registration, cloud address book/device sync,
 rendezvous/ID server, NAT punching or relay fallback. Public IP endpoints are
 rejected. Tailscale private addresses remain supported.
 
@@ -34,7 +34,7 @@ The residual check scans implementations, manifest and generated bridge symbols,
 not just UI entrypoints. Old protocol definitions, translation labels and
 configuration rejection rules can still name retired features without implementing
 them. This is not an exhaustive packet-capture proof. Tailscale's own networking
-and Apple platform certificate verification are outside LocalDesk.
+and Apple platform certificate verification are outside landesk.
 
 The transport constructor and authenticated forwarding destinations enforce the
 private-IP policy before connecting. Cloud address-book/group token storage and

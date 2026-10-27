@@ -110,7 +110,7 @@ pub const LOGIN_MSG_PASSWORD_WRONG: &str = "Wrong Password";
 pub const LOGIN_MSG_LAN_CREDENTIALS_WRONG: &str = "Username or password is incorrect";
 const LAN_CREDENTIAL_CONFIG_PREFIX: &str = "lan-credential-";
 const LAN_CREDENTIAL_USERNAME_OPTION: &str = "lan-access-username";
-#[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
+#[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows", target_os = "ios"))]
 const LAN_CREDENTIAL_KEYRING_SERVICE: &str = "dev.quanru.LocalDesk.LANCredentials";
 pub const LOGIN_MSG_OFFLINE: &str = "Offline";
 pub const LOGIN_SCREEN_WAYLAND: &str = "Wayland login screen is not supported";
@@ -138,7 +138,7 @@ pub(crate) fn load_remembered_lan_credential_for_fingerprint(
     if hbb_common::lan::validate_username(&username).is_err() {
         return None;
     }
-    #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
+    #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows", target_os = "ios"))]
     {
         let entry = match keyring::Entry::new(LAN_CREDENTIAL_KEYRING_SERVICE, &config_id) {
             Ok(entry) => entry,
@@ -163,7 +163,7 @@ pub(crate) fn load_remembered_lan_credential_for_fingerprint(
         password.zeroize();
         Some((username, password_bytes))
     }
-    #[cfg(not(any(target_os = "macos", target_os = "linux", target_os = "windows")))]
+    #[cfg(not(any(target_os = "macos", target_os = "linux", target_os = "windows", target_os = "ios")))]
     {
         None
     }
@@ -171,7 +171,7 @@ pub(crate) fn load_remembered_lan_credential_for_fingerprint(
 
 pub(crate) fn clear_remembered_lan_credential_for_fingerprint(fingerprint: &str) {
     if let Some(config_id) = lan_credential_config_id_for_fingerprint(fingerprint) {
-        #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
+        #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows", target_os = "ios"))]
         match keyring::Entry::new(LAN_CREDENTIAL_KEYRING_SERVICE, &config_id)
             .and_then(|entry| entry.delete_password())
         {
@@ -1255,7 +1255,7 @@ impl LoginConfigHandler {
             .ok_or_else(|| anyhow!("LAN device fingerprint is not available"))?;
         let username = hbb_common::lan::validate_username(username)?;
         hbb_common::lan::validate_password(password)?;
-        #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
+        #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows", target_os = "ios"))]
         {
             let password = std::str::from_utf8(password)
                 .map_err(|_| anyhow!("LAN password is not valid UTF-8"))?;
@@ -1266,7 +1266,7 @@ impl LoginConfigHandler {
                 .set_password(password)
                 .map_err(|err| anyhow!("Failed to save the LAN credential: {err}"))?;
         }
-        #[cfg(not(any(target_os = "macos", target_os = "linux", target_os = "windows")))]
+        #[cfg(not(any(target_os = "macos", target_os = "linux", target_os = "windows", target_os = "ios")))]
         {
             let _ = password;
             bail!("Remembering LAN passwords is not supported on this platform");

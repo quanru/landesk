@@ -3,7 +3,7 @@ Version:    1.3.0
 Release:    0
 Summary:    RPM package
 License:    GPL-3.0
-URL:        https://github.com/quanru/localdesk
+URL:        https://github.com/quanru/landesk
 Vendor:     LocalDesk contributors
 Requires:   gtk3 libxcb libXfixes alsa-lib libva pam gstreamer1-plugins-base
 Recommends: libayatana-appindicator-gtk3 libxdo

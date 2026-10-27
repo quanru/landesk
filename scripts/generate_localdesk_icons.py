@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""Generate every shipped LocalDesk icon from res/localdesk-icon.svg."""
+"""Generate shipped landesk icons from the original cartoon in res/landesk-icon.png."""
 
 from __future__ import annotations
 
 import argparse
+import base64
 import hashlib
 import json
 import shutil
@@ -13,7 +14,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-SOURCE = ROOT / "res/localdesk-icon.svg"
+SOURCE = ROOT / "res/landesk-icon.png"
 MANIFEST = ROOT / "res/localdesk-icon-manifest.json"
 BACKGROUND = (0x0B, 0x1F, 0x33, 0xFF)
 
@@ -62,14 +63,18 @@ def sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
-def render_svg(destination: Path) -> None:
-    sips = shutil.which("sips")
-    if not sips:
-        raise SystemExit("sips is required to rasterize the SVG on macOS")
-    subprocess.run(
-        [sips, "-s", "format", "png", str(SOURCE), "--out", str(destination)],
-        check=True,
-        stdout=subprocess.DEVNULL,
+def render_source(destination: Path) -> None:
+    shutil.copyfile(SOURCE, destination)
+
+
+def write_svg(destination: Path) -> None:
+    data = base64.b64encode(SOURCE.read_bytes()).decode("ascii")
+    destination.write_text(
+        '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" '
+        'width="1024" height="1024" viewBox="0 0 1024 1024">'
+        '<title>landesk cartoon computer user</title>'
+        f'<image width="1024" height="1024" xlink:href="data:image/png;base64,{data}"/>'
+        '</svg>\n'
     )
 
 
@@ -108,7 +113,7 @@ def foreground_image(image, size: int):
 def monochrome_mask(image):
     from PIL import Image, ImageChops
 
-    opaque_background = Image.new("RGBA", image.size, BACKGROUND)
+    opaque_background = Image.new("RGBA", image.size, image.getpixel((0, 0)))
     difference = ImageChops.difference(image, opaque_background).convert("L")
     strokes = difference.point(lambda value: 255 if value > 18 else 0)
     return ImageChops.multiply(strokes, image.getchannel("A"))
@@ -151,6 +156,7 @@ def generated_paths() -> list[Path]:
             ROOT / "res/icon.ico",
             ROOT / "res/tray-icon.ico",
             ROOT / "res/scalable.svg",
+            ROOT / "res/localdesk-icon.svg",
             ROOT / "flutter/assets/icon.svg",
             ROOT / "flutter/windows/runner/resources/app_icon.ico",
             ROOT / "flutter/macos/Runner/AppIcon.icns",
@@ -192,7 +198,7 @@ def generate() -> None:
         raise SystemExit(f"missing icon source: {SOURCE}")
     with tempfile.TemporaryDirectory(prefix="localdesk-icon-") as temp:
         raster = Path(temp) / "icon.png"
-        render_svg(raster)
+        render_source(raster)
         base = Image.open(raster).convert("RGBA")
         if base.size != (1024, 1024):
             raise SystemExit(f"expected a 1024x1024 raster, got {base.size}")
@@ -233,8 +239,8 @@ def generate() -> None:
             save_rgb(base, ios_dir / filename, size)
 
         write_icns(base, ROOT / "flutter/macos/Runner/AppIcon.icns")
-        shutil.copyfile(SOURCE, ROOT / "res/scalable.svg")
-        shutil.copyfile(SOURCE, ROOT / "flutter/assets/icon.svg")
+        for path in ["res/localdesk-icon.svg", "res/scalable.svg", "flutter/assets/icon.svg"]:
+            write_svg(ROOT / path)
         write_manifest()
 
 
@@ -243,16 +249,16 @@ def check() -> None:
         raise SystemExit(f"missing generated icon manifest: {MANIFEST}")
     payload = json.loads(MANIFEST.read_text())
     if payload.get("source_sha256") != sha256(SOURCE):
-        raise SystemExit("LocalDesk icon source changed; regenerate platform assets")
+        raise SystemExit("landesk icon source changed; regenerate platform assets")
     expected = payload.get("generated", {})
     actual_paths = generated_paths()
     if set(expected) != {str(path.relative_to(ROOT)) for path in actual_paths}:
-        raise SystemExit("LocalDesk icon manifest target list is out of date")
+        raise SystemExit("landesk icon manifest target list is out of date")
     for path in actual_paths:
         relative = str(path.relative_to(ROOT))
         if not path.is_file() or sha256(path) != expected[relative]:
-            raise SystemExit(f"generated LocalDesk icon is stale: {relative}")
-    print(f"LocalDesk icon check passed ({len(actual_paths)} assets).")
+            raise SystemExit(f"generated landesk icon is stale: {relative}")
+    print(f"landesk icon check passed ({len(actual_paths)} assets).")
 
 
 def main() -> None:

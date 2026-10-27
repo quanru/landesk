@@ -46,6 +46,7 @@ class _ConnectionPageState extends State<ConnectionPage>
   final TextEditingController _idEditingController = TextEditingController();
   final TextEditingController _usernameController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  bool _rememberPassword = false;
 
   final AllPeersLoader _allPeersLoader = AllPeersLoader();
 
@@ -148,7 +149,7 @@ class _ConnectionPageState extends State<ConnectionPage>
               'lan_version': 1,
               'username': username,
               'password': password,
-              'remember': false,
+              'remember': _rememberPassword,
             }),
     );
     _passwordController.clear();
@@ -415,6 +416,15 @@ class _ConnectionPageState extends State<ConnectionPage>
           ),
           onSubmitted: (_) => onConnect(),
         ).marginSymmetric(horizontal: 4, vertical: 4),
+        if (isIOS)
+          CheckboxListTile(
+            value: _rememberPassword,
+            onChanged: (value) => setState(() => _rememberPassword = value == true),
+            title: Text(translate('Remember password')),
+            contentPadding: EdgeInsets.zero,
+            dense: true,
+            controlAffinity: ListTileControlAffinity.leading,
+          ),
         LayoutBuilder(
           builder: (context, constraints) {
             final singleColumn = constraints.maxWidth < 340;

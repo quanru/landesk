@@ -1214,7 +1214,7 @@ class _AboutState extends State<_About> {
       final path = await FilePicker.saveFile(
         dialogTitle: translate('Export diagnostic bundle'),
         fileName:
-            'LocalDesk-diagnostics-${DateTime.now().millisecondsSinceEpoch}.zip',
+            'landesk-diagnostics-${DateTime.now().millisecondsSinceEpoch}.zip',
         allowedExtensions: ['zip'],
         type: FileType.custom,
       );
@@ -1510,9 +1510,9 @@ class _WaylandCardState extends State<WaylandCard> {
   final _clearShortcutsInhibitorFailedMsg = ''.obs;
   // Don't show the shortcuts permission reset button for now.
   // Users can change it manually:
-  //   "Settings" -> "Apps" -> "LocalDesk" -> "Permissions" -> "Inhibit Shortcuts".
+  //   "Settings" -> "Apps" -> "landesk" -> "Permissions" -> "Inhibit Shortcuts".
   // For resetting(clearing) the permission from the portal permission store, you can
-  // use (replace <desktop-id> with the LocalDesk desktop file ID):
+  // use (replace <desktop-id> with the landesk desktop file ID):
   //   busctl --user call org.freedesktop.impl.portal.PermissionStore \
   //   /org/freedesktop/impl/portal/PermissionStore org.freedesktop.impl.portal.PermissionStore \
   //   DeletePermission sss "gnome" "shortcuts-inhibitor" "<desktop-id>"

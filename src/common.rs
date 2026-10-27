@@ -713,6 +713,14 @@ pub fn get_app_name() -> String {
     hbb_common::config::APP_NAME.read().unwrap().clone()
 }
 
+// Keep the internal app name stable for existing config, IPC and credentials.
+pub fn get_app_display_name() -> String {
+    match get_app_name().as_str() {
+        "LocalDesk" => "landesk".to_owned(),
+        name => name.to_owned(),
+    }
+}
+
 #[inline]
 pub fn is_rustdesk() -> bool {
     hbb_common::config::APP_NAME.read().unwrap().eq("RustDesk")

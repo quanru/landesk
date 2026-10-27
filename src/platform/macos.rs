@@ -305,7 +305,7 @@ fn update_daemon_agent(agent_plist_file: String, update_source_dir: String, sync
 fn correct_app_name(s: &str) -> String {
     let mut s = s.to_owned();
     s = s.replace("com.carriez.RustDesk", &crate::get_full_name());
-    let app_name = crate::get_app_name();
+    let app_name = crate::get_app_display_name();
     let bundle_id = get_bundle_id().unwrap_or_else(|| {
         format!(
             "{}.{}",
@@ -364,7 +364,7 @@ pub fn uninstall_service(show_new_window: bool, sync: bool) -> bool {
                     if show_new_window {
                         std::process::Command::new("open")
                             .arg("-n")
-                            .arg(&format!("/Applications/{}.app", crate::get_app_name()))
+                            .arg(&format!("/Applications/{}.app", crate::get_app_display_name()))
                             .spawn()
                             .ok();
                         // leave open a little time
@@ -813,7 +813,7 @@ pub fn is_installed() -> bool {
         return p
             .to_str()
             .unwrap_or_default()
-            .starts_with(&format!("/Applications/{}.app", crate::get_app_name()));
+            .starts_with(&format!("/Applications/{}.app", crate::get_app_display_name()));
     }
     false
 }
@@ -852,7 +852,7 @@ pub fn update_me() -> ResultType<()> {
         bail!("Unknown app directory of current exe file: {:?}", cmd);
     };
 
-    let app_name = crate::get_app_name();
+    let app_name = crate::get_app_display_name();
     if is_installed_daemon && !is_service_stopped {
         let agent = format!("{}_server.plist", crate::get_full_name());
         let agent_plist_file = format!("/Library/LaunchAgents/{}", agent);
@@ -978,7 +978,7 @@ fn extract_dmg(dmg_path: &str, target_dir: &str) -> ResultType<()> {
     }
     let _guard = DmgGuard(PathBuf::from(&mount_point));
 
-    let app_name = format!("{}.app", crate::get_app_name());
+    let app_name = format!("{}.app", crate::get_app_display_name());
     let src_path = format!("{}/{}", mount_point, app_name);
     let dest_path = format!("{}/{}", target_dir, app_name);
 
@@ -1021,7 +1021,7 @@ fn extract_dmg(dmg_path: &str, target_dir: &str) -> ResultType<()> {
 }
 
 fn update_extracted(target_dir: &str) -> ResultType<()> {
-    let app_name = crate::get_app_name();
+    let app_name = crate::get_app_display_name();
     let exe_path = format!(
         "{}/{}.app/Contents/MacOS/{}",
         target_dir, app_name, app_name

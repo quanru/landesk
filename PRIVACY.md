@@ -1,12 +1,12 @@
-# LocalDesk Privacy Policy
+# landesk Privacy Policy
 
 Effective date: October 23, 2026
 
-This policy describes how the official LocalDesk application, maintained by the contributors to [zibo-chen/LocalDesk](https://github.com/quanru/localdesk), processes information. It covers version 1.3.0 and subsequent official releases; optional features are available only on supported versions and platforms. Modified builds and services operated by others may have different practices.
+This policy describes how the official landesk application, maintained by the contributors to [zibo-chen/landesk](https://github.com/quanru/landesk), processes information. It covers version 1.3.0 and subsequent official releases; optional features are available only on supported versions and platforms. Modified builds and services operated by others may have different practices.
 
 ## Remote sessions and local discovery
 
-LocalDesk connects devices directly over a LAN, routed network, or VPN. The project does not operate a public rendezvous service, relay service, cloud account system, or central store for your remote sessions.
+landesk connects devices directly over a LAN, routed network, or VPN. The project does not operate a public rendezvous service, relay service, cloud account system, or central store for your remote sessions.
 
 Depending on the features and permissions used, the connected devices process and exchange:
 
@@ -15,13 +15,13 @@ Depending on the features and permissions used, the connected devices process an
 - IP addresses, hostnames, device names, operating system information, display information, and device public keys and fingerprints to find, identify, and connect devices.
 - Access usernames and passwords to authenticate to the controlled device. These credentials are sent through the encrypted session to that device for verification.
 
-Native sessions use an encrypted transport after the initial identity and key exchange. Verify the displayed device fingerprint through a trusted channel before trusting a new device. Optional browser access is hosted by your own LocalDesk device and uses HTTPS; it does not route the session through a project-operated server.
+Native sessions use an encrypted transport after the initial identity and key exchange. Verify the displayed device fingerprint through a trusted channel before trusting a new device. Optional browser access is hosted by your own landesk device and uses HTTPS; it does not route the session through a project-operated server.
 
 When local discovery is enabled, mDNS announcements expose the device display name, operating system, protocol version, public fingerprint, network addresses, and listening port to devices on the local network. Discovery announcements do not include passwords. Turn off discovery if you do not want these announcements; direct address connections remain available.
 
 ## Information saved on your devices
 
-LocalDesk saves settings, access usernames, trusted fingerprints, recent devices and connection times, favorites, device identity keys, and other connection preferences in local application configuration. The controlled device stores its configured access password as a salted Argon2id hash. If you choose to remember a remote password on a supported desktop platform, the controller stores that password in the operating system credential store and saves the associated username locally.
+landesk saves settings, access usernames, trusted fingerprints, recent devices and connection times, favorites, device identity keys, and other connection preferences in local application configuration. The controlled device stores its configured access password as a salted Argon2id hash. If you choose to remember a remote password on a supported desktop platform, the controller stores that password in the operating system credential store and saves the associated username locally.
 
 Session content is processed as needed to provide the connection. File transfers save files at the selected destination, clipboard synchronization can leave content in the receiving system clipboard or clipboard history, and session recording, when enabled, saves recordings on the recording device. The other participant can also capture or retain information they receive. Disconnecting does not delete these copies.
 
@@ -29,7 +29,7 @@ Local diagnostic logs can contain connection times, addresses, device or user na
 
 ## Update requests and external services
 
-LocalDesk disables automatic update and plugin builds. It does not contact GitHub to check or download updates at runtime. Users install new builds manually.
+landesk disables automatic update and plugin builds. It does not contact GitHub to check or download updates at runtime. Users install new builds manually.
 
 Opening project, documentation, release, or community links contacts the selected website. GitHub and other services you choose to use handle those requests under their own privacy policies, including the [GitHub Privacy Statement](https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement). VPN, DNS, operating system, and network providers may also process connection metadata under their own arrangements.
 
@@ -37,14 +37,14 @@ The official application does not automatically upload session content or diagno
 
 ## Your controls and deletion
 
-Use LocalDesk settings and session controls to restrict incoming access, configure source network allowlists, change or clear access credentials, disable discovery or browser access, and control clipboard, audio, file transfer, and recording where available. Operating system permissions provide additional controls for screen capture, input, microphone, and other protected resources. End the session to stop its live exchange, and disable incoming access or stop LocalDesk to stop accepting new sessions.
+Use landesk settings and session controls to restrict incoming access, configure source network allowlists, change or clear access credentials, disable discovery or browser access, and control clipboard, audio, file transfer, and recording where available. Operating system permissions provide additional controls for screen capture, input, microphone, and other protected resources. End the session to stop its live exchange, and disable incoming access or stop landesk to stop accepting new sessions.
 
-Saved settings and device records remain until you remove or reset them. Remove recent devices, favorites, trusted fingerprints, and remembered credentials using the available application controls; saved passwords can also be removed from your operating system credential manager. To reset all local data, stop LocalDesk and its background components, then remove its configuration and log directories for every account that ran it, including any service account. This also removes saved device identity keys and causes other devices to see a new identity if keys are regenerated. Uninstalling alone may leave these files and credential entries behind.
+Saved settings and device records remain until you remove or reset them. Remove recent devices, favorites, trusted fingerprints, and remembered credentials using the available application controls; saved passwords can also be removed from your operating system credential manager. To reset all local data, stop landesk and its background components, then remove its configuration and log directories for every account that ran it, including any service account. This also removes saved device identity keys and causes other devices to see a new identity if keys are regenerated. Uninstalling alone may leave these files and credential entries behind.
 
 Delete downloaded updates, transferred files, recordings, exported diagnostics, clipboard history, and backups separately through the relevant application or operating system. Local copies have no project-enforced expiration. We cannot remotely erase files on your devices or copies held by another participant or service. Information you submit to GitHub or another support service follows that service's retention and deletion controls.
 
 ## Contact and policy changes
 
-Contact the project maintainer through the channels listed in the [project README](https://github.com/quanru/localdesk#community), or open a [GitHub issue](https://github.com/quanru/localdesk/issues) for a question that does not contain private information. For private support material, arrange a private channel with the maintainer before sharing it.
+Contact the project maintainer through the channels listed in the [project README](https://github.com/quanru/landesk#community), or open a [GitHub issue](https://github.com/quanru/landesk/issues) for a question that does not contain private information. For private support material, arrange a private channel with the maintainer before sharing it.
 
 Changes to this policy will be published at this location with an updated effective date. The repository history records earlier versions.

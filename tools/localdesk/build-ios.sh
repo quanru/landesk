@@ -5,6 +5,8 @@ repo_dir=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 : "${VCPKG_ROOT:?Set VCPKG_ROOT to device vcpkg root with installed/arm64-ios}"
 : "${PKG_CONFIG_LIBDIR_aarch64_apple_ios:?Set to device libsodium pkgconfig directory}"
 : "${PKG_CONFIG_LIBDIR_aarch64_apple_darwin:?Set to host libsodium pkgconfig directory}"
+# Bridge code generation also invokes Flutter by name.
+export PATH="$(dirname -- "$FLUTTER_BIN"):$PATH"
 export SODIUM_USE_PKG_CONFIG=1 PKG_CONFIG_ALLOW_CROSS=1 PKG_CONFIG_ALL_STATIC=1
 cd "$repo_dir"
 "$FLUTTER_BIN" --version

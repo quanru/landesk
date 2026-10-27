@@ -65,3 +65,6 @@ flutter/web/
 /third_party/libdrmtap/
 res/*.pkg.tar.zst
 res/pkg/
+
+# Original source for the landesk application icon.
+!res/landesk-icon.png

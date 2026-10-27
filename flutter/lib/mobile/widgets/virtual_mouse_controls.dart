@@ -73,8 +73,9 @@ class _VirtualMouseControlsState extends State<VirtualMouseControls>
   @override
   Widget build(BuildContext context) => LayoutBuilder(
     builder: (context, bounds) {
-      const size = 64.0;
-      final position = widget.positions['wheel'] ?? const Offset(.15, .50);
+      final phone = MediaQuery.sizeOf(context).shortestSide < 600;
+      final size = phone ? 48.0 : 64.0;
+      final position = widget.positions['wheel'] ?? const Offset(.02, .45);
       final width = (bounds.maxWidth - size).clamp(1.0, double.infinity);
       final height = (bounds.maxHeight - size).clamp(1.0, double.infinity);
       return Stack(
@@ -136,24 +137,29 @@ class _VirtualMouseControlsState extends State<VirtualMouseControls>
                       shape: BoxShape.circle,
                       color: _pointer != null
                           ? Theme.of(context).colorScheme.primary
-                          : Colors.black.withValues(alpha: .55),
+                          : const Color(0xFF484848).withValues(alpha: .60),
                       border: Border.all(color: Colors.white54),
                     ),
-                    child: const Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.arrow_drop_up,
-                          size: 20,
-                          color: Colors.white,
+                    child: Center(
+                      child: Container(
+                        width: size * .36,
+                        height: size * .80,
+                        decoration: BoxDecoration(
+                          color: Colors.white70,
+                          borderRadius: BorderRadius.circular(size),
                         ),
-                        Icon(Icons.drag_handle, size: 20, color: Colors.white),
-                        Icon(
-                          Icons.arrow_drop_down,
-                          size: 20,
-                          color: Colors.white,
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.arrow_drop_up, size: size * .29,
+                                color: const Color(0xFF888888)),
+                            Icon(Icons.circle, size: size * .16,
+                                color: const Color(0xFF888888)),
+                            Icon(Icons.arrow_drop_down, size: size * .29,
+                                color: const Color(0xFF888888)),
+                          ],
                         ),
-                      ],
+                      ),
                     ),
                   ),
                 ),

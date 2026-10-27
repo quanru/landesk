@@ -44,7 +44,7 @@
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Record the sound from microphone for the purpose of the remote desktop.</string>
 	<key>NSLocalNetworkUsageDescription</key>
-	<string>LocalDesk uses your local network to discover and connect to nearby devices for remote access.</string>
+	<string>landesk uses your local network to discover and connect to nearby devices for remote access.</string>
 	<key>NSBonjourServices</key>
 	<array>
 		<string>_localdesk._tcp</string>

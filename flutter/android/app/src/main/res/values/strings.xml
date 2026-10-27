@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">LocalDesk</string>
-    <string name="input_service_name">LocalDesk Input</string>
-    <string name="accessibility_service_description">Allow other devices to control your phone using virtual touch when LocalDesk screen sharing is established</string>
+    <string name="app_name">landesk</string>
+    <string name="input_service_name">landesk Input</string>
+    <string name="accessibility_service_description">Allow other devices to control your phone using virtual touch when landesk screen sharing is established</string>
 </resources>

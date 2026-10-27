@@ -47,11 +47,11 @@ void main() {
       await Future<void>.delayed(const Duration(milliseconds: 100));
     });
     await tester.pumpAndSettle();
-    expect(find.text('⌘ Space'), findsOneWidget);
-    await tester.tap(find.text('⌘ Space'));
+    expect(find.text('Space'), findsOneWidget);
+    await tester.tap(find.text('Space'));
     await tester.pumpAndSettle();
     expect(sent.single.key, 'VK_SPACE');
-    expect(sent.single.command, isTrue);
+    expect(sent.single.command, isFalse);
     expect(canvasTaps, 0);
     await tester.tapAt(const Offset(400, 250));
     expect(canvasTaps, 1);
@@ -93,7 +93,7 @@ void main() {
       await Future<void>.delayed(const Duration(milliseconds: 150));
     });
     await tester.pumpAndSettle();
-    expect(find.text('⌘ Space'), findsNothing);
+    expect(find.text('Space'), findsNothing);
     await tester.runAsync(() async {
       await Future<void>.delayed(const Duration(milliseconds: 100));
     });
@@ -177,4 +177,48 @@ void main() {
     await open('host-a');
     expect(find.text('My macro'), findsNothing);
   });
+  testWidgets('two fingers hold Cmd and Space until each pointer releases', (tester) async {
+    final events = <String>[];
+    Future<void> flushInput() async {
+      await tester.runAsync(() async {
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+      });
+      await tester.pump();
+    }
+    await tester.runAsync(() async {
+      await tester.pumpWidget(MaterialApp(home: Scaffold(body: CustomKeyOverlay(
+        send: (_) async { fail('single keys must use down/up events'); },
+        write: (key, down, {required ctrl, required alt, required shift, required command}) async {
+          events.add('$key:$down:$command');
+        },
+      ))));
+      await Future<void>.delayed(const Duration(milliseconds: 200));
+    });
+    await tester.pumpAndSettle();
+    expect(find.text('⌘ Space'), findsNothing);
+    expect(find.text('⌘ Tab'), findsNothing);
+    expect(find.text('Tab'), findsOneWidget);
+    final cmd = await tester.startGesture(tester.getCenter(find.text('Cmd')), pointer: 1);
+    await flushInput();
+    expect(events, ['Meta:true:true']);
+    await tester.pump(const Duration(seconds: 1));
+    expect(find.bySemanticsLabel('Finish editing keys'), findsNothing);
+    final space = await tester.startGesture(tester.getCenter(find.text('Space')), pointer: 2);
+    await flushInput();
+    expect(events.last, 'VK_SPACE:true:true');
+    await space.up();
+    await flushInput();
+    expect(events.last, 'VK_SPACE:false:true');
+    expect(find.text('Stop macro'), findsNothing);
+    await cmd.up();
+    await flushInput();
+    expect(events.last, 'Meta:false:false');
+    final tab = await tester.startGesture(tester.getCenter(find.text('Tab')), pointer: 3);
+    await flushInput();
+    await tab.cancel();
+    await flushInput();
+    expect(events.sublist(events.length - 2), ['VK_TAB:true:false', 'VK_TAB:false:false']);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
 }

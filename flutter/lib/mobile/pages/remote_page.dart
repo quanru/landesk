@@ -547,7 +547,10 @@ class _RemotePageState extends State<RemotePage> with WidgetsBindingObserver {
   }
 
   Widget _withVirtualKeys(Widget child) {
+    final screen = MediaQuery.sizeOf(context);
+    final phonePortrait = screen.shortestSide < 600 && screen.height >= screen.width;
     if (!isIOS ||
+        phonePortrait ||
         !gFFI.ffiModel.pi.isSet.isTrue ||
         gFFI.ffiModel.waitForFirstImage.isTrue ||
         inputModel.isViewCamera) {

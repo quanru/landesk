@@ -451,7 +451,7 @@ _connectDialog(
               ? Offstage()
               : Container(height: 12),
           passwdWidget(),
-          if (lanAccess && isDesktop)
+          if (lanAccess && (isDesktop || isIOS))
             CheckboxListTile(
               value: rememberPassword,
               onChanged: (value) =>

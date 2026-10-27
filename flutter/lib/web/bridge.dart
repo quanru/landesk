@@ -1548,7 +1548,7 @@ class RustdeskImpl {
   bool isCustomClient({dynamic hint}) {
     // The upstream and LocalDesk defaults are products, not generated custom clients.
     final appName = mainGetAppNameSync(hint: hint);
-    return appName != "RustDesk" && appName != "LocalDesk";
+    return appName != "RustDesk" && appName != "LocalDesk" && appName != "landesk";
   }
 
   bool isDisableSettings({dynamic hint}) {

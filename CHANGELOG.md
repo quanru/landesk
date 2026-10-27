@@ -22,4 +22,4 @@ All notable LocalDesk changes are documented in this file.
 - Fixed known LAN peers being rejected before the user could confirm an unexpected device-identity fingerprint.
 - Hardened macOS update extraction with unique mount paths, symlink-safe cleanup, code-signature verification, and Gatekeeper validation.
 
-[1.3.0]: https://github.com/quanru/localdesk/compare/v1.2.3...v1.3.0
+[1.3.0]: https://github.com/quanru/landesk/compare/v1.2.3...v1.3.0

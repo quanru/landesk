@@ -19,7 +19,7 @@ iOS is a controller only, as in the original application.
 Private VPN addresses are supported for the user's existing Tailscale setup;
 LocalDesk has no control over a VPN's own transport or relay decisions.
 
-Custom iPad keys were migrated from quanru/localdesk a6660dd. No previous broad
+Custom iPad keys were migrated from quanru/landesk a6660dd. No previous broad
 connection guards are copied: the relay implementation has been removed upstream.
 
 Validation results are appended after building; source gates are not proof of
@@ -92,9 +92,9 @@ and refreshes/verifies the ad-hoc signature after embedding the service.
 This local development recipe uses software codecs; it does not enable `hwcodec`.
 The CI installer recipe separately enables hardware codecs.
 
-Install the resulting `flutter/build/macos/Build/Products/Release/LocalDesk.app`
+Install the resulting `flutter/build/macos/Build/Products/Release/landesk.app`
 into `/Applications`. To serve a desktop, configure local access credentials in
-LocalDesk and allow its screen recording/accessibility permissions in macOS.
+landesk and allow its screen recording/accessibility permissions in macOS.
 Installation and opening the UI alone do not verify remote screen/input access.
 
 The macOS helper also requires flutter_rust_bridge_codegen 1.80.1, dart and rustfmt on PATH; it regenerates all bindings before compiling. BRIDGE_CODEGEN_BIN can override the codegen executable. Desktop builds now require --features flutter; the obsolete Sciter sources and dependency are removed.
