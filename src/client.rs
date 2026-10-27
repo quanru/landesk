@@ -126,18 +126,45 @@ fn lan_credential_config_id_for_fingerprint(fingerprint: &str) -> Option<String>
     }
 }
 
+// Credential metadata is not a recent peer: the peer-list loader deletes
+// records without platform information. Keep it outside the peers directory.
+#[derive(Default, Debug, Serialize, Deserialize)]
+struct LanCredentialMetadata {
+    username: String,
+}
+
+fn lan_credential_metadata_path(config_id: &str) -> std::path::PathBuf {
+    Config::path("lan-credentials").join(format!("{config_id}.toml"))
+}
+
+fn store_lan_credential_username(config_id: &str, username: String) -> ResultType<()> {
+    config::store_path(
+        lan_credential_metadata_path(config_id),
+        LanCredentialMetadata { username },
+    )
+}
+
+fn load_lan_credential_username(config_id: &str, fingerprint: &str) -> Option<String> {
+    let metadata: LanCredentialMetadata = config::load_path(lan_credential_metadata_path(config_id));
+    if hbb_common::lan::validate_username(&metadata.username).is_ok() {
+        return Some(metadata.username);
+    }
+    // Migrate intact old metadata, or recover the username from a successful
+    // connection to the same cryptographic identity if peer cleanup removed it.
+    let legacy = PeerConfig::load(config_id);
+    let username = legacy.options.get(LAN_CREDENTIAL_USERNAME_OPTION).cloned()
+        .or_else(|| LocalConfig::get_recent_lan_endpoints().into_iter()
+            .find(|peer| peer.fingerprint.eq_ignore_ascii_case(fingerprint))
+            .map(|peer| peer.username))?;
+    hbb_common::lan::validate_username(&username).ok()?;
+    Some(username)
+}
+
 pub(crate) fn load_remembered_lan_credential_for_fingerprint(
     fingerprint: &str,
 ) -> Option<(String, Vec<u8>)> {
     let config_id = lan_credential_config_id_for_fingerprint(fingerprint)?;
-    let config = PeerConfig::load(&config_id);
-    let username = config
-        .options
-        .get(LAN_CREDENTIAL_USERNAME_OPTION)
-        .cloned()?;
-    if hbb_common::lan::validate_username(&username).is_err() {
-        return None;
-    }
+    let username = load_lan_credential_username(&config_id, fingerprint)?;
     #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows", target_os = "ios"))]
     {
         let entry = match keyring::Entry::new(LAN_CREDENTIAL_KEYRING_SERVICE, &config_id) {
@@ -161,6 +188,9 @@ pub(crate) fn load_remembered_lan_credential_for_fingerprint(
         }
         let password_bytes = password.as_bytes().to_vec();
         password.zeroize();
+        if let Err(err) = store_lan_credential_username(&config_id, username.clone()) {
+            log::warn!("Failed to migrate LAN credential metadata: {err}");
+        }
         Some((username, password_bytes))
     }
     #[cfg(not(any(target_os = "macos", target_os = "linux", target_os = "windows", target_os = "ios")))]
@@ -179,6 +209,11 @@ pub(crate) fn clear_remembered_lan_credential_for_fingerprint(fingerprint: &str)
             Err(err) => log::warn!("Failed to delete the remembered LAN credential: {err}"),
         }
         PeerConfig::remove(&config_id);
+        if let Err(err) = std::fs::remove_file(lan_credential_metadata_path(&config_id)) {
+            if err.kind() != std::io::ErrorKind::NotFound {
+                log::warn!("Failed to remove LAN credential metadata: {err}");
+            }
+        }
     }
 }
 #[cfg(target_os = "linux")]
@@ -1271,12 +1306,8 @@ impl LoginConfigHandler {
             let _ = password;
             bail!("Remembering LAN passwords is not supported on this platform");
         }
-        let mut config = PeerConfig::load(&config_id);
-        config.password.clear();
-        config
-            .options
-            .insert(LAN_CREDENTIAL_USERNAME_OPTION.to_owned(), username);
-        config.store(&config_id);
+        store_lan_credential_username(&config_id, username)?;
+        PeerConfig::remove(&config_id); // Retire the legacy metadata record.
         Ok(())
     }
 
@@ -3136,4 +3167,56 @@ pub fn check_if_retry(msgtype: &str, title: &str, text: &str) -> bool {
             && !text.to_lowercase().contains("manually")
             && !text.to_lowercase().contains("restricted")
             && !text.to_lowercase().contains("not allowed"))
+}
+
+#[cfg(test)]
+mod lan_credential_metadata_tests {
+    use super::*;
+
+    #[test]
+    fn remembered_username_survives_real_peer_refresh_and_disk_reload() {
+        // Isolate process-global configuration even when the parent suite runs
+        // tests concurrently. Never access installed config or the Keychain.
+        const CHILD: &str = "LANDESK_CREDENTIAL_TEST_CHILD";
+        if std::env::var_os(CHILD).is_none() {
+            let output = std::process::Command::new(std::env::current_exe().unwrap())
+                .args(["--exact", "client::lan_credential_metadata_tests::remembered_username_survives_real_peer_refresh_and_disk_reload", "--nocapture", "--test-threads=1"])
+                .env(CHILD, "1")
+                .output().unwrap();
+            assert!(output.status.success(), "isolated regression failed: {} {}",
+                String::from_utf8_lossy(&output.stdout), String::from_utf8_lossy(&output.stderr));
+            return;
+        }
+        let app_name = format!("landesk-credential-test-{}", uuid::Uuid::new_v4());
+        let original = std::mem::replace(&mut *config::APP_NAME.write().unwrap(), app_name);
+        let root = Config::path("");
+        assert!(!root.exists());
+        struct Cleanup(std::path::PathBuf, String);
+        impl Drop for Cleanup {
+            fn drop(&mut self) {
+                *config::APP_NAME.write().unwrap() = self.1.clone();
+                if self.0.exists() {
+                    std::fs::remove_dir_all(&self.0).expect("remove isolated test config");
+                }
+            }
+        }
+        let _cleanup = Cleanup(root, original);
+        let fingerprint = "a".repeat(64);
+        let id = lan_credential_config_id_for_fingerprint(&fingerprint).unwrap();
+        let mut old = PeerConfig::default();
+        old.options.insert(LAN_CREDENTIAL_USERNAME_OPTION.into(), "test-operator".into());
+        old.store(&id);
+        assert!(PeerConfig::exists(&id));
+        PeerConfig::peers(None);
+        assert!(!PeerConfig::exists(&id), "reproduce deletion of the old metadata");
+
+        store_lan_credential_username(&id, "test-operator".into()).unwrap();
+        PeerConfig::peers(None);
+        PeerConfig::peers(None);
+        assert_eq!(load_lan_credential_username(&id, &fingerprint).as_deref(), Some("test-operator"));
+        let on_disk: LanCredentialMetadata = config::load_path(lan_credential_metadata_path(&id));
+        assert_eq!(on_disk.username, "test-operator");
+        let text = std::fs::read_to_string(lan_credential_metadata_path(&id)).unwrap();
+        assert!(!text.contains("password"));
+    }
 }
