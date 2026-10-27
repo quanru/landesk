@@ -38,7 +38,11 @@ impl Drop for DiscoveryGuard {
 type Message = RendezvousMessage;
 
 pub(crate) fn connectable_local_address(address: IpAddr) -> bool {
-    if address.is_loopback() || address.is_unspecified() || address.is_multicast() {
+    if !hbb_common::lan::allowed_ip(address)
+        || address.is_loopback()
+        || address.is_unspecified()
+        || address.is_multicast()
+    {
         return false;
     }
     match address {
@@ -49,7 +53,7 @@ pub(crate) fn connectable_local_address(address: IpAddr) -> bool {
 
 #[cfg(not(target_os = "ios"))]
 pub(crate) fn local_connectable_addresses() -> Vec<IpAddr> {
-    let mut addresses = default_net::get_interfaces()
+    let addresses = default_net::get_interfaces()
         .into_iter()
         .flat_map(|interface| {
             interface
@@ -65,11 +69,6 @@ pub(crate) fn local_connectable_addresses() -> Vec<IpAddr> {
         })
         .filter(|address| connectable_local_address(*address))
         .collect::<BTreeSet<_>>();
-    if let Some(address) = get_ipaddr_by_peer((Ipv4Addr::new(192, 0, 2, 1), 9)) {
-        if connectable_local_address(address) {
-            addresses.insert(address);
-        }
-    }
     addresses.into_iter().collect()
 }
 
@@ -383,18 +382,9 @@ fn create_broadcast_sockets() -> Vec<(UdpSocket, Ipv4Addr)> {
             }
         }
     }
-    #[cfg(not(target_os = "ios"))]
-    if let Some(IpAddr::V4(address)) = get_ipaddr_by_peer((Ipv4Addr::new(192, 0, 2, 1), 9)) {
-        if connectable_local_address(IpAddr::V4(address))
-            && !ipv4s.iter().any(|(candidate, _)| *candidate == address)
-        {
-            ipv4s.push((address, Ipv4Addr::BROADCAST));
-        }
-    }
     ipv4s.push((Ipv4Addr::UNSPECIFIED, Ipv4Addr::BROADCAST)); // for robustness
     let mut sockets = Vec::new();
     for (v4_addr, broadcast) in ipv4s {
-        // removing v4_addr.is_private() check, https://github.com/rustdesk/rustdesk/issues/4663
         if let Ok(s) = UdpSocket::bind(SocketAddr::from((v4_addr, 0))) {
             if s.set_broadcast(true).is_ok() {
                 sockets.push((s, broadcast));
@@ -452,7 +442,7 @@ fn wait_response(
             if let Ok(msg_in) = Message::parse_from_bytes(&buf[0..len]) {
                 match msg_in.union {
                     Some(rendezvous_message::Union::PeerDiscovery(p)) => {
-                        if p.cmd == "pong" {
+                        if p.cmd == "pong" && hbb_common::lan::allowed_ip(addr.ip()) {
                             if p.id.len() != 64
                                 || !p.id.bytes().all(|value| value.is_ascii_hexdigit())
                             {
@@ -717,6 +707,10 @@ mod tests {
     fn excludes_unscoped_or_unusable_local_addresses() {
         assert!(connectable_local_address("192.168.1.20".parse().unwrap()));
         assert!(connectable_local_address("fd00::20".parse().unwrap()));
+        assert!(!connectable_local_address("8.8.8.8".parse().unwrap()));
+        assert!(!connectable_local_address(
+            "2001:4860:4860::8888".parse().unwrap()
+        ));
         assert!(!connectable_local_address("0.0.0.0".parse().unwrap()));
         assert!(!connectable_local_address("127.0.0.1".parse().unwrap()));
         assert!(!connectable_local_address("fe80::20".parse().unwrap()));

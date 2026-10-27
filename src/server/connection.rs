@@ -1138,7 +1138,14 @@ impl Connection {
         let mut pf = pf.clone();
         let (mut addr, is_rdp) = Self::normalize_port_forward_target(&mut pf);
         self.port_forward_address = addr.clone();
-        match timeout(3000, TcpStream::connect(&addr)).await {
+        let target = match hbb_common::lan::port_forward_endpoint(&pf.host, pf.port) {
+            Ok(target) => target,
+            Err(err) => {
+                self.send_login_error(err.to_string()).await;
+                return false;
+            }
+        };
+        match timeout(3000, TcpStream::connect(target)).await {
             Ok(Ok(sock)) => {
                 self.port_forward_socket = Some(Framed::new(sock, BytesCodec::new()));
                 true

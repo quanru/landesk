@@ -35,3 +35,8 @@ not just UI entrypoints. Old protocol definitions, translation labels and
 configuration rejection rules can still name retired features without implementing
 them. This is not an exhaustive packet-capture proof. Tailscale's own networking
 and Apple platform certificate verification are outside LocalDesk.
+
+The transport constructor and authenticated forwarding destinations enforce the
+private-IP policy before connecting. Cloud address-book/group token storage and
+retired NAT/proxy config fields are removed. See validation/network-path-audit-2026-10-27.md
+for the call-path audit, test evidence and packet-capture limits.

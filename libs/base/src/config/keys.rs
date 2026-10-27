@@ -77,8 +77,7 @@ pub const OPTION_ENABLE_HWCODEC: &str = "enable-hwcodec";
 pub const OPTION_APPROVE_MODE: &str = "approve-mode";
 pub const OPTION_VERIFICATION_METHOD: &str = "verification-method";
 pub const OPTION_TEMPORARY_PASSWORD_LENGTH: &str = "temporary-password-length";
-pub const OPTION_CUSTOM_RENDEZVOUS_SERVER: &str = "custom-rendezvous-server";
-pub const OPTION_API_SERVER: &str = "api-server";
+
 pub const OPTION_KEY: &str = "key";
 pub const OPTION_PRESET_ADDRESS_BOOK_NAME: &str = "preset-address-book-name";
 pub const OPTION_PRESET_ADDRESS_BOOK_TAG: &str = "preset-address-book-tag";
@@ -130,12 +129,9 @@ pub const OPTION_ALLOW_COMMAND_LINE_SETTINGS_WHEN_SETTINGS_DISABLED: &str =
     "allow-command-line-settings-when-settings-disabled";
 
 // Connection punch-through / port-forward options
-pub const OPTION_ENABLE_TCP_PUNCH: &str = "enable-tcp-punch";
-pub const OPTION_ENABLE_UDP_PUNCH: &str = "enable-udp-punch";
-pub const OPTION_ENABLE_IPV6_PUNCH: &str = "enable-ipv6-punch";
+
 pub const OPTION_ENABLE_PORT_FORWARD_MUX: &str = "enable-port-forward-mux";
-pub const OPTION_ENABLE_WEBRTC: &str = "enable-webrtc";
-pub const OPTION_ALLOW_KCP_CC: &str = "allow-kcp-congestion-control";
+
 pub const OPTION_HIDE_USERNAME_ON_CARD: &str = "hide-username-on-card";
 pub const OPTION_HIDE_HELP_CARDS: &str = "hide-help-cards";
 pub const OPTION_DEFAULT_CONNECT_PASSWORD: &str = "default-connect-password";
@@ -259,11 +255,7 @@ pub const KEYS_LOCAL_SETTINGS: &[&str] = &[
     OPTION_ALLOW_AUTO_RECORD_OUTGOING,
     OPTION_HIDE_RECORDING_BUTTON,
     OPTION_VIDEO_SAVE_DIRECTORY,
-    OPTION_ENABLE_TCP_PUNCH,
-    OPTION_ENABLE_UDP_PUNCH,
-    OPTION_ENABLE_IPV6_PUNCH,
     OPTION_ENABLE_PORT_FORWARD_MUX,
-    OPTION_ENABLE_WEBRTC,
     OPTION_TOUCH_MODE,
     OPTION_SHOW_VIRTUAL_MOUSE,
     OPTION_SHOW_VIRTUAL_JOYSTICK,
@@ -310,11 +302,6 @@ pub const KEYS_SETTINGS: &[&str] = &[
     OPTION_APPROVE_MODE,
     OPTION_VERIFICATION_METHOD,
     OPTION_TEMPORARY_PASSWORD_LENGTH,
-    OPTION_PROXY_URL,
-    OPTION_PROXY_USERNAME,
-    OPTION_PROXY_PASSWORD,
-    OPTION_CUSTOM_RENDEZVOUS_SERVER,
-    OPTION_API_SERVER,
     OPTION_KEY,
     OPTION_ALLOW_WEBSOCKET,
     OPTION_PRESET_ADDRESS_BOOK_NAME,
@@ -328,14 +315,10 @@ pub const KEYS_SETTINGS: &[&str] = &[
     OPTION_ENABLE_DIRECTX_CAPTURE,
     OPTION_ENABLE_ANDROID_SOFTWARE_ENCODING_HALF_SCALE,
     OPTION_ENABLE_TRUSTED_DEVICES,
-    OPTION_RELAY_SERVER,
-    OPTION_ICE_SERVERS,
     OPTION_DISABLE_UDP,
     OPTION_ALLOW_INSECURE_TLS_FALLBACK,
     OPTION_KEEP_AWAKE_DURING_INCOMING_SESSIONS,
     OPTION_ALLOW_AUTO_UPDATE,
-    OPTION_ALLOW_KCP_CC,
-    OPTION_ALLOW_WEBRTC_CC,
 ];
 
 // BUILDIN_SETTINGS
@@ -364,8 +347,6 @@ pub const KEYS_BUILDIN_SETTINGS: &[&str] = &[
     OPTION_ALLOW_DEEP_LINK_SERVER_SETTINGS,
     OPTION_ONE_WAY_FILE_TRANSFER,
     OPTION_ALLOW_HTTPS_21114,
-    OPTION_ALLOW_HOSTNAME_AS_ID,
-    OPTION_REGISTER_DEVICE,
     OPTION_HIDE_POWERED_BY_ME,
     OPTION_MAIN_WINDOW_ALWAYS_ON_TOP,
     OPTION_FILE_TRANSFER_MAX_FILES,

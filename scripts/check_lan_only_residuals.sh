@@ -179,6 +179,14 @@ report_matches \
   'pub struct LanIdentity|pub fn .*lan_identity|lan_identities:|lan_identity_bindings:|default_lan_identity_id:' \
   libs/hbb_common/src/config.rs
 
+
+report_matches \
+  'cloud account cache or public transport configuration implementation' \
+  'pub struct (Ab|AbPeer|AbEntry|Group|GroupUser|GroupPeer|DeviceGroup|Socks5Server)\b|pub access_token:|rendezvous_server:|nat_type:|fn no_register_device|OPTION_(ICE_SERVERS|ENABLE_TCP_PUNCH|ENABLE_UDP_PUNCH|ENABLE_IPV6_PUNCH|CUSTOM_RENDEZVOUS_SERVER|API_SERVER|RELAY_SERVER)' \
+  libs/hbb_common/src/config.rs libs/base/src/config/keys.rs
+report_matches \
+  'NAT traversal or cloud HTTP dependency in resolved package graph' \
+  '^name = "(webrtc[^"]*|stun|turn|natpmp|igd[^"]*|reqwest)"$' Cargo.lock
 if [[ $failed -ne 0 ]]; then
   exit 1
 fi
