@@ -13,12 +13,12 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/quanru/localdesk/releases/latest"><img src="https://img.shields.io/github/v/release/zibo-chen/LocalDesk?style=flat-square&logo=github&color=2563eb" alt="最新版本"></a>
-  <a href="https://github.com/quanru/localdesk/releases"><img src="https://img.shields.io/github/downloads/zibo-chen/LocalDesk/total?style=flat-square&logo=github&color=0ea5e9" alt="累计下载量"></a>
-  <a href="https://github.com/quanru/localdesk/stargazers"><img src="https://img.shields.io/github/stars/zibo-chen/LocalDesk?style=flat-square&logo=github&color=f59e0b" alt="GitHub Stars"></a>
-  <a href="https://github.com/quanru/localdesk/network/members"><img src="https://img.shields.io/github/forks/zibo-chen/LocalDesk?style=flat-square&logo=github" alt="GitHub Forks"></a>
-  <a href="https://github.com/quanru/localdesk/actions/workflows/localdesk-preflight.yml"><img src="https://img.shields.io/github/actions/workflow/status/zibo-chen/LocalDesk/localdesk-preflight.yml?branch=master&style=flat-square&label=build" alt="构建状态"></a>
-  <a href="LICENCE"><img src="https://img.shields.io/github/license/zibo-chen/LocalDesk?style=flat-square&color=16a34a" alt="开源许可"></a>
+  <a href="https://github.com/quanru/localdesk/releases/latest"><img src="https://img.shields.io/github/v/release/quanru/localdesk?style=flat-square&logo=github&color=2563eb" alt="最新版本"></a>
+  <a href="https://github.com/quanru/localdesk/releases"><img src="https://img.shields.io/github/downloads/quanru/localdesk/total?style=flat-square&logo=github&color=0ea5e9" alt="累计下载量"></a>
+  <a href="https://github.com/quanru/localdesk/stargazers"><img src="https://img.shields.io/github/stars/quanru/localdesk?style=flat-square&logo=github&color=f59e0b" alt="GitHub Stars"></a>
+  <a href="https://github.com/quanru/localdesk/network/members"><img src="https://img.shields.io/github/forks/quanru/localdesk?style=flat-square&logo=github" alt="GitHub Forks"></a>
+  <a href="https://github.com/quanru/localdesk/actions/workflows/localdesk-preflight.yml"><img src="https://img.shields.io/github/actions/workflow/status/quanru/localdesk/localdesk-preflight.yml?branch=master&style=flat-square&label=build" alt="构建状态"></a>
+  <a href="LICENCE"><img src="https://img.shields.io/github/license/quanru/localdesk?style=flat-square&color=16a34a" alt="开源许可"></a>
 </p>
 
 <p align="center">
@@ -80,7 +80,7 @@ LocalDesk 专注于一个明确场景：让本身已经网络互通的设备直�
 
 ## 📦 下载安装
 
-稳定版本请前往 **[GitHub Releases](https://github.com/quanru/localdesk/releases/latest)** 下载。希望体验最新改动时，可以使用 **[Nightly 版本](https://github.com/quanru/localdesk/releases/tag/nightly)** 或 **[GitHub Actions](https://github.com/quanru/localdesk/actions)** 中的构建产物。
+LocalDesk 仍在开发中，尚未发布经过验收的稳定版本。请先查看[验证记录](docs/localdesk-migration.md)；各平台构建进度见 [GitHub Actions](https://github.com/quanru/localdesk/actions)。
 
 | 平台 | 架构 | 安装包 |
 | --- | --- | --- |
@@ -90,7 +90,7 @@ LocalDesk 专注于一个明确场景：让本身已经网络互通的设备直�
 | Android | ARM64、ARMv7、x86_64、通用包 | `.apk` |
 
 > [!NOTE]
-> Nightly 属于开发构建，日常使用建议优先选择最新稳定版本。
+> 下表列出计划支持的平台，不代表相应安装包已经构建或验收成功。
 
 <a id="quick-start"></a>
 

@@ -36,7 +36,11 @@ successful physical-device sessions or absence of every possible OS network flow
 - iOS device and arm64 simulator Rust libraries: release builds passed with Rust 1.82.
 - Targeted Flutter analysis: no errors/warnings; 7 deprecation informational notices.
 - iOS unsigned device app: release build passed (57.7 MB).
-- Simulator app, desktop/Android binaries, and physical remote sessions: pending.
+- iPad mini simulator app: built, installed and launched to the LocalDesk connection screen.
+- Desktop/Android binaries and physical remote sessions: pending. Desktop installers
+  and Rust CI started on GitHub; source preflight passed there too.
+- Physical iPad launch of the earlier build was refused by iPadOS signing/trust;
+  no successful real-device LAN session is claimed.
 
 ## Reproduce the iOS build
 
@@ -56,7 +60,7 @@ For simulator builds, use simulator-targeted native dependencies, set
 `BINDGEN_EXTRA_CLANG_ARGS_aarch64_apple_ios_sim=--target=arm64-apple-ios15.0-simulator`
 and `PKG_CONFIG_LIBDIR_aarch64_apple_ios_sim`, build the Rust library with
 `cargo build --locked --features flutter --release --target aarch64-apple-ios-sim --lib`,
-then run `flutter build ios --simulator --debug --no-codesign` under `flutter/`.
+then run `XCODE_XCCONFIG_FILE="$PWD/../tools/localdesk/device.xcconfig" flutter build ios --simulator --debug --no-codesign` under `flutter/` (Apple Silicon only).
 Xcode selects the matching library through `RUSTDESK_TARGET`.
 
 Only private IPv4/IPv6 literals are accepted; hostnames are intentionally rejected

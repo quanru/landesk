@@ -18,12 +18,12 @@ Only private IP endpoints are accepted. Both ends must use the LAN protocol; sto
 </p>
 
 <p align="center">
-  <a href="https://github.com/quanru/localdesk/releases/latest"><img src="https://img.shields.io/github/v/release/zibo-chen/LocalDesk?style=flat-square&logo=github&color=2563eb" alt="Latest release"></a>
-  <a href="https://github.com/quanru/localdesk/releases"><img src="https://img.shields.io/github/downloads/zibo-chen/LocalDesk/total?style=flat-square&logo=github&color=0ea5e9" alt="Total downloads"></a>
-  <a href="https://github.com/quanru/localdesk/stargazers"><img src="https://img.shields.io/github/stars/zibo-chen/LocalDesk?style=flat-square&logo=github&color=f59e0b" alt="GitHub stars"></a>
-  <a href="https://github.com/quanru/localdesk/network/members"><img src="https://img.shields.io/github/forks/zibo-chen/LocalDesk?style=flat-square&logo=github" alt="GitHub forks"></a>
-  <a href="https://github.com/quanru/localdesk/actions/workflows/localdesk-preflight.yml"><img src="https://img.shields.io/github/actions/workflow/status/zibo-chen/LocalDesk/localdesk-preflight.yml?branch=master&style=flat-square&label=build" alt="Build status"></a>
-  <a href="LICENCE"><img src="https://img.shields.io/github/license/zibo-chen/LocalDesk?style=flat-square&color=16a34a" alt="License"></a>
+  <a href="https://github.com/quanru/localdesk/releases/latest"><img src="https://img.shields.io/github/v/release/quanru/localdesk?style=flat-square&logo=github&color=2563eb" alt="Latest release"></a>
+  <a href="https://github.com/quanru/localdesk/releases"><img src="https://img.shields.io/github/downloads/quanru/localdesk/total?style=flat-square&logo=github&color=0ea5e9" alt="Total downloads"></a>
+  <a href="https://github.com/quanru/localdesk/stargazers"><img src="https://img.shields.io/github/stars/quanru/localdesk?style=flat-square&logo=github&color=f59e0b" alt="GitHub stars"></a>
+  <a href="https://github.com/quanru/localdesk/network/members"><img src="https://img.shields.io/github/forks/quanru/localdesk?style=flat-square&logo=github" alt="GitHub forks"></a>
+  <a href="https://github.com/quanru/localdesk/actions/workflows/localdesk-preflight.yml"><img src="https://img.shields.io/github/actions/workflow/status/quanru/localdesk/localdesk-preflight.yml?branch=master&style=flat-square&label=build" alt="Build status"></a>
+  <a href="LICENCE"><img src="https://img.shields.io/github/license/quanru/localdesk?style=flat-square&color=16a34a" alt="License"></a>
 </p>
 
 <p align="center">
@@ -85,7 +85,7 @@ That makes it a good fit for home labs, offices, classrooms, on-site support, an
 
 ## 📦 Download
 
-Download stable packages from **[GitHub Releases](https://github.com/quanru/localdesk/releases/latest)**. For the newest changes, use the **[nightly release](https://github.com/quanru/localdesk/releases/tag/nightly)** or artifacts from **[GitHub Actions](https://github.com/quanru/localdesk/actions)**.
+LocalDesk is under development. No stable LocalDesk release has been verified yet. Build results are available in [GitHub Actions](https://github.com/quanru/localdesk/actions); see [validation status](docs/localdesk-migration.md) before installing.
 
 | Platform | Architectures | Packages |
 | --- | --- | --- |

@@ -2,6 +2,11 @@ name: LocalDesk Installers CI
 
 on:
   workflow_dispatch:
+    inputs:
+      build-mobile:
+        description: Include Android and iOS builds
+        type: boolean
+        default: true
   pull_request:
     paths-ignore:
     - "docs/**"
@@ -20,4 +25,4 @@ jobs:
     with:
       upload-artifact: true
       publish-release: false
-      build-mobile: false
+      build-mobile: ${{ github.event_name == 'workflow_dispatch' && inputs.build-mobile }}

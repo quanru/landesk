@@ -34,7 +34,7 @@ jobs:
         run: |
           grep -Fq 'upload-artifact: true' .github/workflows/flutter-ci.yml
           grep -Fq 'publish-release: false' .github/workflows/flutter-ci.yml
-          grep -Fq 'build-mobile: false' .github/workflows/flutter-ci.yml
+          grep -Fq 'inputs.build-mobile' .github/workflows/flutter-ci.yml
           grep -Fq 'publish-release: true' .github/workflows/flutter-tag.yml
           grep -Fq 'publish-release: true' .github/workflows/flutter-nightly.yml
           grep -Fq 'branches:' .github/workflows/flutter-nightly.yml
