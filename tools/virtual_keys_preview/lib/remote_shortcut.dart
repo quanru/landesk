@@ -1,0 +1,1 @@
+../../../flutter/lib/mobile/widgets/remote_shortcut.dart

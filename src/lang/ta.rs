@@ -804,5 +804,10 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("Could not save key layout", ""),
         ("Could not send remote shortcut", ""),
         ("Copy", ""),
+        ("Scroll up", ""),
+        ("Scroll down", ""),
+        ("Slide to scroll", ""),
+        ("Left click; hold and slide to drag", ""),
+        ("Right click", ""),
     ].iter().cloned().collect();
 }

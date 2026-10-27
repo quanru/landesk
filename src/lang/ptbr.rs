@@ -780,5 +780,10 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("Rotate 90° clockwise", ""),
         ("Rotate 180°", ""),
         ("Rotate 270° clockwise", ""),
+        ("Scroll up", ""),
+        ("Scroll down", ""),
+        ("Slide to scroll", ""),
+        ("Left click; hold and slide to drag", ""),
+        ("Right click", ""),
     ].iter().cloned().collect();
 }

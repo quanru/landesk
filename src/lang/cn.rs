@@ -814,5 +814,10 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("Could not save key layout", "无法保存按键布局"),
         ("Could not send remote shortcut", "无法发送远程快捷键"),
         ("Copy", "复制"),
+        ("Scroll up", "向上滚动"),
+        ("Scroll down", "向下滚动"),
+        ("Slide to scroll", "上下滑动滚轮"),
+        ("Left click; hold and slide to drag", "左键；按住并滑动以拖拽"),
+        ("Right click", "右键"),
     ].iter().cloned().collect();
 }

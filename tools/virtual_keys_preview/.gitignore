@@ -1,0 +1,10 @@
+.dart_tool/
+build/
+ios/
+*.iml
+.metadata
+.flutter-plugins*
+/test/
+/analysis_options.yaml
+
+/lib/preview_translations.dart

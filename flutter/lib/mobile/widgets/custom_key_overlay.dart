@@ -7,6 +7,7 @@ import 'package:path_provider/path_provider.dart';
 
 import 'remote_shortcut.dart';
 import 'virtual_key_editor.dart';
+import 'virtual_mouse_controls.dart';
 
 class _KeySpot {
   _KeySpot(this.config, this.x, this.y);
@@ -34,11 +35,17 @@ class CustomKeyOverlay extends StatefulWidget {
       {super.key,
       required this.send,
       this.write,
+      this.mouseButton,
+      this.mouseScroll,
+      this.mouseMove,
       this.isMac = true,
       this.profileId = 'default',
       this.translate = virtualKeyText});
   final Future<void> Function(RemoteShortcut) send;
   final RemoteKeyWriter? write;
+  final Future<void> Function(String, bool)? mouseButton;
+  final Future<void> Function(int)? mouseScroll;
+  final Future<void> Function(Offset)? mouseMove;
   final bool isMac;
   final String profileId;
   final String Function(String) translate;
@@ -64,6 +71,7 @@ class _CustomKeyOverlayState extends State<CustomKeyOverlay>
 
   String get _filename =>
       'virtual_keys_v3/${base64Url.encode(utf8.encode(widget.profileId))}_${widget.isMac ? 'mac' : 'linux'}.json';
+  final Map<String, Offset> _mousePositions = {};
   bool _sending = false;
   bool _loaded = false;
   Future<void> _pendingSave = Future.value();
@@ -148,6 +156,16 @@ class _CustomKeyOverlayState extends State<CustomKeyOverlay>
       setState(() {
         _spots = rows.map(_KeySpot.fromJson).toList();
         _visible = data['visible'] != false;
+        final positions = data['mousePositions'];
+        if (positions is Map) {
+          for (final id in ['mouse', 'wheel']) {
+            final p = positions[id];
+            if (p is List && p.length == 2 && p.every((v) => v is num && v.isFinite)) {
+              _mousePositions[id] = Offset((p[0] as num).toDouble().clamp(0, 1),
+                  (p[1] as num).toDouble().clamp(0, 1));
+            }
+          }
+        }
       });
     } catch (e) {
       debugPrint('CustomKeyOverlay using default layout: $e');
@@ -161,6 +179,7 @@ class _CustomKeyOverlayState extends State<CustomKeyOverlay>
     final data = jsonEncode({
       'spots': _spots.map((s) => s.toJson()).toList(),
       'visible': _visible,
+      'mousePositions': _mousePositions.map((id, p) => MapEntry(id, [p.dx, p.dy])),
     });
     _pendingSave = _pendingSave.then((_) async {
       try {
@@ -250,6 +269,15 @@ class _CustomKeyOverlayState extends State<CustomKeyOverlay>
       LayoutBuilder(builder: (context, bounds) {
         if (!_loaded) return const SizedBox.expand();
         return Stack(children: [
+          if (_visible && widget.mouseButton != null && widget.mouseScroll != null && widget.mouseMove != null)
+            Positioned.fill(child: VirtualMouseControls(
+              button: widget.mouseButton!, scroll: widget.mouseScroll!, move: widget.mouseMove!,
+              translate: widget.translate, editing: _edit, positions: _mousePositions,
+              onPositionEnd: _save,
+              onPosition: (id, position) {
+                setState(() => _mousePositions[id] = position);
+              },
+            )),
           // Always-available small toggle (even with the keys hidden).
           Positioned(
               top: 6,
@@ -370,7 +398,7 @@ class _CustomKeyOverlayState extends State<CustomKeyOverlay>
                     tooltip: widget.translate('Reset'),
                     icon: const Icon(Icons.restore),
                     onPressed: () {
-                      setState(() => _spots = _defaults());
+                      setState(() { _spots = _defaults(); _mousePositions.clear(); });
                       _save();
                     })),
           if (_visible)
