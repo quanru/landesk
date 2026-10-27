@@ -9,7 +9,6 @@ import 'package:provider/provider.dart';
 
 import '../../common.dart';
 import '../../common/formatter/id_formatter.dart';
-import '../../desktop/lan_identity_manager.dart';
 import '../../models/favorite_group_model.dart';
 import '../../models/peer_model.dart';
 import '../../models/platform_model.dart';
@@ -123,7 +122,7 @@ class _PeerCardState extends State<_PeerCard>
             isWebMobile: isWeb && !isWebDesktop,
             isPortrait: stateGlobal.isPortrait.isTrue,
           )
-        ? _buildPortrait()
+          ? _buildPortrait()
           : _buildLandscape(),
     );
   }
@@ -346,7 +345,9 @@ class _PeerCardState extends State<_PeerCard>
     final border = isDark ? Colors.white12 : const Color(0xFFE1E5EC);
     final muted = isDark ? Colors.white60 : const Color(0xFF737B8C);
     final offline = peer.online == false;
-    final deviceColor = offline ? const Color(0xFF77808E) : const Color(0xFF1677FF);
+    final deviceColor = offline
+        ? const Color(0xFF77808E)
+        : const Color(0xFF1677FF);
     final child = Card(
       color: surface,
       elevation: isDark ? 0 : 2,
@@ -373,11 +374,17 @@ class _PeerCardState extends State<_PeerCard>
                       gradient: LinearGradient(
                         colors: offline
                             ? (isDark
-                                ? const [Color(0xFF30343C), Color(0xFF282C33)]
-                                : const [Color(0xFFF1F2F4), Color(0xFFE5E8EC)])
+                                  ? const [Color(0xFF30343C), Color(0xFF282C33)]
+                                  : const [
+                                      Color(0xFFF1F2F4),
+                                      Color(0xFFE5E8EC),
+                                    ])
                             : (isDark
-                                ? const [Color(0xFF253A61), Color(0xFF1D2940)]
-                                : const [Color(0xFFF1F6FF), Color(0xFFE4EEFF)]),
+                                  ? const [Color(0xFF253A61), Color(0xFF1D2940)]
+                                  : const [
+                                      Color(0xFFF1F6FF),
+                                      Color(0xFFE4EEFF),
+                                    ]),
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       ),
@@ -475,21 +482,24 @@ class _PeerCardState extends State<_PeerCard>
                           child: ElevatedButton(
                             onPressed: () => widget.connect(context, peer.id),
                             style: ElevatedButton.styleFrom(
-                              foregroundColor:
-                                  offline ? muted : const Color(0xFF1677FF),
+                              foregroundColor: offline
+                                  ? muted
+                                  : const Color(0xFF1677FF),
                               backgroundColor: offline
                                   ? (isDark
-                                      ? const Color(0xFF30343C)
-                                      : const Color(0xFFF1F2F4))
+                                        ? const Color(0xFF30343C)
+                                        : const Color(0xFFF1F2F4))
                                   : (isDark
-                                      ? const Color(0xFF26354D)
-                                      : const Color(0xFFF0F6FF)),
+                                        ? const Color(0xFF26354D)
+                                        : const Color(0xFFF0F6FF)),
                               elevation: 0,
                             ),
                             child: Text(
-                              translate(peer.online == true
-                                  ? 'Connect'
-                                  : 'Try to connect'),
+                              translate(
+                                peer.online == true
+                                    ? 'Connect'
+                                    : 'Try to connect',
+                              ),
                               style: const TextStyle(
                                 fontWeight: FontWeight.w600,
                               ),
@@ -603,14 +613,14 @@ class _PeerCardState extends State<_PeerCard>
   }
 
   Widget _actionMore(Peer peer) => Listener(
-        onPointerDown: (e) {
-          final x = e.position.dx;
-          final y = e.position.dy;
-          _menuPos = RelativeRect.fromLTRB(x, y, x, y);
-        },
-        onPointerUp: (_) => _showPeerMenu(peer.id),
-        child: build_more(context),
-      );
+    onPointerDown: (e) {
+      final x = e.position.dx;
+      final y = e.position.dy;
+      _menuPos = RelativeRect.fromLTRB(x, y, x, y);
+    },
+    onPointerUp: (_) => _showPeerMenu(peer.id),
+    child: build_more(context),
+  );
 
   bool _shouldBuildPasswordIcon(Peer peer) {
     return false;
@@ -657,18 +667,18 @@ abstract class BasePeerCard extends StatelessWidget {
   Future<List<mod_menu.PopupMenuEntry<String>>> _buildPopupMenuEntry(
     BuildContext context,
   ) async => (await _buildMenuItems(context))
-          .map(
-            (e) => e.build(
-              context,
-              const MenuConfig(
-                commonColor: CustomPopupMenuTheme.commonColor,
-                height: CustomPopupMenuTheme.height,
-                dividerHeight: CustomPopupMenuTheme.dividerHeight,
-              ),
-            ),
-          )
-          .expand((i) => i)
-          .toList();
+      .map(
+        (e) => e.build(
+          context,
+          const MenuConfig(
+            commonColor: CustomPopupMenuTheme.commonColor,
+            height: CustomPopupMenuTheme.height,
+            dividerHeight: CustomPopupMenuTheme.dividerHeight,
+          ),
+        ),
+      )
+      .expand((i) => i)
+      .toList();
 
   @protected
   Future<List<MenuEntryBase<String>>> _buildMenuItems(BuildContext context);
@@ -713,85 +723,6 @@ abstract class BasePeerCard extends StatelessWidget {
           ? translate('Connect')
           : '${translate('Connect')} ${peer.id}'),
     );
-  }
-
-  Future<List<MenuEntryBase<String>>> _lanIdentityActions(
-    BuildContext context,
-  ) async {
-    if (!isDesktop) return const [];
-    final actions = <MenuEntryBase<String>>[
-      MenuEntryButton<String>(
-        childBuilder: (TextStyle? style) => Text(
-          '${translate('Connect')} · ${translate('Account')}',
-          style: style,
-        ),
-        proc: () {
-          () async {
-            final identityId = await showLanIdentityPicker(
-              context,
-              fingerprint: peer.fingerprint,
-            );
-            if (identityId == null || !context.mounted) return;
-            connectInPeerTab(context, peer, tab, identityId: identityId);
-          }();
-        },
-        padding: menuPadding,
-        dismissOnClicked: true,
-      ),
-    ];
-
-    if (peer.fingerprint.isEmpty) return actions;
-    final boundIdentityId = bind.mainGetBoundLanIdentityId(
-      fingerprint: peer.fingerprint,
-    );
-    if (boundIdentityId.isNotEmpty) {
-      actions.add(
-        MenuEntryButton<String>(
-          childBuilder: (TextStyle? style) => Text(
-            '${translate('Remove')} · ${translate('Account')}',
-            style: style,
-          ),
-          proc: () {
-            final error = bind.mainBindLanIdentity(
-              fingerprint: peer.fingerprint,
-              identityId: '',
-            );
-            showToast(error.isEmpty ? translate('Successful') : error);
-          },
-          padding: menuPadding,
-          dismissOnClicked: true,
-        ),
-      );
-    }
-    if (bind.mainHasLegacyLanCredential(fingerprint: peer.fingerprint)) {
-      actions.add(
-        MenuEntryButton<String>(
-          childBuilder: (TextStyle? style) => Text(
-            '${translate('Add')} · ${translate('Account')}',
-            style: style,
-          ),
-          proc: () {
-            () async {
-              final identityId = await showImportLegacyLanCredentialDialog(
-                context,
-                fingerprint: peer.fingerprint,
-                suggestedName: peer.alias.isNotEmpty
-                    ? peer.alias
-                    : peer.hostname.isNotEmpty
-                    ? peer.hostname
-                    : peer.id,
-              );
-              if (identityId != null) {
-                showToast(translate('Successful'));
-              }
-            }();
-          },
-          padding: menuPadding,
-          dismissOnClicked: true,
-        ),
-      );
-    }
-    return actions;
   }
 
   @protected
@@ -930,16 +861,16 @@ abstract class BasePeerCard extends StatelessWidget {
       await _openNewConnInAction(id, 'Open in New Tab', kOptionOpenInTabs);
 
   _openInWindowsAction(String id) async => await _openNewConnInAction(
-        id,
-        'Open in new window',
-        kOptionOpenInWindows,
-      );
+    id,
+    'Open in new window',
+    kOptionOpenInWindows,
+  );
 
   // ignore: unused_element
   _openNewConnInOptAction(String id) async =>
       mainGetLocalBoolOptionSync(kOptionOpenNewConnInTabs)
-          ? await _openInWindowsAction(id)
-          : await _openInTabsAction(id);
+      ? await _openInWindowsAction(id)
+      : await _openInTabsAction(id);
 
   @protected
   MenuEntryBase<String> _renameAction(String id) {
@@ -1089,12 +1020,12 @@ abstract class BasePeerCard extends StatelessWidget {
 
 class RecentPeerCard extends BasePeerCard {
   RecentPeerCard({required Peer peer, EdgeInsets? menuPadding, Key? key})
-      : super(
-          peer: peer,
-          tab: PeerTabIndex.recent,
-          menuPadding: menuPadding,
-          key: key,
-        );
+    : super(
+        peer: peer,
+        tab: PeerTabIndex.recent,
+        menuPadding: menuPadding,
+        key: key,
+      );
 
   @override
   Future<List<MenuEntryBase<String>>> _buildMenuItems(
@@ -1106,7 +1037,6 @@ class RecentPeerCard extends BasePeerCard {
       _viewCameraAction(context),
       _terminalAction(context),
     ];
-    menuItems.addAll(await _lanIdentityActions(context));
 
     if (peer.platform == kPeerPlatformWindows) {
       menuItems.add(_terminalRunAsAdminAction(context));
@@ -1146,12 +1076,12 @@ class RecentPeerCard extends BasePeerCard {
 
 class FavoritePeerCard extends BasePeerCard {
   FavoritePeerCard({required Peer peer, EdgeInsets? menuPadding, Key? key})
-      : super(
-          peer: peer,
-          tab: PeerTabIndex.fav,
-          menuPadding: menuPadding,
-          key: key,
-        );
+    : super(
+        peer: peer,
+        tab: PeerTabIndex.fav,
+        menuPadding: menuPadding,
+        key: key,
+      );
 
   @override
   Future<List<MenuEntryBase<String>>> _buildMenuItems(
@@ -1163,7 +1093,6 @@ class FavoritePeerCard extends BasePeerCard {
       _viewCameraAction(context),
       _terminalAction(context),
     ];
-    menuItems.addAll(await _lanIdentityActions(context));
 
     if (peer.platform == kPeerPlatformWindows) {
       menuItems.add(_terminalRunAsAdminAction(context));
@@ -1250,12 +1179,12 @@ class FavoritePeerCard extends BasePeerCard {
 
 class DiscoveredPeerCard extends BasePeerCard {
   DiscoveredPeerCard({required Peer peer, EdgeInsets? menuPadding, Key? key})
-      : super(
-          peer: peer,
-          tab: PeerTabIndex.lan,
-          menuPadding: menuPadding,
-          key: key,
-        );
+    : super(
+        peer: peer,
+        tab: PeerTabIndex.lan,
+        menuPadding: menuPadding,
+        key: key,
+      );
 
   @override
   Future<List<MenuEntryBase<String>>> _buildMenuItems(
@@ -1267,7 +1196,6 @@ class DiscoveredPeerCard extends BasePeerCard {
       _viewCameraAction(context),
       _terminalAction(context),
     ];
-    menuItems.addAll(await _lanIdentityActions(context));
 
     if (peer.platform == kPeerPlatformWindows) {
       menuItems.add(_terminalRunAsAdminAction(context));
@@ -1451,15 +1379,18 @@ String peerLastSeenText(Peer peer) {
 }
 
 Widget getOnline(double rightPadding, Peer peer) {
-  final label = translate(peer.online == null
-      ? 'Status unknown'
-      : (peer.online == true ? 'Online' : 'Offline'));
+  final label = translate(
+    peer.online == null
+        ? 'Status unknown'
+        : (peer.online == true ? 'Online' : 'Offline'),
+  );
   return Padding(
     padding: EdgeInsets.only(right: rightPadding),
     child: PeerStatusBadge(
       online: peer.online,
       label: label,
-      tooltip: '${peerLastSeenText(peer)}\n'
+      tooltip:
+          '${peerLastSeenText(peer)}\n'
           '${translate('Discovery status may be delayed. You can still try to connect.')}',
     ),
   );
@@ -1476,11 +1407,11 @@ Widget build_more(BuildContext context, {bool invert = false}) {
         radius: 14,
         backgroundColor: hover.value
             ? (invert
-                ? Theme.of(context).colorScheme.background
-                : Theme.of(context).scaffoldBackgroundColor)
+                  ? Theme.of(context).colorScheme.background
+                  : Theme.of(context).scaffoldBackgroundColor)
             : (invert
-                ? Theme.of(context).scaffoldBackgroundColor
-                : Theme.of(context).colorScheme.background),
+                  ? Theme.of(context).scaffoldBackgroundColor
+                  : Theme.of(context).colorScheme.background),
         child: Icon(
           Icons.more_vert,
           size: 18,
@@ -1502,14 +1433,11 @@ void connectInPeerTab(
   bool isTcpTunneling = false,
   bool isRDP = false,
   bool isTerminal = false,
-  String? identityId,
 }) async {
   connect(
     context,
     peer.id,
-    password: identityId == null
-        ? ''
-        : buildLanIdentityPayload(identityId, bindIdentity: true),
+    password: '',
     username: peer.username,
     isFileTransfer: isFileTransfer,
     isTerminal: isTerminal,

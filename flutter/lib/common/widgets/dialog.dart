@@ -12,7 +12,6 @@ import 'package:flutter_hbb/models/state_model.dart';
 import 'package:get/get.dart';
 
 import '../../common.dart';
-import '../../desktop/lan_identity_manager.dart';
 import '../../models/model.dart';
 import '../../models/platform_model.dart';
 
@@ -309,10 +308,6 @@ _connectDialog(
   final errUsername = ''.obs;
   final errPassword = ''.obs;
   bool rememberPassword = false;
-  final List<LanIdentityProfile> lanIdentities = lanAccess && isDesktop
-      ? loadLanIdentityProfiles()
-      : const [];
-  var selectedIdentityId = lanIdentityManualValue;
   if (osUsernameController != null) {
     osUsernameController.addListener(() {
       if (errUsername.value.isNotEmpty) {
@@ -323,16 +318,13 @@ _connectDialog(
 
   dialogManager.dismissAll();
   dialogManager.show((setState, close, context) {
-    final usingLanIdentity =
-        lanAccess && selectedIdentityId != lanIdentityManualValue;
-
     cancel() {
       close();
       closeConnection();
     }
 
     submit() {
-      if (osUsernameController != null && !usingLanIdentity) {
+      if (osUsernameController != null) {
         if (osUsernameController.text.trim().isEmpty) {
           errUsername.value = translate('Empty Username');
           setState(() {});
@@ -343,34 +335,23 @@ _connectDialog(
       final osPassword = osPasswordController?.text ?? '';
       final password = passwordController?.text.trim() ?? '';
       if (lanAccess) {
-        if (usingLanIdentity) {
-          final error = bind.sessionLoginLanIdentity(
-            sessionId: sessionId,
-            identityId: selectedIdentityId,
-            bindOnSuccess: rememberPassword,
-          );
-          if (error.isNotEmpty) {
-            errPassword.value = error;
-          setState(() {});
-          return;
-        }
-        } else if (osPassword.isEmpty) {
+        if (osPassword.isEmpty) {
           errPassword.value = translate('Empty Password');
           setState(() {});
           return;
         } else {
-        final error = bind.sessionLoginLan(
-          sessionId: sessionId,
-          username: osUsername,
-          password: osPassword,
-          remember: rememberPassword,
-        );
-        osPasswordController?.clear();
-        if (error.isNotEmpty) {
-          errPassword.value = error;
-          setState(() {});
-          return;
-        }
+          final error = bind.sessionLoginLan(
+            sessionId: sessionId,
+            username: osUsername,
+            password: osPassword,
+            remember: rememberPassword,
+          );
+          osPasswordController?.clear();
+          if (error.isNotEmpty) {
+            errPassword.value = error;
+            setState(() {});
+            return;
+          }
         }
       } else {
         if (passwordController != null && password.isEmpty) return;
@@ -465,37 +446,7 @@ _connectDialog(
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (lanAccess && isDesktop && lanIdentities.isNotEmpty)
-            DropdownButtonFormField<String>(
-              key: ValueKey(selectedIdentityId),
-              initialValue: selectedIdentityId,
-              decoration: InputDecoration(
-                labelText: translate('Account'),
-                prefixIcon: const Icon(Icons.badge_outlined),
-              ),
-              items: [
-                DropdownMenuItem(
-                  value: lanIdentityManualValue,
-                  child: Text(
-                    '${translate('Username')} · ${translate('Password')}',
-                  ),
-                ),
-                ...lanIdentities.map(
-                  (identity) => DropdownMenuItem(
-                    value: identity.id,
-                    child: Text(
-                      identity.isDefault
-                          ? '${identity.name} (${translate('Default')})'
-                          : identity.name,
-                    ),
-                  ),
-                ),
-              ],
-              onChanged: (value) => setState(
-                () => selectedIdentityId = value ?? lanIdentityManualValue,
-              ),
-            ).paddingOnly(bottom: 12),
-          if (!usingLanIdentity) osAccountWidget(),
+          osAccountWidget(),
           osUsernameController == null || passwordController == null
               ? Offstage()
               : Container(height: 12),
@@ -508,11 +459,7 @@ _connectDialog(
               contentPadding: EdgeInsets.zero,
               dense: true,
               controlAffinity: ListTileControlAffinity.leading,
-              title: Text(
-                usingLanIdentity
-                    ? '${translate('Remember password')} · ${translate('Account')}'
-                    : translate('Remember password'),
-              ),
+              title: Text(translate('Remember password')),
             ),
         ],
       ),
@@ -841,10 +788,10 @@ showSetOSPassword(
   final controller = TextEditingController();
   osPassword ??=
       await bind.sessionGetOption(sessionId: sessionId, arg: 'os-password') ??
-          '';
+      '';
   var autoLogin =
       await bind.sessionGetOption(sessionId: sessionId, arg: 'auto-login') !=
-          '';
+      '';
   controller.text = osPassword;
   dialogManager.show((setState, close, context) {
     closeWithCallback([dynamic]) {
@@ -918,10 +865,10 @@ showSetOSAccount(
   final passwdController = TextEditingController();
   var username =
       await bind.sessionGetOption(sessionId: sessionId, arg: 'os-username') ??
-          '';
+      '';
   var password =
       await bind.sessionGetOption(sessionId: sessionId, arg: 'os-password') ??
-          '';
+      '';
   usernameController.text = username;
   passwdController.text = password;
   dialogManager.show((setState, close, context) {
@@ -1127,10 +1074,7 @@ Future<void> _saveTrackpadSpeed({
 void _showTrackpadSpeedSaveError(Object error, StackTrace stackTrace) {
   debugPrint('Failed to save trackpad speed: $error');
   debugPrintStack(stackTrace: stackTrace);
-  BotToast.showText(
-    text: translate('Failed'),
-    contentColor: Colors.red,
-  );
+  BotToast.showText(text: translate('Failed'), contentColor: Colors.red);
 }
 
 List<Widget> _trackpadSpeedDialogActions({
@@ -1184,10 +1128,7 @@ void trackpadSpeedDialog(SessionID sessionId, FFI ffi) {
     }
 
     return CustomAlertDialog(
-      title: Text(
-        translate('Trackpad speed'),
-        style: TextStyle(fontSize: 21),
-      ),
+      title: Text(translate('Trackpad speed'), style: TextStyle(fontSize: 21)),
       content: TrackpadSpeedWidget(
         value: curSpeed,
         onTextChanged: (text) => speedText = text,
@@ -1205,47 +1146,39 @@ void trackpadSpeedDialog(SessionID sessionId, FFI ffi) {
 }
 
 void deleteConfirmDialog(Function onSubmit, String title) async {
-  gFFI.dialogManager.show(
-    (setState, close, context) {
-      submit() async {
-        await onSubmit();
-        close();
-      }
+  gFFI.dialogManager.show((setState, close, context) {
+    submit() async {
+      await onSubmit();
+      close();
+    }
 
-      return CustomAlertDialog(
-        title: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.delete_rounded,
-              color: Colors.red,
-            ),
-            Expanded(
-              child: Text(title, overflow: TextOverflow.ellipsis).paddingOnly(
-                left: 10,
-              ),
-            ),
-          ],
-        ),
-        content: SizedBox.shrink(),
-        actions: [
-          dialogButton(
-            "Cancel",
-            icon: Icon(Icons.close_rounded),
-            onPressed: close,
-            isOutline: true,
-          ),
-          dialogButton(
-            "OK",
-            icon: Icon(Icons.done_rounded),
-            onPressed: submit,
+    return CustomAlertDialog(
+      title: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.delete_rounded, color: Colors.red),
+          Expanded(
+            child: Text(
+              title,
+              overflow: TextOverflow.ellipsis,
+            ).paddingOnly(left: 10),
           ),
         ],
-        onSubmit: submit,
-        onCancel: close,
-      );
-    },
-  );
+      ),
+      content: SizedBox.shrink(),
+      actions: [
+        dialogButton(
+          "Cancel",
+          icon: Icon(Icons.close_rounded),
+          onPressed: close,
+          isOutline: true,
+        ),
+        dialogButton("OK", icon: Icon(Icons.done_rounded), onPressed: submit),
+      ],
+      onSubmit: submit,
+      onCancel: close,
+    );
+  });
 }
 
 void renameDialog({

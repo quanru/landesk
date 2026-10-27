@@ -26,12 +26,6 @@ mod lan_identity;
 mod lan_mdns;
 mod lan_protocol;
 mod lan_server;
-#[cfg(all(
-    feature = "flutter",
-    feature = "software-update",
-    not(any(target_os = "android", target_os = "ios"))
-))]
-mod software_update;
 #[cfg(not(any(target_os = "android", target_os = "ios", feature = "flutter")))]
 pub mod ui;
 mod version;
@@ -53,9 +47,6 @@ mod lang;
 #[cfg(not(any(target_os = "android", target_os = "ios")))]
 mod port_forward;
 
-#[cfg(all(feature = "flutter", feature = "plugin_framework"))]
-#[cfg(not(any(target_os = "android", target_os = "ios")))]
-pub mod plugin;
 
 #[cfg(not(any(target_os = "android", target_os = "ios")))]
 mod tray;
@@ -67,8 +58,6 @@ mod ui_cm_interface;
 mod ui_interface;
 mod ui_session_interface;
 
-#[cfg(feature = "plugin_framework")]
-mod hbbs_http;
 
 #[cfg(any(target_os = "windows", target_os = "linux", target_os = "macos"))]
 pub mod clipboard_file;

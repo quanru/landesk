@@ -119,6 +119,13 @@ report_matches \
   flutter/lib src/ui.rs
 
 for removed in \
+  src/plugin \
+  src/hbbs_http.rs \
+  src/hbbs_http \
+  src/software_update \
+  flutter/lib/plugin \
+  flutter/lib/models/user_model.dart \
+  flutter/lib/models/address_book_model.dart \
   src/rendezvous_mediator.rs \
   src/kcp_stream.rs \
   src/updater.rs \
@@ -143,6 +150,17 @@ if ! job_is_disabled build-rustdesk-linux-sciter .github/workflows/flutter-build
   echo 'LAN-only residual check failed: legacy Linux UI release job is not disabled' >&2
   failed=1
 fi
+
+report_matches \
+  'cloud account, updater or plugin entry in native Flutter UI' \
+  '(UserModel|AddressBookModel|PluginUiManager|pluginSyncUi|pluginListReload|mainGetSoftwareUpdateState|mainCheckSoftwareUpdate|mainDownloadSoftwareUpdate|mainInstallSoftwareUpdate)' \
+  flutter/lib/main.dart flutter/lib/mobile flutter/lib/desktop flutter/lib/models
+
+# LocalDesk exposes per-host authentication, not a separate account manager.
+report_matches \
+  'account management entrypoint in native Flutter UI' \
+  'showLanIdentityManager|showLanIdentityEditor|showLanIdentityPicker|showImportLegacyLanCredentialDialog|lan_identity_manager.dart' \
+  flutter/lib/desktop flutter/lib/mobile flutter/lib/common
 
 if [[ $failed -ne 0 ]]; then
   exit 1

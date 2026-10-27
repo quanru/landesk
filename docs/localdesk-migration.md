@@ -81,3 +81,18 @@ or an untrusted profile must be resolved before claiming real-device validation.
 The user may need to trust/verify the developer in Settings > General > VPN &
 Device Management. Do not delete other apps, reset device trust or revoke working
 certificates as a speculative workaround.
+
+## Local Apple Silicon desktop build
+
+`tools/localdesk/build-macos-arm64.sh` uses Flutter 3.44.1, Rust 1.82, existing
+vcpkg `arm64-osx` libraries and host libsodium. Set `FLUTTER_BIN`, `VCPKG_ROOT`,
+`VCPKG_INSTALLED_ROOT` if needed, and libsodium pkg-config environment variables.
+It builds the library and service, packages the Flutter app for arm64/macOS 12.3+,
+and refreshes/verifies the ad-hoc signature after embedding the service.
+This local development recipe uses software codecs; it does not enable `hwcodec`.
+The CI installer recipe separately enables hardware codecs.
+
+Install the resulting `flutter/build/macos/Build/Products/Release/LocalDesk.app`
+into `/Applications`. To serve a desktop, configure local access credentials in
+LocalDesk and allow its screen recording/accessibility permissions in macOS.
+Installation and opening the UI alone do not verify remote screen/input access.

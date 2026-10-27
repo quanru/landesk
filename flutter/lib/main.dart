@@ -32,8 +32,6 @@ import 'mobile/pages/home_page.dart';
 import 'mobile/pages/server_page.dart';
 import 'models/platform_model.dart';
 
-import 'package:flutter_hbb/plugin/handlers.dart'
-    if (dart.library.html) 'package:flutter_hbb/web/plugin/handlers.dart';
 
 /// Basic window and launch properties.
 int? kWindowId;
@@ -157,8 +155,6 @@ void runMainApp(bool startService) async {
   await bind.mainCheckConnectStatus();
   if (startService) {
     gFFI.serverModel.startService();
-    bind.pluginSyncUi(syncTo: kAppTypeMain);
-    bind.pluginListReload();
   }
   runApp(App());
 
@@ -573,12 +569,7 @@ _registerEventHandler() {
       reloadAllWindows();
     });
   }
-  // Register native handlers.
-  if (isDesktop) {
-    platformFFI.registerEventHandler('native_ui', 'native_ui', (evt) async {
-      NativeUiHandler.instance.onEvent(evt);
-    });
-  }
+
 }
 
 Widget keyListenerBuilder(BuildContext context, Widget? child) {
