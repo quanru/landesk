@@ -26,10 +26,10 @@
 			<key>CFBundleURLIconFile</key>
 			<string></string>
 			<key>CFBundleURLName</key>
-			<string>com.zibochen.subnetdesk</string>
+			<string>dev.quanru.localdesk</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<string>subnetdesk</string>
+				<string>localdesk</string>
 			</array>
 		</dict>
 	</array>
@@ -44,10 +44,10 @@
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Record the sound from microphone for the purpose of the remote desktop.</string>
 	<key>NSLocalNetworkUsageDescription</key>
-	<string>SubnetDesk uses your local network to discover and connect to nearby devices for remote access.</string>
+	<string>LocalDesk uses your local network to discover and connect to nearby devices for remote access.</string>
 	<key>NSBonjourServices</key>
 	<array>
-		<string>_subnetdesk._tcp</string>
+		<string>_localdesk._tcp</string>
 	</array>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>

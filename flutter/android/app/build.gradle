@@ -82,7 +82,7 @@ protobuf {
 }
 
 android {
-    // Keep the established Kotlin namespace while publishing under the SubnetDesk application ID.
+    // Keep the established Kotlin namespace while publishing under the LocalDesk application ID.
     namespace "com.carriez.flutter_hbb"
     compileSdkVersion flutter.compileSdkVersion
     sourceSets {
@@ -100,7 +100,7 @@ android {
 
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId "com.zibochen.subnetdesk"
+        applicationId "dev.quanru.localdesk"
         minSdkVersion flutter.minSdkVersion
         targetSdkVersion flutter.targetSdkVersion
         versionCode flutterVersionCode.toInteger()

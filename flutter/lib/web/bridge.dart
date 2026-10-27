@@ -1691,9 +1691,9 @@ class RustdeskImpl {
   }
 
   bool isCustomClient({dynamic hint}) {
-    // The upstream and SubnetDesk defaults are products, not generated custom clients.
+    // The upstream and LocalDesk defaults are products, not generated custom clients.
     final appName = mainGetAppNameSync(hint: hint);
-    return appName != "RustDesk" && appName != "SubnetDesk";
+    return appName != "RustDesk" && appName != "LocalDesk";
   }
 
   bool isDisableSettings({dynamic hint}) {

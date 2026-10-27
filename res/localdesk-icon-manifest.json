@@ -21,7 +21,7 @@
     "flutter/android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png": "9ed0f168a4ed7c563872edb6ad7b10027a3e94d4dca0110026fe3303ff11d11c",
     "flutter/android/app/src/main/res/mipmap-xxxhdpi/ic_stat_logo.png": "89e473a5c09f44f03e6c8640da0932d10cf9445513e802b16fe5216728631484",
     "flutter/assets/icon.png": "0ffaba3ecb744d8eade6299086fab53264042fd8b7f2f7f9698f6206d3779822",
-    "flutter/assets/icon.svg": "62d2496d0ae76b623f45efabd4b20131643b3a60fbad22d6367c97da13bd4223",
+    "flutter/assets/icon.svg": "bddd72731f60e3505b07036b08e37734623ee024a0246b93375284cff666fa5b",
     "flutter/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-1024x1024@1x.png": "c01d77448d23ece0cfe4de512dc5ed26ad52148fb5269ea9a85144bcee784356",
     "flutter/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-20x20@1x.png": "18663b36803f284e56dbc1d30afb2b781f5fc6f268c1c3d534a8c9063e3464d2",
     "flutter/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-20x20@2x.png": "6cca7cf5c251c6933b5b861997a59e2ec3b03e940eb07d51512b74ca2ef1952f",
@@ -48,9 +48,9 @@
     "res/mac-icon.png": "0ffaba3ecb744d8eade6299086fab53264042fd8b7f2f7f9698f6206d3779822",
     "res/mac-tray-dark-x2.png": "e4ad1adcaa3358a6a4b7e36480ade74132ca201080b8859202734d585ebe8294",
     "res/mac-tray-light-x2.png": "f624819ddfa033c811f1343ae1da9d7325b71b56f2168f89f878a75a3be6b1b5",
-    "res/scalable.svg": "62d2496d0ae76b623f45efabd4b20131643b3a60fbad22d6367c97da13bd4223",
+    "res/scalable.svg": "bddd72731f60e3505b07036b08e37734623ee024a0246b93375284cff666fa5b",
     "res/tray-icon.ico": "4fbf7696fdadf4b54817ff2881475e68440fb61539878471c5345879f4cc487f"
   },
-  "source": "res/subnetdesk-icon.svg",
-  "source_sha256": "62d2496d0ae76b623f45efabd4b20131643b3a60fbad22d6367c97da13bd4223"
+  "source": "res/localdesk-icon.svg",
+  "source_sha256": "bddd72731f60e3505b07036b08e37734623ee024a0246b93375284cff666fa5b"
 }

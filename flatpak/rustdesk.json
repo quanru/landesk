@@ -1,12 +1,12 @@
 {
-  "id": "com.zibochen.SubnetDesk",
+  "id": "dev.quanru.LocalDesk",
   "runtime": "org.freedesktop.Platform",
   "runtime-version": "24.08",
   "sdk": "org.freedesktop.Sdk",
-  "command": "subnetdesk",
+  "command": "localdesk",
   "cleanup": ["/include", "/lib/pkgconfig", "/share/gtk-doc"],
-  "rename-desktop-file": "subnetdesk.desktop",
-  "rename-icon": "subnetdesk",
+  "rename-desktop-file": "localdesk.desktop",
+  "rename-icon": "localdesk",
   "modules": [
     "shared-modules/libappindicator/libappindicator-gtk3-12.10.json",
     {
@@ -34,21 +34,21 @@
       ]
     },
     {
-      "name": "subnetdesk",
+      "name": "localdesk",
       "buildsystem": "simple",
       "build-commands": [
-        "bsdtar -Oxf subnetdesk.deb data.tar.xz | bsdtar -xf -",
+        "bsdtar -Oxf localdesk.deb data.tar.xz | bsdtar -xf -",
         "cp -r usr/* /app/",
-        "mkdir -p /app/bin && ln -s /app/share/subnetdesk/subnetdesk /app/bin/subnetdesk"
+        "mkdir -p /app/bin && ln -s /app/share/localdesk/localdesk /app/bin/localdesk"
       ],
       "sources": [
         {
           "type": "file",
-          "path": "subnetdesk.deb"
+          "path": "localdesk.deb"
         },
         {
           "type": "file",
-          "path": "com.zibochen.SubnetDesk.metainfo.xml"
+          "path": "dev.quanru.LocalDesk.metainfo.xml"
         }
       ]
     }

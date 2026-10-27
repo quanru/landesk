@@ -198,7 +198,7 @@ fn elevate_install(
     if !same_plugin_exists {
         args.push(&plugin_url);
     }
-    crate::platform::elevate(args, "SubnetDesk wants to install the plugin")
+    crate::platform::elevate(args, "LocalDesk wants to install the plugin")
 }
 
 #[inline]
@@ -218,7 +218,7 @@ fn elevate_uninstall(plugin_id: &str) -> ResultType<bool> {
 fn elevate_uninstall(plugin_id: &str) -> ResultType<bool> {
     crate::platform::elevate(
         vec!["--plugin-uninstall", plugin_id],
-        "SubnetDesk wants to uninstall the plugin",
+        "LocalDesk wants to uninstall the plugin",
     )
 }
 

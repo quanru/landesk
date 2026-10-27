@@ -5,13 +5,13 @@ set -e
 if [ "$1" = configure ]; then
 
 	INITSYS=$(ls -al /proc/1/exe | awk -F' ' '{print $NF}' | awk -F'/' '{print $NF}')
-	ln -f -s /usr/share/subnetdesk/subnetdesk /usr/bin/subnetdesk
+	ln -f -s /usr/share/localdesk/localdesk /usr/bin/localdesk
 
 	if [ "systemd" == "$INITSYS" ]; then
 		mkdir -p /usr/lib/systemd/system/
-		cp /usr/share/subnetdesk/files/systemd/subnetdesk.service /usr/lib/systemd/system/subnetdesk.service
+		cp /usr/share/localdesk/files/systemd/localdesk.service /usr/lib/systemd/system/localdesk.service
 		systemctl daemon-reload
-		systemctl enable subnetdesk
-		systemctl start subnetdesk
+		systemctl enable localdesk
+		systemctl start localdesk
 	fi
 fi

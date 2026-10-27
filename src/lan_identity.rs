@@ -10,7 +10,7 @@ use zeroize::{Zeroize, Zeroizing};
 
 const MAX_IDENTITY_NAME_LEN: usize = 64;
 #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
-const LAN_IDENTITY_KEYRING_SERVICE: &str = "com.zibochen.SubnetDesk.LANIdentities";
+const LAN_IDENTITY_KEYRING_SERVICE: &str = "dev.quanru.LocalDesk.LANIdentities";
 
 #[derive(Debug, Serialize)]
 pub struct LanIdentitySummary {

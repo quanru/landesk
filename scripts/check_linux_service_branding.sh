@@ -21,7 +21,7 @@ reject_pattern() {
   fi
 }
 
-service_resource=res/subnetdesk.service
+service_resource=res/localdesk.service
 debian_scripts=(
   res/DEBIAN/preinst
   res/DEBIAN/postinst
@@ -45,35 +45,35 @@ if [[ -e res/rustdesk.service ]]; then
   exit 1
 fi
 
-require_fixed "$service_resource" 'Description=SubnetDesk'
-require_fixed "$service_resource" 'ExecStart=/usr/bin/subnetdesk --service'
-require_fixed "$service_resource" 'ExecStop=/usr/bin/pkill -f "subnetdesk --"'
-require_fixed build.py 'Package: subnetdesk'
-require_fixed flutter/linux/CMakeLists.txt 'set(BINARY_NAME "subnetdesk")'
-require_fixed res/rustdesk.desktop 'Exec=subnetdesk %u'
-require_fixed res/rustdesk.desktop 'Icon=subnetdesk'
-require_fixed res/DEBIAN/postinst '/usr/lib/systemd/system/subnetdesk.service'
-require_fixed res/DEBIAN/postinst 'systemctl enable subnetdesk'
-require_fixed res/DEBIAN/postinst 'systemctl start subnetdesk'
-require_fixed res/DEBIAN/preinst 'systemctl stop subnetdesk'
-require_fixed res/DEBIAN/prerm 'systemctl stop subnetdesk'
-require_fixed res/DEBIAN/prerm 'systemctl disable subnetdesk'
+require_fixed "$service_resource" 'Description=LocalDesk'
+require_fixed "$service_resource" 'ExecStart=/usr/bin/localdesk --service'
+require_fixed "$service_resource" 'ExecStop=/usr/bin/pkill -f "localdesk --"'
+require_fixed build.py 'Package: localdesk'
+require_fixed flutter/linux/CMakeLists.txt 'set(BINARY_NAME "localdesk")'
+require_fixed res/rustdesk.desktop 'Exec=localdesk %u'
+require_fixed res/rustdesk.desktop 'Icon=localdesk'
+require_fixed res/DEBIAN/postinst '/usr/lib/systemd/system/localdesk.service'
+require_fixed res/DEBIAN/postinst 'systemctl enable localdesk'
+require_fixed res/DEBIAN/postinst 'systemctl start localdesk'
+require_fixed res/DEBIAN/preinst 'systemctl stop localdesk'
+require_fixed res/DEBIAN/prerm 'systemctl stop localdesk'
+require_fixed res/DEBIAN/prerm 'systemctl disable localdesk'
 
 for file in "${rpm_specs[@]}"; do
-  require_fixed "$file" '$HBB/res/subnetdesk.service'
-  require_fixed "$file" '/etc/systemd/system/subnetdesk.service'
-  require_fixed "$file" 'systemctl enable subnetdesk'
-  require_fixed "$file" 'systemctl start subnetdesk'
-  require_fixed "$file" 'systemctl stop subnetdesk'
-  require_fixed "$file" 'systemctl disable subnetdesk'
+  require_fixed "$file" '$HBB/res/localdesk.service'
+  require_fixed "$file" '/etc/systemd/system/localdesk.service'
+  require_fixed "$file" 'systemctl enable localdesk'
+  require_fixed "$file" 'systemctl start localdesk'
+  require_fixed "$file" 'systemctl stop localdesk'
+  require_fixed "$file" 'systemctl disable localdesk'
 done
 
-require_fixed res/PKGBUILD '$HBB/res/subnetdesk.service'
-require_fixed res/pacman_install '/etc/systemd/system/subnetdesk.service'
-require_fixed res/pacman_install 'systemctl enable subnetdesk'
-require_fixed res/pacman_install 'systemctl start subnetdesk'
-require_fixed res/pacman_install 'systemctl stop subnetdesk'
-require_fixed res/pacman_install 'systemctl disable subnetdesk'
+require_fixed res/PKGBUILD '$HBB/res/localdesk.service'
+require_fixed res/pacman_install '/etc/systemd/system/localdesk.service'
+require_fixed res/pacman_install 'systemctl enable localdesk'
+require_fixed res/pacman_install 'systemctl start localdesk'
+require_fixed res/pacman_install 'systemctl stop localdesk'
+require_fixed res/pacman_install 'systemctl disable localdesk'
 
 reject_pattern 'res/rustdesk\.service' "${packaging_files[@]}"
 reject_pattern 'cp .*rustdesk\.service .*/(etc|usr/lib)/systemd' "${packaging_files[@]}"

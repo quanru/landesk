@@ -37,8 +37,8 @@ class RelativeMouseState {
 }
 
 private final class LocalNetworkPermissionProbe {
-    private let queue = DispatchQueue(label: "com.zibochen.subnetdesk.local-network-permission")
-    private let serviceName = "SubnetDesk-\(UUID().uuidString)"
+    private let queue = DispatchQueue(label: "dev.quanru.localdesk.local-network-permission")
+    private let serviceName = "LocalDesk-\(UUID().uuidString)"
     private var browser: NWBrowser?
     private var listener: NWListener?
     private var completion: ((String) -> Void)?
@@ -56,7 +56,7 @@ private final class LocalNetworkPermissionProbe {
                 let listener = try NWListener(using: parameters)
                 listener.service = NWListener.Service(
                     name: self.serviceName,
-                    type: "_subnetdesk._tcp"
+                    type: "_localdesk._tcp"
                 )
                 listener.newConnectionHandler = { connection in
                     connection.cancel()
@@ -67,7 +67,7 @@ private final class LocalNetworkPermissionProbe {
                 self.listener = listener
 
                 let browser = NWBrowser(
-                    for: .bonjour(type: "_subnetdesk._tcp", domain: nil),
+                    for: .bonjour(type: "_localdesk._tcp", domain: nil),
                     using: parameters
                 )
                 browser.stateUpdateHandler = { [weak self] state in
@@ -95,7 +95,7 @@ private final class LocalNetworkPermissionProbe {
                 self.timeoutWorkItem = timeout
                 self.queue.asyncAfter(deadline: .now() + 30, execute: timeout)
             } catch {
-                NSLog("[SubnetDesk] Failed to start the local-network permission probe: %@", error.localizedDescription)
+                NSLog("[LocalDesk] Failed to start the local-network permission probe: %@", error.localizedDescription)
                 self.finish("unknown")
             }
         }
@@ -128,7 +128,7 @@ private final class LocalNetworkPermissionProbe {
         if Self.isPermissionDenied(error) {
             finish("denied")
         } else {
-            NSLog("[SubnetDesk] Local-network permission probe failed: %@", error.debugDescription)
+            NSLog("[LocalDesk] Local-network permission probe failed: %@", error.debugDescription)
             finish("unknown")
         }
     }
@@ -239,7 +239,7 @@ class MainFlutterWindow: NSWindow {
         // Do this FIRST before setting any state
         let result = CGAssociateMouseAndMouseCursorPosition(0)
         if result != CGError.success {
-            NSLog("[SubnetDesk] Failed to dissociate mouse from cursor position: %d", result.rawValue)
+            NSLog("[LocalDesk] Failed to dissociate mouse from cursor position: %d", result.rawValue)
             return false
         }
 
@@ -281,7 +281,7 @@ class MainFlutterWindow: NSWindow {
 
         // Check if monitor was created successfully
         if state.eventMonitor == nil {
-            NSLog("[SubnetDesk] Failed to create event monitor for relative mouse mode")
+            NSLog("[LocalDesk] Failed to create event monitor for relative mouse mode")
             // Re-associate mouse since we failed
             CGAssociateMouseAndMouseCursorPosition(1)
             state.deltaChannel = nil
@@ -313,12 +313,12 @@ class MainFlutterWindow: NSWindow {
         // Re-associate mouse with cursor position (non-blocking with async retry)
         let result = CGAssociateMouseAndMouseCursorPosition(1)
         if result != CGError.success {
-            NSLog("[SubnetDesk] Failed to re-associate mouse with cursor position: %d, scheduling retry...", result.rawValue)
+            NSLog("[LocalDesk] Failed to re-associate mouse with cursor position: %d, scheduling retry...", result.rawValue)
             // Non-blocking retry after 50ms
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
                 let retryResult = CGAssociateMouseAndMouseCursorPosition(1)
                 if retryResult != CGError.success {
-                    NSLog("[SubnetDesk] Retry failed to re-associate mouse: %d. Cursor may remain locked.", retryResult.rawValue)
+                    NSLog("[LocalDesk] Retry failed to re-associate mouse: %d. Cursor may remain locked.", retryResult.rawValue)
                 }
             }
         }

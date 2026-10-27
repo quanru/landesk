@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "subnetdesk-web-client",
+      "name": "localdesk-web-client",
       "dependencies": {
         "@bufbuild/protobuf": "2.6.2",
         "fast-sha256": "1.3.0",

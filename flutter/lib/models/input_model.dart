@@ -1106,7 +1106,7 @@ class InputModel {
   /// and layout remap are derived from it, while the advertised base frame is
   /// the panel-rotated one. Map the point into that space so the peer injects
   /// it unchanged and needs no knowledge of the client-side rotation (works
-  /// with any SubnetDesk server). No-op when the view follows the panel.
+  /// with any LocalDesk server). No-op when the view follows the panel.
   Point? _rotatePointToBase(Point? p) {
     if (p == null) {
       return null;

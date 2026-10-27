@@ -202,7 +202,7 @@ class WebHomePage extends StatelessWidget {
           return;
         }
         list.removeAt(0);
-        fakelink = "subnetdesk://${list.join(s)}";
+        fakelink = "localdesk://${list.join(s)}";
         break;
       }
     }

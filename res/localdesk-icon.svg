@@ -5,7 +5,7 @@
   role="img"
   aria-labelledby="title description"
 >
-  <title id="title">SubnetDesk application icon</title>
+  <title id="title">LocalDesk application icon</title>
   <desc id="description">
     Two desktop endpoints connected directly across a local subnet.
   </desc>

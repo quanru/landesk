@@ -1,4 +1,4 @@
-name: SubnetDesk Release Build
+name: LocalDesk Release Build
 
 permissions:
   contents: write

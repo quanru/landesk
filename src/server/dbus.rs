@@ -31,7 +31,7 @@ struct DbusError(String);
 
 impl fmt::Display for DbusError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "SubnetDesk DBus Error: {}", self.0)
+        write!(f, "LocalDesk DBus Error: {}", self.0)
     }
 }
 
@@ -156,7 +156,7 @@ fn create_private_temp_dir(prefix: &str) -> Result<std::path::PathBuf, Box<dyn E
 
 #[cfg(target_os = "linux")]
 fn activate_via_kwin_script(pid: u32) -> Result<(), Box<dyn Error>> {
-    let script_dir = create_private_temp_dir("subnetdesk-kwin-activate")?;
+    let script_dir = create_private_temp_dir("localdesk-kwin-activate")?;
     let script_path = script_dir.join(format!("{pid}.js"));
     // `workspace.windowList()` (KWin 5) was renamed to the `workspace.windows`
     // property in KWin 6's scripting API; support either.
@@ -177,7 +177,7 @@ fn activate_via_kwin_script(pid: u32) -> Result<(), Box<dyn Error>> {
          }}\n"
     );
     std::fs::File::create(&script_path)?.write_all(script.as_bytes())?;
-    let plugin_name = format!("subnetdesk-activate-{pid}");
+    let plugin_name = format!("localdesk-activate-{pid}");
 
     let conn = Connection::new_session()?;
     let proxy = conn.with_proxy("org.kde.KWin", "/Scripting", DBUS_TIMEOUT);
@@ -247,11 +247,11 @@ fn handle_client_message(builder: &mut IfaceBuilder<()>) {
 // A host may run its own screen-locking power-save script that powers the
 // physical monitor off (via org.gnome.Mutter.DisplayConfig's PowerSaveMode
 // property) when the session locks, to save power/wear on an unattended
-// machine. On GNOME, an incoming SubnetDesk connection while the screen is
+// machine. On GNOME, an incoming LocalDesk connection while the screen is
 // in that state can capture a monitor that's powered off (no frames ever
 // arrive -- "Connection successful, waiting for image..." forever), and
 // the user's own script has no way to know a remote viewer just connected,
-// so it never wakes the display back up. Real fix: SubnetDesk wakes the
+// so it never wakes the display back up. Real fix: LocalDesk wakes the
 // display itself on a new connection (mirroring the exact D-Bus call such
 // a script would use), and re-blanks it after the last viewer disconnects
 // if the screen is still locked, so the power-saving behavior isn't lost.
@@ -331,7 +331,7 @@ impl DisplayBackend for DbusBackend {
 // The counters are lock-free so connection handling never blocks on D-Bus.
 // `prior_mode` doubles as the transition lock: wake and re-blank both hold it
 // across their entire read-check-write D-Bus sequence, so a re-blank can never
-// interleave with a reconnect's wake. `Some(mode)` means SubnetDesk changed
+// interleave with a reconnect's wake. `Some(mode)` means LocalDesk changed
 // the power-save mode and `mode` is what to restore; `None` means it did not,
 // so a display that was already on is never touched.
 #[cfg(target_os = "linux")]
@@ -487,7 +487,7 @@ fn should_reblank(generation_at_schedule: u64, current_generation: u64, viewer_c
 }
 
 /// Restore the display's prior power-save mode after the last monitor viewer
-/// disconnects, if SubnetDesk changed it and the screen is still locked. Only
+/// disconnects, if LocalDesk changed it and the screen is still locked. Only
 /// call this once [`note_monitor_disconnected`] reports the monitor-viewer
 /// count has actually reached zero.
 #[cfg(target_os = "linux")]

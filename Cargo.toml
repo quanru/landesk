@@ -1,10 +1,10 @@
 [package]
 name = "rustdesk"
 version = "1.3.0"
-authors = ["SubnetDesk contributors"]
+authors = ["LocalDesk contributors"]
 edition = "2021"
 build= "build.rs"
-description = "SubnetDesk LAN/VPN Remote Desktop"
+description = "LocalDesk LAN/VPN Remote Desktop"
 default-run = "rustdesk"
 rust-version = "1.75"
 
@@ -225,9 +225,9 @@ exclude = ["vdi/host"]
 libxdo-sys = { path = "libs/libxdo-sys-stub" }
 
 [package.metadata.winres]
-LegalCopyright = "Copyright © 2026 SubnetDesk contributors."
-ProductName = "SubnetDesk"
-FileDescription = "SubnetDesk LAN/VPN Remote Desktop"
+LegalCopyright = "Copyright © 2026 LocalDesk contributors."
+ProductName = "LocalDesk"
+FileDescription = "LocalDesk LAN/VPN Remote Desktop"
 OriginalFilename = "rustdesk.exe"
 
 [target.'cfg(target_os="windows")'.build-dependencies]
@@ -244,8 +244,8 @@ hound = "3.5"
 docopt = "1.1"
 
 [package.metadata.bundle]
-name = "SubnetDesk"
-identifier = "com.zibochen.subnetdesk"
+name = "LocalDesk"
+identifier = "dev.quanru.localdesk"
 icon = ["res/32x32.png", "res/128x128.png", "res/128x128@2x.png"]
 osx_minimum_system_version = "10.14"
 

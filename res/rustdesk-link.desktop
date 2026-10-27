@@ -1,11 +1,11 @@
 [Desktop Entry]
-Name=SubnetDesk
+Name=LocalDesk
 NoDisplay=true
-MimeType=x-scheme-handler/subnetdesk;
-TryExec=subnetdesk
-Exec=subnetdesk %u
-Icon=subnetdesk
+MimeType=x-scheme-handler/localdesk;
+TryExec=localdesk
+Exec=localdesk %u
+Icon=localdesk
 Terminal=false
 Type=Application
 StartupNotify=false
-StartupWMClass=subnetdesk
+StartupWMClass=localdesk

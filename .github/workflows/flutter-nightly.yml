@@ -1,4 +1,4 @@
-name: SubnetDesk Nightly Build
+name: LocalDesk Nightly Build
 
 permissions:
   contents: write
@@ -17,7 +17,7 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: subnetdesk-nightly-release
+  group: localdesk-nightly-release
   cancel-in-progress: true
 
 jobs:
@@ -62,7 +62,7 @@ jobs:
             await github.rest.repos.updateRelease({
               ...context.repo,
               release_id: release.id,
-              name: 'SubnetDesk Nightly（构建中）',
+              name: 'LocalDesk Nightly（构建中）',
               body: [
                 '正在为最新的主分支提交构建测试包。',
                 '',

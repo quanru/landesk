@@ -626,7 +626,7 @@ class _ConnectionPageState extends State<ConnectionPage> with WindowListener {
                   autocorrect: false,
                   enableSuggestions: false,
                   decoration: InputDecoration(
-                    labelText: '${translate('Local Address')} (IP / DNS)',
+                    labelText: '${translate('Local Address')} (IP)',
                     prefixIcon: const Icon(Icons.desktop_windows_outlined),
                   ),
                   onChanged: (value) => _idController.id = value,

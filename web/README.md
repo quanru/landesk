@@ -1,4 +1,4 @@
-# SubnetDesk Web client
+# LocalDesk Web client
 
 This browser client speaks the same LAN-only protocol as the native client through the embedded
 HTTPS/WebSocket gateway. It does not use the public RustDesk ID, rendezvous, or relay services.

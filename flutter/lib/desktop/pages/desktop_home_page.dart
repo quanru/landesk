@@ -34,7 +34,7 @@ class DesktopHomePage extends StatefulWidget {
 const borderColor = Color(0xFF2F65BA);
 const _showSelinuxHelpTipOption = 'show-selinux-help-tip';
 const _selinuxHelpUrl =
-    'https://github.com/zibo-chen/SubnetDesk/blob/master/docs/linux-host-readiness.md#selinux';
+    'https://github.com/quanru/localdesk/blob/master/docs/linux-host-readiness.md#selinux';
 const _lanDeviceNameOption = 'lan-device-name';
 
 class LanServerInfoPanel extends StatefulWidget {
@@ -1721,7 +1721,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Text(
-                        'SubnetDesk',
+                        'LocalDesk',
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.w700,

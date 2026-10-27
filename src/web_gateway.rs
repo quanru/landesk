@@ -615,7 +615,7 @@ fn build_certificate_subject_alt_names(
     listen_addresses: &[IpAddr],
     interface_addresses: &[IpAddr],
 ) -> Vec<String> {
-    let mut names = vec!["localhost".to_owned(), "subnetdesk.local".to_owned()];
+    let mut names = vec!["localhost".to_owned(), "localdesk.local".to_owned()];
     names.extend(
         configured_hosts
             .split(',')
@@ -782,7 +782,7 @@ fn secure_private_file_permissions(_path: &Path) -> ResultType<()> {
 fn certificate_authority_params() -> CertificateParams {
     let mut params = CertificateParams::default();
     let mut distinguished_name = DistinguishedName::new();
-    distinguished_name.push(DnType::CommonName, "SubnetDesk Local CA");
+    distinguished_name.push(DnType::CommonName, "LocalDesk Local CA");
     params.distinguished_name = distinguished_name;
     params.is_ca = IsCa::Ca(BasicConstraints::Unconstrained);
     params.key_usages = vec![
@@ -828,7 +828,7 @@ fn generate_leaf_certificate(
     let mut params = CertificateParams::new(subject_alt_names.to_vec())
         .context("Failed to configure Web certificate names")?;
     let mut distinguished_name = DistinguishedName::new();
-    distinguished_name.push(DnType::CommonName, "subnetdesk.local");
+    distinguished_name.push(DnType::CommonName, "localdesk.local");
     params.distinguished_name = distinguished_name;
     params.extended_key_usages = vec![ExtendedKeyUsagePurpose::ServerAuth];
     params.key_usages = vec![KeyUsagePurpose::DigitalSignature];
@@ -1272,7 +1272,7 @@ async fn ca_certificate() -> Response {
                 (CONTENT_TYPE, "application/pkix-cert"),
                 (
                     CONTENT_DISPOSITION,
-                    "attachment; filename=\"subnetdesk-local-ca.der\"",
+                    "attachment; filename=\"localdesk-local-ca.der\"",
                 ),
             ],
             Body::from(certificate),
@@ -1736,22 +1736,22 @@ mod tests {
     #[test]
     fn generated_certificate_rotates_when_addresses_change_or_it_ages() {
         let metadata = GeneratedCertificateMetadata {
-            subject_alt_names: vec!["192.168.1.20".to_owned(), "subnetdesk.local".to_owned()],
+            subject_alt_names: vec!["192.168.1.20".to_owned(), "localdesk.local".to_owned()],
             generated_at_unix_seconds: 1_000,
         };
         assert!(!generated_certificate_needs_rotation(
             &metadata,
-            &["192.168.1.20".to_owned(), "subnetdesk.local".to_owned()],
+            &["192.168.1.20".to_owned(), "localdesk.local".to_owned()],
             1_000 + GENERATED_CERTIFICATE_ROTATION_SECONDS - 1,
         ));
         assert!(generated_certificate_needs_rotation(
             &metadata,
-            &["192.168.1.21".to_owned(), "subnetdesk.local".to_owned()],
+            &["192.168.1.21".to_owned(), "localdesk.local".to_owned()],
             1_001,
         ));
         assert!(generated_certificate_needs_rotation(
             &metadata,
-            &["192.168.1.20".to_owned(), "subnetdesk.local".to_owned()],
+            &["192.168.1.20".to_owned(), "localdesk.local".to_owned()],
             1_000 + GENERATED_CERTIFICATE_ROTATION_SECONDS,
         ));
     }
@@ -1837,8 +1837,8 @@ mod tests {
             true,
         ));
         assert!(origin_allowed(
-            Some("http://subnetdesk.local:18123"),
-            "subnetdesk.local:18123",
+            Some("http://localdesk.local:18123"),
+            "localdesk.local:18123",
             false,
         ));
         assert!(!origin_allowed(
@@ -1868,11 +1868,11 @@ mod tests {
         let allowed = HashSet::from([
             "192.168.0.123".to_owned(),
             "fd00::20".to_owned(),
-            "subnetdesk.local".to_owned(),
+            "localdesk.local".to_owned(),
         ]);
         assert!(authority_host_allowed("192.168.0.123:18123", &allowed));
         assert!(authority_host_allowed("[fd00::20]:18123", &allowed));
-        assert!(authority_host_allowed("subnetdesk.local:18123", &allowed));
+        assert!(authority_host_allowed("localdesk.local:18123", &allowed));
         assert!(!authority_host_allowed("attacker.example:18123", &allowed));
     }
 

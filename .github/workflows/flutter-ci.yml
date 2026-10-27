@@ -1,4 +1,4 @@
-name: SubnetDesk Installers CI
+name: LocalDesk Installers CI
 
 on:
   workflow_dispatch:
@@ -9,7 +9,7 @@ on:
     - ".github/workflows/ci.yml"
 
 concurrency:
-  group: subnetdesk-flutter-ci-${{ github.ref }}
+  group: localdesk-flutter-ci-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:

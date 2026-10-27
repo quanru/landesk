@@ -1,6 +1,6 @@
 # Changelog
 
-All notable SubnetDesk changes are documented in this file.
+All notable LocalDesk changes are documented in this file.
 
 ## [1.3.0] - 2026-08-27
 
@@ -18,8 +18,8 @@ All notable SubnetDesk changes are documented in this file.
 ### Fixed
 
 - Fixed Windows remote desktop and camera stalls caused by texture lifecycle races during session changes.
-- Fixed Windows portable builds unpacking into RustDesk's data directory instead of an isolated SubnetDesk directory.
+- Fixed Windows portable builds unpacking into RustDesk's data directory instead of an isolated LocalDesk directory.
 - Fixed known LAN peers being rejected before the user could confirm an unexpected device-identity fingerprint.
 - Hardened macOS update extraction with unique mount paths, symlink-safe cleanup, code-signature verification, and Gatekeeper validation.
 
-[1.3.0]: https://github.com/zibo-chen/SubnetDesk/compare/v1.2.3...v1.3.0
+[1.3.0]: https://github.com/quanru/localdesk/compare/v1.2.3...v1.3.0

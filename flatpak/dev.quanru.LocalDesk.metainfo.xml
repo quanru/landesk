@@ -1,17 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <component type="desktop-application">
-  <id>com.zibochen.SubnetDesk</id>
+  <id>dev.quanru.LocalDesk</id>
   <developer id="com.zibochen">
-    <name>SubnetDesk contributors</name>
+    <name>LocalDesk contributors</name>
   </developer>
-  <launchable type="desktop-id">com.zibochen.SubnetDesk.desktop</launchable>
+  <launchable type="desktop-id">dev.quanru.LocalDesk.desktop</launchable>
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>AGPL-3.0-only</project_license>
-  <name>SubnetDesk</name>
+  <name>LocalDesk</name>
   <summary>LAN/VPN-only remote desktop access</summary>
   <description>
     <p>
-      SubnetDesk provides encrypted remote desktop access directly between devices on a LAN or routed VPN.
+      LocalDesk provides encrypted remote desktop access directly between devices on a LAN or routed VPN.
       It does not use rendezvous, relay, NAT traversal, cloud accounts, or public update services.
     </p>
     <ul>
@@ -25,8 +25,8 @@
     <category>Utility</category>
     <category>Network</category>
   </categories>
-  <url type="bugtracker">https://github.com/zibo-chen/SubnetDesk/issues</url>
-  <url type="vcs-browser">https://github.com/zibo-chen/SubnetDesk</url>
+  <url type="bugtracker">https://github.com/quanru/localdesk/issues</url>
+  <url type="vcs-browser">https://github.com/quanru/localdesk</url>
   <requires>
     <display_length compare="ge">600</display_length>
   </requires>

@@ -195,7 +195,7 @@ fn build_bundle(root: &Path, output: File, system: &str) -> ResultType<()> {
         "debug_build": cfg!(debug_assertions), "logs": manifest, "warnings": warnings,
     }))?)?;
     zip.start_file("README.txt", options)?;
-    zip.write_all(b"SubnetDesk diagnostic bundle\nAttach this ZIP with reproduction steps and the time of the problem.\nContains recent logs (7 days, newest 64 files, up to 2 MiB per file / 32 MiB input).\nConfiguration files are excluded. Common credentials, addresses and home paths are redacted on a best-effort basis. Review before sharing publicly; unstructured logs may still contain personal information.\nSee diagnostics.json for missing or truncated logs.\n")?;
+    zip.write_all(b"LocalDesk diagnostic bundle\nAttach this ZIP with reproduction steps and the time of the problem.\nContains recent logs (7 days, newest 64 files, up to 2 MiB per file / 32 MiB input).\nConfiguration files are excluded. Common credentials, addresses and home paths are redacted on a best-effort basis. Review before sharing publicly; unstructured logs may still contain personal information.\nSee diagnostics.json for missing or truncated logs.\n")?;
     zip.finish()?.sync_all()?;
     Ok(())
 }
@@ -211,7 +211,7 @@ pub fn export(request: &str) -> ResultType<()> {
         std::io::Error::new(std::io::ErrorKind::InvalidInput, "Invalid destination")
     })?;
     let temporary = parent.join(format!(
-        ".subnetdesk-diagnostics-{}.tmp",
+        ".localdesk-diagnostics-{}.tmp",
         uuid::Uuid::new_v4()
     ));
     let file = OpenOptions::new()
@@ -262,7 +262,7 @@ mod tests {
     impl Fixture {
         fn new() -> Self {
             let path = std::env::temp_dir().join(format!(
-                "subnetdesk-diagnostics-test-{}",
+                "localdesk-diagnostics-test-{}",
                 uuid::Uuid::new_v4()
             ));
             fs::create_dir_all(&path).unwrap();

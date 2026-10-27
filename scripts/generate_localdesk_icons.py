@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate every shipped SubnetDesk icon from res/subnetdesk-icon.svg."""
+"""Generate every shipped LocalDesk icon from res/localdesk-icon.svg."""
 
 from __future__ import annotations
 
@@ -13,8 +13,8 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-SOURCE = ROOT / "res/subnetdesk-icon.svg"
-MANIFEST = ROOT / "res/subnetdesk-icon-manifest.json"
+SOURCE = ROOT / "res/localdesk-icon.svg"
+MANIFEST = ROOT / "res/localdesk-icon-manifest.json"
 BACKGROUND = (0x0B, 0x1F, 0x33, 0xFF)
 
 PNG_TARGETS = {
@@ -127,7 +127,7 @@ def write_icns(image, destination: Path) -> None:
     iconutil = shutil.which("iconutil")
     if not iconutil:
         raise SystemExit("iconutil is required to generate the macOS AppIcon.icns")
-    with tempfile.TemporaryDirectory(prefix="subnetdesk-iconset-") as temp:
+    with tempfile.TemporaryDirectory(prefix="localdesk-iconset-") as temp:
         iconset = Path(temp) / "AppIcon.iconset"
         iconset.mkdir()
         for logical in (16, 32, 128, 256, 512):
@@ -190,7 +190,7 @@ def generate() -> None:
 
     if not SOURCE.is_file():
         raise SystemExit(f"missing icon source: {SOURCE}")
-    with tempfile.TemporaryDirectory(prefix="subnetdesk-icon-") as temp:
+    with tempfile.TemporaryDirectory(prefix="localdesk-icon-") as temp:
         raster = Path(temp) / "icon.png"
         render_svg(raster)
         base = Image.open(raster).convert("RGBA")
@@ -243,16 +243,16 @@ def check() -> None:
         raise SystemExit(f"missing generated icon manifest: {MANIFEST}")
     payload = json.loads(MANIFEST.read_text())
     if payload.get("source_sha256") != sha256(SOURCE):
-        raise SystemExit("SubnetDesk icon source changed; regenerate platform assets")
+        raise SystemExit("LocalDesk icon source changed; regenerate platform assets")
     expected = payload.get("generated", {})
     actual_paths = generated_paths()
     if set(expected) != {str(path.relative_to(ROOT)) for path in actual_paths}:
-        raise SystemExit("SubnetDesk icon manifest target list is out of date")
+        raise SystemExit("LocalDesk icon manifest target list is out of date")
     for path in actual_paths:
         relative = str(path.relative_to(ROOT))
         if not path.is_file() or sha256(path) != expected[relative]:
-            raise SystemExit(f"generated SubnetDesk icon is stale: {relative}")
-    print(f"SubnetDesk icon check passed ({len(actual_paths)} assets).")
+            raise SystemExit(f"generated LocalDesk icon is stale: {relative}")
+    print(f"LocalDesk icon check passed ({len(actual_paths)} assets).")
 
 
 def main() -> None:

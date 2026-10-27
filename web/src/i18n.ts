@@ -2,7 +2,7 @@ export type WebLocale = "zh" | "en";
 
 const messages = {
   zh: {
-    title: "SubnetDesk Web",
+    title: "LocalDesk Web",
     remoteAccess: "远程访问",
     username: "访问用户名",
     password: "访问密码",
@@ -52,7 +52,7 @@ const messages = {
     unknownError: "未知错误",
   },
   en: {
-    title: "SubnetDesk Web",
+    title: "LocalDesk Web",
     remoteAccess: "Remote access to",
     username: "Access username",
     password: "Access password",

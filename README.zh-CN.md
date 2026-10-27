@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="res/subnetdesk-icon.svg" alt="SubnetDesk 图标" width="120">
+  <img src="res/localdesk-icon.svg" alt="LocalDesk 图标" width="120">
 </p>
 
-<h1 align="center">SubnetDesk</h1>
+<h1 align="center">LocalDesk</h1>
 
 <p align="center">
   <strong>面向局域网的远程桌面：连接直接、部署简单、数据路径可控。</strong>
@@ -13,12 +13,12 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/zibo-chen/SubnetDesk/releases/latest"><img src="https://img.shields.io/github/v/release/zibo-chen/SubnetDesk?style=flat-square&logo=github&color=2563eb" alt="最新版本"></a>
-  <a href="https://github.com/zibo-chen/SubnetDesk/releases"><img src="https://img.shields.io/github/downloads/zibo-chen/SubnetDesk/total?style=flat-square&logo=github&color=0ea5e9" alt="累计下载量"></a>
-  <a href="https://github.com/zibo-chen/SubnetDesk/stargazers"><img src="https://img.shields.io/github/stars/zibo-chen/SubnetDesk?style=flat-square&logo=github&color=f59e0b" alt="GitHub Stars"></a>
-  <a href="https://github.com/zibo-chen/SubnetDesk/network/members"><img src="https://img.shields.io/github/forks/zibo-chen/SubnetDesk?style=flat-square&logo=github" alt="GitHub Forks"></a>
-  <a href="https://github.com/zibo-chen/SubnetDesk/actions/workflows/subnetdesk-preflight.yml"><img src="https://img.shields.io/github/actions/workflow/status/zibo-chen/SubnetDesk/subnetdesk-preflight.yml?branch=master&style=flat-square&label=build" alt="构建状态"></a>
-  <a href="LICENCE"><img src="https://img.shields.io/github/license/zibo-chen/SubnetDesk?style=flat-square&color=16a34a" alt="开源许可"></a>
+  <a href="https://github.com/quanru/localdesk/releases/latest"><img src="https://img.shields.io/github/v/release/zibo-chen/LocalDesk?style=flat-square&logo=github&color=2563eb" alt="最新版本"></a>
+  <a href="https://github.com/quanru/localdesk/releases"><img src="https://img.shields.io/github/downloads/zibo-chen/LocalDesk/total?style=flat-square&logo=github&color=0ea5e9" alt="累计下载量"></a>
+  <a href="https://github.com/quanru/localdesk/stargazers"><img src="https://img.shields.io/github/stars/zibo-chen/LocalDesk?style=flat-square&logo=github&color=f59e0b" alt="GitHub Stars"></a>
+  <a href="https://github.com/quanru/localdesk/network/members"><img src="https://img.shields.io/github/forks/zibo-chen/LocalDesk?style=flat-square&logo=github" alt="GitHub Forks"></a>
+  <a href="https://github.com/quanru/localdesk/actions/workflows/localdesk-preflight.yml"><img src="https://img.shields.io/github/actions/workflow/status/zibo-chen/LocalDesk/localdesk-preflight.yml?branch=master&style=flat-square&label=build" alt="构建状态"></a>
+  <a href="LICENCE"><img src="https://img.shields.io/github/license/zibo-chen/LocalDesk?style=flat-square&color=16a34a" alt="开源许可"></a>
 </p>
 
 <p align="center">
@@ -33,7 +33,7 @@
 </p>
 
 <p align="center">
-  <a href="#why-subnetdesk">项目定位</a> ·
+  <a href="#why-localdesk">项目定位</a> ·
   <a href="#features">主要功能</a> ·
   <a href="#download">下载安装</a> ·
   <a href="#quick-start">快速开始</a> ·
@@ -41,26 +41,26 @@
 </p>
 
 <p align="center">
-  <img src="assets/screenshots/device-discovery.png" alt="SubnetDesk 局域网设备发现" width="880">
+  <img src="assets/screenshots/device-discovery.png" alt="LocalDesk 局域网设备发现" width="880">
 </p>
 
-<a id="why-subnetdesk"></a>
+<a id="why-localdesk"></a>
 
-## 💡 为什么选择 SubnetDesk
+## 💡 为什么选择 LocalDesk
 
-SubnetDesk 专注于一个明确场景：让本身已经网络互通的设备直接进行远程控制。项目移除了 RustDesk 中的公网设备 ID、信令、中继、云账号、代理和公网自动更新等路径，改为直接连接目标地址，并自动发现局域网设备。
+LocalDesk 专注于一个明确场景：让本身已经网络互通的设备直接进行远程控制。项目移除了 RustDesk 中的公网设备 ID、信令、中继、云账号、代理和公网自动更新等路径，改为直接连接目标地址，并自动发现局域网设备。
 
 它适合家庭实验室、办公室、教室、现场运维，以及通过 WireGuard、Tailscale、OpenVPN 等 VPN 互通的私有网络。
 
-| | SubnetDesk | 典型 RustDesk 部署 |
+| | LocalDesk | 典型 RustDesk 部署 |
 | --- | --- | --- |
-| 连接方式 | 直接连接 IP 地址或主机名 | 通过设备 ID 和信令服务连接，可使用中继 |
+| 连接方式 | 直接连接 私有 IP 地址 | 通过设备 ID 和信令服务连接，可使用中继 |
 | 设备发现 | 局域网 mDNS 自动发现 | 设备 ID 或地址簿 |
 | 服务依赖 | 无需协调服务器 | 设备 ID 连接通常需要公网或自建信令/中继服务 |
 | 适用场景 | 局域网、可路由私网、VPN | 互联网和跨 NAT 访问 |
 
 > [!IMPORTANT]
-> SubnetDesk 不提供公网信令或中继服务。两台设备必须位于同一局域网、可路由的私有网络，或通过 VPN 实现网络互通。
+> LocalDesk 不提供公网信令或中继服务。两台设备必须位于同一局域网、可路由的私有网络，或通过 VPN 实现网络互通。
 
 <a id="features"></a>
 
@@ -69,7 +69,7 @@ SubnetDesk 专注于一个明确场景：让本身已经网络互通的设备直
 | | 功能 | 说明 |
 | --- | --- | --- |
 | 🔎 | 局域网发现 | 通过 mDNS 自动发现附近设备。 |
-| ⚡ | 地址直连 | 使用 IP 地址或主机名直接连接，TCP 端口可配置。 |
+| ⚡ | 地址直连 | 使用 私有 IP 地址直接连接，TCP 端口可配置。 |
 | 🔐 | 访问认证 | 使用用户名和密码保护访问，密码以 Argon2id 哈希保存。 |
 | 🛡️ | 设备验证 | 首次连接时核对并保存设备指纹，降低误连风险。 |
 | 🌐 | 网络白名单 | 通过 CIDR 网段限制允许接入的来源网络。 |
@@ -80,7 +80,7 @@ SubnetDesk 专注于一个明确场景：让本身已经网络互通的设备直
 
 ## 📦 下载安装
 
-稳定版本请前往 **[GitHub Releases](https://github.com/zibo-chen/SubnetDesk/releases/latest)** 下载。希望体验最新改动时，可以使用 **[Nightly 版本](https://github.com/zibo-chen/SubnetDesk/releases/tag/nightly)** 或 **[GitHub Actions](https://github.com/zibo-chen/SubnetDesk/actions)** 中的构建产物。
+稳定版本请前往 **[GitHub Releases](https://github.com/quanru/localdesk/releases/latest)** 下载。希望体验最新改动时，可以使用 **[Nightly 版本](https://github.com/quanru/localdesk/releases/tag/nightly)** 或 **[GitHub Actions](https://github.com/quanru/localdesk/actions)** 中的构建产物。
 
 | 平台 | 架构 | 安装包 |
 | --- | --- | --- |
@@ -96,13 +96,13 @@ SubnetDesk 专注于一个明确场景：让本身已经网络互通的设备直
 
 ## 🚀 快速开始
 
-1. 在两台设备上安装并打开 SubnetDesk。
+1. 在两台设备上安装并打开 LocalDesk。
 2. 在被控端打开 **LAN 设置**，设置用户名和密码，并开启局域网发现。默认端口为 `21118`。
-3. 在控制端选择已发现的设备，或手动输入 `主机名:端口` / `IP:端口`。
+3. 在控制端选择已发现的设备，或手动输入 `IP:端口`。
 4. 首次连接时核对设备指纹，确认无误后发起连接。
 
 <p align="center">
-  <img src="assets/screenshots/lan-settings.png" alt="SubnetDesk LAN 设置" width="880">
+  <img src="assets/screenshots/lan-settings.png" alt="LocalDesk LAN 设置" width="880">
 </p>
 
 ### 网络检查清单
@@ -122,7 +122,7 @@ SubnetDesk 专注于一个明确场景：让本身已经网络互通的设备直
 
 与其他远程控制软件一样，请只向可信网络开放监听端口，使用高强度且不重复的密码，并尽可能通过另一条可信渠道核对设备指纹。
 
-会话数据、本地存储、更新请求和删除方式，请参阅 [SubnetDesk 隐私政策（英文）](PRIVACY.md)。
+会话数据、本地存储、更新请求和删除方式，请参阅 [LocalDesk 隐私政策（英文）](PRIVACY.md)。
 
 <a id="build-from-source"></a>
 
@@ -131,8 +131,8 @@ SubnetDesk 专注于一个明确场景：让本身已经网络互通的设备直
 拉取仓库及其子模块，然后执行 Flutter 桌面端构建：
 
 ```bash
-git clone --recurse-submodules https://github.com/zibo-chen/SubnetDesk.git
-cd SubnetDesk
+git clone --recurse-submodules https://github.com/quanru/localdesk.git
+cd LocalDesk
 ./build.py --flutter --hwcodec
 ```
 
@@ -140,26 +140,26 @@ cd SubnetDesk
 
 ## 🤝 参与贡献
 
-欢迎提交缺陷报告、功能建议和 Pull Request。开始修改前建议先查看现有 [Issues](https://github.com/zibo-chen/SubnetDesk/issues)，并尽量让改动保持聚焦，符合项目面向局域网与 VPN 的产品定位。
+欢迎提交缺陷报告、功能建议和 Pull Request。开始修改前建议先查看现有 [Issues](https://github.com/quanru/localdesk/issues)，并尽量让改动保持聚焦，符合项目面向局域网与 VPN 的产品定位。
 
 ## 💬 交流社区
 
 <p align="center">
   <a href="https://discord.gg/MFZG478wPQ">
-    <img src="https://img.shields.io/badge/Discord-加入交流社区-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="加入 SubnetDesk Discord 交流社区">
+    <img src="https://img.shields.io/badge/Discord-加入交流社区-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="加入 LocalDesk Discord 交流社区">
   </a>
 </p>
 
 <p align="center">
-  欢迎加入 <a href="https://discord.gg/MFZG478wPQ">SubnetDesk Discord 交流社区</a>。也可以扫描下方二维码添加我的微信，备注 <strong>SubnetDesk</strong>，我会拉你进入微信交流群。
+  欢迎加入 <a href="https://discord.gg/MFZG478wPQ">LocalDesk Discord 交流社区</a>。也可以扫描下方二维码添加我的微信，备注 <strong>LocalDesk</strong>，我会拉你进入微信交流群。
 </p>
 
 <p align="center">
-  <img src="assets/community/wechat-contact.jpg" alt="添加 czb 微信，加入 SubnetDesk 交流群" width="360">
+  <img src="assets/community/wechat-contact.jpg" alt="添加 czb 微信，加入 LocalDesk 交流群" width="360">
 </p>
 
 ## 🙏 致谢与许可
 
-SubnetDesk 基于 [RustDesk](https://github.com/rustdesk/rustdesk) 开发并保留其开源基础。本项目独立维护，并非 RustDesk 官方发行版。
+LocalDesk 基于 [RustDesk](https://github.com/rustdesk/rustdesk) 开发并保留其开源基础。本项目独立维护，并非 RustDesk 官方发行版。
 
 项目采用 [GNU Affero General Public License v3.0](LICENCE) 许可。请仅在自己拥有或已获授权的设备上使用远程控制功能。

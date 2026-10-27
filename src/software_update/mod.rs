@@ -17,7 +17,7 @@ use std::{
 };
 
 const DEFAULT_MANIFEST_URL: &str =
-    "https://github.com/zibo-chen/SubnetDesk/releases/latest/download/update-stable.json";
+    "https://github.com/quanru/localdesk/releases/latest/download/update-stable.json";
 const UPDATE_EVENT_NAME: &str = "software_update";
 const MAX_MANIFEST_BYTES: u64 = 1024 * 1024;
 const MAX_PACKAGE_BYTES: u64 = 1024 * 1024 * 1024;
@@ -293,7 +293,7 @@ fn download_inner(artifact: UpdateArtifact) -> ResultType<()> {
 
     let filename = filename_from_url(&artifact.url)?;
     let update_dir = std::env::temp_dir().join(format!(
-        "subnetdesk-update-{}",
+        "localdesk-update-{}",
         uuid::Uuid::new_v4().simple()
     ));
     fs::create_dir_all(&update_dir)?;
@@ -502,7 +502,7 @@ fn http_client() -> ResultType<Client> {
                 attempt.follow()
             }
         }))
-        .user_agent(format!("SubnetDesk/{} updater", env!("CARGO_PKG_VERSION")))
+        .user_agent(format!("LocalDesk/{} updater", env!("CARGO_PKG_VERSION")))
         .build()?)
 }
 
@@ -670,7 +670,7 @@ fn discard_download(state: &mut UpdateState) {
         if parent
             .file_name()
             .and_then(|name| name.to_str())
-            .map_or(false, |name| name.starts_with("subnetdesk-update-"))
+            .map_or(false, |name| name.starts_with("localdesk-update-"))
         {
             let _ = fs::remove_dir(parent);
         }
@@ -742,16 +742,16 @@ mod tests {
     #[test]
     fn accepts_safe_update_filename() {
         assert_eq!(
-            filename_from_url("https://example.com/releases/subnetdesk-1.3.0-x86_64.msi")
+            filename_from_url("https://example.com/releases/localdesk-1.3.0-x86_64.msi")
                 .expect("safe URL"),
-            "subnetdesk-1.3.0-x86_64.msi"
+            "localdesk-1.3.0-x86_64.msi"
         );
     }
 
     #[test]
     fn validates_signed_artifact_shape() {
         let artifact = UpdateArtifact {
-            url: "https://example.com/subnetdesk.dmg".to_owned(),
+            url: "https://example.com/localdesk.dmg".to_owned(),
             size: 42,
             sha256: "ab".repeat(32),
         };
@@ -761,7 +761,7 @@ mod tests {
     #[test]
     fn rejects_unsafe_artifact_urls() {
         let artifact = UpdateArtifact {
-            url: "http://example.com/subnetdesk.dmg".to_owned(),
+            url: "http://example.com/localdesk.dmg".to_owned(),
             size: 42,
             sha256: "ab".repeat(32),
         };

@@ -1,4 +1,4 @@
-name: SubnetDesk Rust CI
+name: LocalDesk Rust CI
 
 permissions:
   contents: read
@@ -32,7 +32,7 @@ on:
       - ".github/workflows/flutter-tag.yml"
 
 concurrency:
-  group: subnetdesk-rust-ci-${{ github.ref }}
+  group: localdesk-rust-ci-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:

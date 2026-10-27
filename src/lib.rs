@@ -1,3 +1,5 @@
+#[cfg(any(feature = "software-update", feature = "plugin_framework"))]
+compile_error!("LocalDesk excludes online updates and plugins; build without these features");
 mod keyboard;
 /// cbindgen:ignore
 pub mod platform;

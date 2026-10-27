@@ -36,13 +36,13 @@ void main() {
         home: Builder(
           builder: (_) => safePlatformDefaultTextStyle(
             platform: TargetPlatform.macOS,
-            child: const Text('SubnetDesk'),
+            child: const Text('LocalDesk'),
           ),
         ),
       ),
     );
 
-    final textContext = tester.element(find.text('SubnetDesk'));
+    final textContext = tester.element(find.text('LocalDesk'));
     final style = DefaultTextStyle.of(textContext).style;
     expect(style.fontFamily, kSafeMacOSFontFamily);
     expect(style.fontFamilyFallback, kSafeMacOSFontFallback);

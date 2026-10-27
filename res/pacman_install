@@ -5,43 +5,43 @@
 # arg 1:  the new package version
 post_install() {
 	# do something here
-	cp /usr/share/subnetdesk/files/subnetdesk.service /etc/systemd/system/subnetdesk.service
-	cp /usr/share/subnetdesk/files/subnetdesk.desktop /usr/share/applications/
-	cp /usr/share/subnetdesk/files/subnetdesk-link.desktop /usr/share/applications/
+	cp /usr/share/localdesk/files/localdesk.service /etc/systemd/system/localdesk.service
+	cp /usr/share/localdesk/files/localdesk.desktop /usr/share/applications/
+	cp /usr/share/localdesk/files/localdesk-link.desktop /usr/share/applications/
 	systemctl daemon-reload
-	systemctl enable subnetdesk
-	systemctl start subnetdesk
+	systemctl enable localdesk
+	systemctl start localdesk
 	update-desktop-database
 }
 
 # arg 1:  the new package version
 # arg 2:  the old package version
 pre_upgrade() {
-	systemctl stop subnetdesk || true
+	systemctl stop localdesk || true
 }
 
 # arg 1:  the new package version
 # arg 2:  the old package version
 post_upgrade() {
-	cp /usr/share/subnetdesk/files/subnetdesk.service /etc/systemd/system/subnetdesk.service
-	cp /usr/share/subnetdesk/files/subnetdesk.desktop /usr/share/applications/
-	cp /usr/share/subnetdesk/files/subnetdesk-link.desktop /usr/share/applications/
+	cp /usr/share/localdesk/files/localdesk.service /etc/systemd/system/localdesk.service
+	cp /usr/share/localdesk/files/localdesk.desktop /usr/share/applications/
+	cp /usr/share/localdesk/files/localdesk-link.desktop /usr/share/applications/
 	systemctl daemon-reload
-	systemctl enable subnetdesk
-	systemctl start subnetdesk
+	systemctl enable localdesk
+	systemctl start localdesk
 	update-desktop-database
 }
 
 # arg 1:  the old package version
 pre_remove() {
-	systemctl stop subnetdesk || true
-	systemctl disable subnetdesk || true
-	rm /etc/systemd/system/subnetdesk.service || true
+	systemctl stop localdesk || true
+	systemctl disable localdesk || true
+	rm /etc/systemd/system/localdesk.service || true
 }
 
 # arg 1:  the old package version
 post_remove() {
-	rm /usr/share/applications/subnetdesk.desktop || true
-	rm /usr/share/applications/subnetdesk-link.desktop || true
+	rm /usr/share/applications/localdesk.desktop || true
+	rm /usr/share/applications/localdesk-link.desktop || true
 	update-desktop-database
 }

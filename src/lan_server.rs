@@ -315,6 +315,9 @@ pub fn source_allowed(ip: IpAddr) -> bool {
 
 pub(crate) fn source_allowed_with(ip: IpAddr, configured: &str) -> bool {
     let ip = normalize_source_ip(ip);
+    if !hbb_common::lan::allowed_ip(ip) {
+        return false;
+    }
     let networks: Vec<&str> = if configured.trim().is_empty() {
         vec![
             "10.0.0.0/8",
@@ -383,6 +386,7 @@ mod tests {
         assert!(source_allowed_with("100.64.10.2".parse().unwrap(), ""));
         assert!(source_allowed_with("fd00::20".parse().unwrap(), ""));
         assert!(!source_allowed_with("8.8.8.8".parse().unwrap(), ""));
+        assert!(!source_allowed_with("8.8.8.8".parse().unwrap(), "0.0.0.0/0"));
         assert!(!source_allowed_with("::ffff:8.8.8.8".parse().unwrap(), ""));
         assert!(source_allowed_with(
             "10.23.1.9".parse().unwrap(),

@@ -18,7 +18,7 @@ class GenerateUpdateManifestTests(unittest.TestCase):
             root = Path(directory)
             for arch in ("x86_64", "aarch64"):
                 for extension in ("msi", "exe", "dmg"):
-                    (root / f"subnetdesk-1.3.0-{arch}.{extension}").write_bytes(
+                    (root / f"localdesk-1.3.0-{arch}.{extension}").write_bytes(
                         f"{arch}-{extension}".encode()
                     )
             output = root / "update-stable.json"
@@ -29,7 +29,7 @@ class GenerateUpdateManifestTests(unittest.TestCase):
                     "--asset-dir",
                     str(root),
                     "--repository",
-                    "zibo-chen/SubnetDesk",
+                    "zibo-chen/LocalDesk",
                     "--tag",
                     "v1.3.0",
                     "--version",
@@ -48,7 +48,7 @@ class GenerateUpdateManifestTests(unittest.TestCase):
             artifact = manifest["artifacts"]["windows-x86_64-msi"]
             expected = hashlib.sha256(b"x86_64-msi").hexdigest()
             self.assertEqual(artifact["sha256"], expected)
-            self.assertTrue(artifact["url"].endswith("/subnetdesk-1.3.0-x86_64.msi"))
+            self.assertTrue(artifact["url"].endswith("/localdesk-1.3.0-x86_64.msi"))
 
     def test_missing_asset_fails_closed(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -59,7 +59,7 @@ class GenerateUpdateManifestTests(unittest.TestCase):
                     "--asset-dir",
                     directory,
                     "--repository",
-                    "zibo-chen/SubnetDesk",
+                    "zibo-chen/LocalDesk",
                     "--tag",
                     "v1.3.0",
                     "--version",

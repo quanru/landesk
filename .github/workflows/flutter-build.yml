@@ -1,4 +1,4 @@
-name: Build SubnetDesk native packages
+name: Build LocalDesk native packages
 
 on:
   workflow_call:
@@ -220,13 +220,13 @@ jobs:
         shell: bash
         run: echo "SODIUM_LIB_DIR=$VCPKG_ROOT/installed/${{ matrix.job.vcpkg-triplet }}/lib" >> "$GITHUB_ENV"
 
-      - name: Build SubnetDesk
+      - name: Build LocalDesk
         run: |
           # Windows: build RustDesk
           # --hwcodec is shared by all Windows targets; per-target extras (e.g. --vram) come from the matrix
           python3 .\build.py --portable --flutter --skip-portable-pack --hwcodec ${{ matrix.job.build-args }}
           mv ./flutter/build/windows/${{ matrix.job.flutter-arch }}/runner/Release ./rustdesk
-          Rename-Item ./rustdesk/rustdesk.exe SubnetDesk.exe
+          Rename-Item ./rustdesk/rustdesk.exe LocalDesk.exe
 
           # Download usbmmidd_v2.zip and extract it to ./rustdesk
           Invoke-WebRequest -Uri https://github.com/rustdesk-org/rdev/releases/download/usbmmidd_v2/usbmmidd_v2.zip -OutFile usbmmidd_v2.zip
@@ -262,10 +262,10 @@ jobs:
         if: env.UPLOAD_ARTIFACT == 'true'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: subnetdesk-unsigned-windows-${{ matrix.job.arch }}
+          name: localdesk-unsigned-windows-${{ matrix.job.arch }}
           path: rustdesk
 
-      - name: Sign SubnetDesk files
+      - name: Sign LocalDesk files
         if: env.UPLOAD_ARTIFACT == 'true' && env.SIGN_BASE_URL != '-2'
         shell: bash
         run: |
@@ -279,10 +279,10 @@ jobs:
           sed -i '/dpiAware/d' res/manifest.xml
           pushd ./libs/portable
           pip3 install -r requirements.txt
-          python3 ./generate.py -f ../../rustdesk/ -o . -e ../../rustdesk/SubnetDesk.exe
+          python3 ./generate.py -f ../../rustdesk/ -o . -e ../../rustdesk/LocalDesk.exe
           popd
           mkdir -p ./SignOutput
-          mv ./target/release/rustdesk-portable-packer.exe ./SignOutput/subnetdesk-${{ env.VERSION }}-${{ matrix.job.arch }}.exe
+          mv ./target/release/rustdesk-portable-packer.exe ./SignOutput/localdesk-${{ env.VERSION }}-${{ matrix.job.arch }}.exe
 
       - name: Add MSBuild to PATH
         uses: microsoft/setup-msbuild@6fb02220983dee41ce7ae257b6f4d8f9bf5ed4ce # v2
@@ -294,16 +294,16 @@ jobs:
         if: env.UPLOAD_ARTIFACT == 'true'
         run: |
           pushd ./res/msi
-          python preprocess.py --arp --app-name SubnetDesk --manufacturer SubnetDesk -d ../../rustdesk
+          python preprocess.py --arp --app-name LocalDesk --manufacturer LocalDesk -d ../../rustdesk
           if ($LASTEXITCODE -ne 0) { throw "MSI preprocessing failed with exit code $LASTEXITCODE" }
           nuget restore msi.sln
           $msiPlatform = if ('${{ matrix.job.arch }}' -eq 'aarch64') { 'ARM64' } else { 'x64' }
           msbuild msi.sln -p:Configuration=Release -p:Platform=$msiPlatform /p:TargetVersion=Windows10
           $msi = Get-ChildItem ./Package/bin/*/Release/en-us/Package.msi | Select-Object -First 1
-          mv $msi.FullName ../../SignOutput/subnetdesk-${{ env.VERSION }}-${{ matrix.job.arch }}.msi
-          sha256sum ../../SignOutput/subnetdesk-*.msi
+          mv $msi.FullName ../../SignOutput/localdesk-${{ env.VERSION }}-${{ matrix.job.arch }}.msi
+          sha256sum ../../SignOutput/localdesk-*.msi
 
-      - name: Sign SubnetDesk self-extracted file
+      - name: Sign LocalDesk self-extracted file
         if: env.UPLOAD_ARTIFACT == 'true' && env.SIGN_BASE_URL != '-2'
         shell: bash
         run: |
@@ -313,10 +313,10 @@ jobs:
         if: env.UPLOAD_ARTIFACT == 'true'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: subnetdesk-windows-${{ matrix.job.arch }}
+          name: localdesk-windows-${{ matrix.job.arch }}
           path: |
-            ./SignOutput/subnetdesk-*.msi
-            ./SignOutput/subnetdesk-*.exe
+            ./SignOutput/localdesk-*.msi
+            ./SignOutput/localdesk-*.exe
 
       - name: Publish Release
         uses: softprops/action-gh-release@de2c0eb89ae2a093876385947365aca7b0e5f844 # v1
@@ -326,8 +326,8 @@ jobs:
           generate_release_notes: true
           tag_name: ${{ env.TAG_NAME }}
           files: |
-            ./SignOutput/subnetdesk-*.msi
-            ./SignOutput/subnetdesk-*.exe
+            ./SignOutput/localdesk-*.msi
+            ./SignOutput/localdesk-*.exe
 
   # The fallback for the flutter version, we use Sciter for 32bit Windows.
   build-for-windows-sciter:
@@ -405,7 +405,7 @@ jobs:
           head -n 100 "${VCPKG_ROOT}/buildtrees/ffmpeg/build-${{ matrix.job.vcpkg-triplet }}-rel-out.log" || true
         shell: bash
 
-      - name: Build SubnetDesk
+      - name: Build LocalDesk
         id: build
         shell: bash
         run: |
@@ -446,10 +446,10 @@ jobs:
         if: env.UPLOAD_ARTIFACT == 'true'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: subnetdesk-unsigned-windows-${{ matrix.job.arch }}
+          name: localdesk-unsigned-windows-${{ matrix.job.arch }}
           path: Release
 
-      - name: Sign SubnetDesk files
+      - name: Sign LocalDesk files
         if: env.UPLOAD_ARTIFACT == 'true' && env.SIGN_BASE_URL != '-2'
         shell: bash
         run: |
@@ -465,9 +465,9 @@ jobs:
           python3 ./generate.py -f ../../Release/ -o . -e ../../Release/rustdesk.exe
           popd
           mkdir -p ./SignOutput
-          mv ./target/release/rustdesk-portable-packer.exe ./SignOutput/subnetdesk-${{ env.VERSION }}-${{ matrix.job.arch }}-sciter.exe
+          mv ./target/release/rustdesk-portable-packer.exe ./SignOutput/localdesk-${{ env.VERSION }}-${{ matrix.job.arch }}-sciter.exe
 
-      - name: Sign SubnetDesk self-extracted file
+      - name: Sign LocalDesk self-extracted file
         if: env.UPLOAD_ARTIFACT == 'true' && env.SIGN_BASE_URL != '-2'
         shell: bash
         run: |
@@ -481,11 +481,11 @@ jobs:
           generate_release_notes: true
           tag_name: ${{ env.TAG_NAME }}
           files: |
-            ./SignOutput/subnetdesk-*.exe
+            ./SignOutput/localdesk-*.exe
 
   build-rustdesk-ios:
     if: ${{ inputs.upload-artifact && inputs.build-mobile }}
-    name: Build SubnetDesk ios ipa
+    name: Build LocalDesk ios ipa
     runs-on: ${{ matrix.job.os }}
     needs: [generate-bridge]
     strategy:
@@ -562,7 +562,7 @@ jobs:
           name: bridge-artifact
           path: ./
 
-      - name: Build SubnetDesk lib
+      - name: Build LocalDesk lib
         run: |
           rustup target add ${{ matrix.job.target }}
           cargo build --locked --features flutter,hwcodec --release --target aarch64-apple-ios --lib
@@ -573,7 +573,7 @@ jobs:
           name: liblibrustdesk.a
           path: target/aarch64-apple-ios/release/liblibrustdesk.a
 
-      - name: Build SubnetDesk
+      - name: Build LocalDesk
         shell: bash
         run: |
           pushd flutter
@@ -585,7 +585,7 @@ jobs:
       #   # if: env.ANDROID_SIGNING_KEY != null && env.UPLOAD_ARTIFACT == 'true'
       #   uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       #   with:
-      #     name: subnetdesk-${{ env.VERSION }}-${{ matrix.job.arch }}.apk
+      #     name: localdesk-${{ env.VERSION }}-${{ matrix.job.arch }}.apk
       #     path: flutter/build/ios/ipa/*.ipa
 
       # - name: Publish ipa package
@@ -751,7 +751,7 @@ jobs:
           cargo -V
           rustc -V
 
-      - name: Build SubnetDesk
+      - name: Build LocalDesk
         run: |
           if [ "${{ matrix.job.target }}" = "aarch64-apple-darwin" ]; then
             MIN_MACOS_VERSION="12.3"
@@ -768,14 +768,14 @@ jobs:
           CREATE_DMG="$(command -v create-dmg)"
           CREATE_DMG="$(readlink -f "$CREATE_DMG")"
           sed -i -e 's/MAXIMUM_UNMOUNTING_ATTEMPTS=3/MAXIMUM_UNMOUNTING_ATTEMPTS=7/' "$CREATE_DMG"
-          create-dmg --icon "SubnetDesk.app" 200 190 --hide-extension "SubnetDesk.app" --window-size 800 400 --app-drop-link 600 185 subnetdesk-${{ env.VERSION }}-${{ matrix.job.arch }}.dmg ./flutter/build/macos/Build/Products/Release/SubnetDesk.app
+          create-dmg --icon "LocalDesk.app" 200 190 --hide-extension "LocalDesk.app" --window-size 800 400 --app-drop-link 600 185 localdesk-${{ env.VERSION }}-${{ matrix.job.arch }}.dmg ./flutter/build/macos/Build/Products/Release/LocalDesk.app
 
       - name: Upload unsigned macOS app
         if: env.UPLOAD_ARTIFACT == 'true'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: subnetdesk-unsigned-macos-${{ matrix.job.arch }}
-          path: subnetdesk-${{ env.VERSION }}-${{ matrix.job.arch }}.dmg # can not upload the directory directly or tar.gz, which destroy the link structure, causing the codesign failed
+          name: localdesk-unsigned-macos-${{ matrix.job.arch }}
+          path: localdesk-${{ env.VERSION }}-${{ matrix.job.arch }}.dmg # can not upload the directory directly or tar.gz, which destroy the link structure, causing the codesign failed
 
       - name: Codesign app and create signed dmg
         if: env.MACOS_P12_BASE64 != '' && env.UPLOAD_ARTIFACT == 'true'
@@ -789,24 +789,24 @@ jobs:
           security unlock-keychain -p ${{ secrets.MACOS_P12_PASSWORD }} rustdesk.keychain
           # start sign the rustdesk.app and dmg
           rm -rf *.dmg || true
-          codesign --force --options runtime -s ${{ secrets.MACOS_CODESIGN_IDENTITY }} --deep --strict --entitlements ./flutter/macos/Runner/Release.entitlements ./flutter/build/macos/Build/Products/Release/SubnetDesk.app -vvv
-          create-dmg --icon "SubnetDesk.app" 200 190 --hide-extension "SubnetDesk.app" --window-size 800 400 --app-drop-link 600 185 subnetdesk-${{ env.VERSION }}-${{ matrix.job.arch }}.dmg ./flutter/build/macos/Build/Products/Release/SubnetDesk.app
-          codesign --force --options runtime -s ${{ secrets.MACOS_CODESIGN_IDENTITY }} --deep --strict subnetdesk-${{ env.VERSION }}-${{ matrix.job.arch }}.dmg -vvv
-          # notarize the architecture-specific SubnetDesk DMG
-          rcodesign notary-submit --api-key-path ${{ github.workspace }}/rustdesk.json --staple subnetdesk-${{ env.VERSION }}-${{ matrix.job.arch }}.dmg
+          codesign --force --options runtime -s ${{ secrets.MACOS_CODESIGN_IDENTITY }} --deep --strict --entitlements ./flutter/macos/Runner/Release.entitlements ./flutter/build/macos/Build/Products/Release/LocalDesk.app -vvv
+          create-dmg --icon "LocalDesk.app" 200 190 --hide-extension "LocalDesk.app" --window-size 800 400 --app-drop-link 600 185 localdesk-${{ env.VERSION }}-${{ matrix.job.arch }}.dmg ./flutter/build/macos/Build/Products/Release/LocalDesk.app
+          codesign --force --options runtime -s ${{ secrets.MACOS_CODESIGN_IDENTITY }} --deep --strict localdesk-${{ env.VERSION }}-${{ matrix.job.arch }}.dmg -vvv
+          # notarize the architecture-specific LocalDesk DMG
+          rcodesign notary-submit --api-key-path ${{ github.workspace }}/rustdesk.json --staple localdesk-${{ env.VERSION }}-${{ matrix.job.arch }}.dmg
 
       - name: Upload macOS installer
         if: env.UPLOAD_ARTIFACT == 'true'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: subnetdesk-macos-${{ matrix.job.arch }}
-          path: subnetdesk-${{ env.VERSION }}-${{ matrix.job.arch }}.dmg
+          name: localdesk-macos-${{ matrix.job.arch }}
+          path: localdesk-${{ env.VERSION }}-${{ matrix.job.arch }}.dmg
 
       - name: Publish DMG package
         if: env.PUBLISH_RELEASE == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
-        run: bash scripts/upload_release_asset_with_retry.sh "$TAG_NAME" "subnetdesk-${VERSION}-${{ matrix.job.arch }}.dmg"
+        run: bash scripts/upload_release_asset_with_retry.sh "$TAG_NAME" "localdesk-${VERSION}-${{ matrix.job.arch }}.dmg"
 
   publish_unsigned:
     needs:
@@ -818,30 +818,30 @@ jobs:
       - name: Download artifacts
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
-          name: subnetdesk-unsigned-macos-x86_64
+          name: localdesk-unsigned-macos-x86_64
           path: ./
 
       - name: Download Artifacts
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
-          name: subnetdesk-unsigned-macos-aarch64
+          name: localdesk-unsigned-macos-aarch64
           path: ./
 
       - name: Download Artifacts
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
-          name: subnetdesk-unsigned-windows-x86_64
+          name: localdesk-unsigned-windows-x86_64
           path: ./windows-x86_64/
 
       - name: Download Artifacts
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
-          name: subnetdesk-unsigned-windows-aarch64
+          name: localdesk-unsigned-windows-aarch64
           path: ./windows-aarch64/
 
       - name: Combine unsigned app
         run: |
-          tar czf subnetdesk-${{ env.VERSION }}-unsigned.tar.gz *.dmg windows-x86_64 windows-aarch64
+          tar czf localdesk-${{ env.VERSION }}-unsigned.tar.gz *.dmg windows-x86_64 windows-aarch64
 
       - name: Publish unsigned app
         uses: softprops/action-gh-release@de2c0eb89ae2a093876385947365aca7b0e5f844 # v1
@@ -849,12 +849,12 @@ jobs:
           prerelease: ${{ inputs.upload-tag == 'nightly' || contains(inputs.upload-tag, '-') }}
           generate_release_notes: true
           tag_name: ${{ env.TAG_NAME }}
-          files: subnetdesk-${{ env.VERSION }}-unsigned.tar.gz
+          files: localdesk-${{ env.VERSION }}-unsigned.tar.gz
 
   build-rustdesk-android:
     if: ${{ inputs.build-mobile }}
     needs: [generate-bridge]
-    name: Build SubnetDesk android apk ${{ matrix.job.target }}
+    name: Build LocalDesk android apk ${{ matrix.job.target }}
     runs-on: ${{ matrix.job.os }}
     strategy:
       fail-fast: false
@@ -1004,7 +1004,7 @@ jobs:
           prefix-key: rustdesk-lib-cache-android # TODO: drop '-android' part after caches are invalidated
           key: ${{ matrix.job.target }}
 
-      - name: Build SubnetDesk lib
+      - name: Build LocalDesk lib
         env:
           ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
           ANDROID_NDK_ROOT: ${{ steps.setup-ndk.outputs.ndk-path }}
@@ -1040,7 +1040,7 @@ jobs:
           name: librustdesk.so.${{ matrix.job.target }}
           path: ./target/${{ matrix.job.target }}/release/liblibrustdesk.so
 
-      - name: Build SubnetDesk
+      - name: Build LocalDesk
         shell: bash
         env:
           JAVA_HOME: /usr/lib/jvm/java-17-openjdk-amd64
@@ -1058,7 +1058,7 @@ jobs:
               # build flutter
               pushd flutter
               flutter build apk "--${{ matrix.job.reltype }}" --target-platform android-arm64 --split-per-abi
-              mv build/app/outputs/flutter-apk/app-arm64-v8a-${{ matrix.job.reltype }}.apk ../subnetdesk-${{ env.VERSION }}-${{ matrix.job.arch }}${{ matrix.job.suffix }}.apk
+              mv build/app/outputs/flutter-apk/app-arm64-v8a-${{ matrix.job.reltype }}.apk ../localdesk-${{ env.VERSION }}-${{ matrix.job.arch }}${{ matrix.job.suffix }}.apk
             ;;
             armv7-linux-androideabi)
               mkdir -p ./flutter/android/app/src/main/jniLibs/armeabi-v7a
@@ -1067,7 +1067,7 @@ jobs:
               # build flutter
               pushd flutter
               flutter build apk "--${{ matrix.job.reltype }}" --target-platform android-arm --split-per-abi
-              mv build/app/outputs/flutter-apk/app-armeabi-v7a-${{ matrix.job.reltype }}.apk ../subnetdesk-${{ env.VERSION }}-${{ matrix.job.arch }}${{ matrix.job.suffix }}.apk
+              mv build/app/outputs/flutter-apk/app-armeabi-v7a-${{ matrix.job.reltype }}.apk ../localdesk-${{ env.VERSION }}-${{ matrix.job.arch }}${{ matrix.job.suffix }}.apk
             ;;
             x86_64-linux-android)
               mkdir -p ./flutter/android/app/src/main/jniLibs/x86_64
@@ -1076,7 +1076,7 @@ jobs:
               # build flutter
               pushd flutter
               flutter build apk "--${{ matrix.job.reltype }}" --target-platform android-x64 --split-per-abi
-              mv build/app/outputs/flutter-apk/app-x86_64-${{ matrix.job.reltype }}.apk ../subnetdesk-${{ env.VERSION }}-${{ matrix.job.arch }}${{ matrix.job.suffix }}.apk
+              mv build/app/outputs/flutter-apk/app-x86_64-${{ matrix.job.reltype }}.apk ../localdesk-${{ env.VERSION }}-${{ matrix.job.arch }}${{ matrix.job.suffix }}.apk
             ;;
             i686-linux-android)
               mkdir -p ./flutter/android/app/src/main/jniLibs/x86
@@ -1085,12 +1085,12 @@ jobs:
               # build flutter
               pushd flutter
               flutter build apk "--${{ matrix.job.reltype }}" --target-platform android-x86 --split-per-abi
-              mv build/app/outputs/flutter-apk/app-x86-${{ matrix.job.reltype }}.apk ../subnetdesk-${{ env.VERSION }}-${{ matrix.job.arch }}${{ matrix.job.suffix }}.apk
+              mv build/app/outputs/flutter-apk/app-x86-${{ matrix.job.reltype }}.apk ../localdesk-${{ env.VERSION }}-${{ matrix.job.arch }}${{ matrix.job.suffix }}.apk
             ;;
           esac
           popd
           mkdir -p signed-apk; pushd signed-apk
-          mv ../subnetdesk-${{ env.VERSION }}-${{ matrix.job.arch }}${{ matrix.job.suffix }}.apk .
+          mv ../localdesk-${{ env.VERSION }}-${{ matrix.job.arch }}${{ matrix.job.suffix }}.apk .
 
       # https://github.com/r0adkll/sign-android-release/issues/84#issuecomment-1889636075
       - name: Setup sign tool version variable
@@ -1161,7 +1161,7 @@ jobs:
         if: env.ANDROID_SIGNING_KEY != '' && env.UPLOAD_ARTIFACT == 'true'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: subnetdesk-${{ env.VERSION }}-${{ matrix.job.arch }}.apk
+          name: localdesk-${{ env.VERSION }}-${{ matrix.job.arch }}.apk
           path: ${{steps.sign-rustdesk.outputs.signedReleaseFile}}
 
       - name: Publish signed apk package
@@ -1176,7 +1176,7 @@ jobs:
 
   build-rustdesk-android-universal:
     needs: [build-rustdesk-android]
-    name: Build SubnetDesk android universal apk
+    name: Build LocalDesk android universal apk
     if: ${{ inputs.upload-artifact && inputs.build-mobile }}
     runs-on: ubuntu-24.04
     env:
@@ -1279,7 +1279,7 @@ jobs:
           name: librustdesk.so.i686-linux-android
           path: ./flutter/android/app/src/main/jniLibs/x86
 
-      - name: Build SubnetDesk
+      - name: Build LocalDesk
         shell: bash
         env:
           JAVA_HOME: /usr/lib/jvm/java-17-openjdk-amd64
@@ -1304,7 +1304,7 @@ jobs:
           flutter build apk "--${{ env.reltype }}" --target-platform android-arm64,android-arm,android-x64${{ env.x86_target }}
           popd
           mkdir -p signed-apk
-          mv ./flutter/build/app/outputs/flutter-apk/app-${{ env.reltype }}.apk signed-apk/subnetdesk-${{ env.VERSION }}-universal${{ env.suffix }}.apk
+          mv ./flutter/build/app/outputs/flutter-apk/app-${{ env.reltype }}.apk signed-apk/localdesk-${{ env.VERSION }}-universal${{ env.suffix }}.apk
 
       # https://github.com/r0adkll/sign-android-release/issues/84#issuecomment-1889636075
       - name: Setup sign tool version variable
@@ -1375,7 +1375,7 @@ jobs:
         if: env.ANDROID_SIGNING_KEY != '' && env.UPLOAD_ARTIFACT == 'true'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: subnetdesk-${{ env.VERSION }}-universal${{ env.suffix }}.apk
+          name: localdesk-${{ env.VERSION }}-universal${{ env.suffix }}.apk
           path: ${{steps.sign-rustdesk.outputs.signedReleaseFile}}
 
       - name: Publish signed apk package
@@ -1390,7 +1390,7 @@ jobs:
 
   build-rustdesk-linux:
     needs: [generate-bridge]
-    name: Build SubnetDesk linux ${{ matrix.job.target }}
+    name: Build LocalDesk linux ${{ matrix.job.target }}
     runs-on: ${{ matrix.job.on }}
     strategy:
       fail-fast: false
@@ -1509,7 +1509,7 @@ jobs:
           path: ./
 
       - uses: rustdesk-org/run-on-arch-action@d3fcfbb632b84cf7f6bc772bfaaa2c2f4f8789a8 # no release tag; commit 2026-05-26
-        name: Build SubnetDesk
+        name: Build LocalDesk
         id: vcpkg
         if: matrix.job.arch == 'x86_64' || env.UPLOAD_ARTIFACT == 'true'
         with:
@@ -1626,7 +1626,7 @@ jobs:
             export CARGO_INCREMENTAL=0
             export DEB_ARCH=${{ matrix.job.deb_arch }}
             python3 ./build.py --flutter --skip-cargo
-            for name in subnetdesk*??.deb; do
+            for name in localdesk*??.deb; do
               mv "$name" "${name%%.deb}-${{ matrix.job.arch }}.deb"
             done
 
@@ -1640,7 +1640,7 @@ jobs:
             esac
             HBB=`pwd` rpmbuild ./res/rpm-flutter.spec -bb
             pushd ~/rpmbuild/RPMS/${{ matrix.job.arch }}
-            for name in subnetdesk-*.rpm; do
+            for name in localdesk-*.rpm; do
                 mv "$name" /workspace/"$name"
             done
 
@@ -1654,9 +1654,9 @@ jobs:
             esac
             HBB=`pwd` rpmbuild ./res/rpm-flutter-suse.spec -bb
             pushd ~/rpmbuild/RPMS/${{ matrix.job.arch }}
-            for name in subnetdesk-*.rpm; do
-                base="${name#subnetdesk-}"
-                mv "$name" "/workspace/subnetdesk-${base%%.rpm}-suse.rpm"
+            for name in localdesk-*.rpm; do
+                base="${name#localdesk-}"
+                mv "$name" "/workspace/localdesk-${base%%.rpm}-suse.rpm"
             done
 
       - name: Publish debian/rpm package
@@ -1667,22 +1667,22 @@ jobs:
           generate_release_notes: true
           tag_name: ${{ env.TAG_NAME }}
           files: |
-            subnetdesk-*.deb
-            subnetdesk-*.rpm
+            localdesk-*.deb
+            localdesk-*.rpm
 
       - name: Upload deb
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: env.UPLOAD_ARTIFACT == 'true'
         with:
-          name: subnetdesk-${{ env.VERSION }}-${{ matrix.job.arch }}.deb
-          path: subnetdesk-${{ env.VERSION }}-${{ matrix.job.arch }}.deb
+          name: localdesk-${{ env.VERSION }}-${{ matrix.job.arch }}.deb
+          path: localdesk-${{ env.VERSION }}-${{ matrix.job.arch }}.deb
 
       - name: Upload rpm packages
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: env.UPLOAD_ARTIFACT == 'true'
         with:
-          name: subnetdesk-linux-rpm-${{ matrix.job.arch }}
-          path: subnetdesk-*.rpm
+          name: localdesk-linux-rpm-${{ matrix.job.arch }}
+          path: localdesk-*.rpm
 
       # only x86_64 for arch since we can not find newest arm64 docker image to build
       # old arch image does not make sense for arch since it is "arch" which always update to date
@@ -1708,8 +1708,8 @@ jobs:
         if: matrix.job.arch == 'x86_64' && env.UPLOAD_ARTIFACT == 'true'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: subnetdesk-archlinux-x86_64
-          path: res/subnetdesk-${{ env.VERSION }}*.zst
+          name: localdesk-archlinux-x86_64
+          path: res/localdesk-${{ env.VERSION }}*.zst
 
       - name: Publish archlinux package
         if: matrix.job.arch == 'x86_64' && env.PUBLISH_RELEASE == 'true'
@@ -1719,16 +1719,16 @@ jobs:
           generate_release_notes: true
           tag_name: ${{ env.TAG_NAME }}
           files: |
-            res/subnetdesk-${{ env.VERSION }}*.zst
+            res/localdesk-${{ env.VERSION }}*.zst
 
   # Same build as build-rustdesk-linux x86_64 -- same vcpkg/ffmpeg, same ubuntu18.04 container, same
   # rust and flutter -- only with the drm feature on, so it ships as the separate
-  # subnetdesk-unattended-wayland deb. libdrmtap is built on the runner because bionic's meson is too
+  # localdesk-unattended-wayland deb. libdrmtap is built on the runner because bionic's meson is too
   # old for it. A separate job rather than a matrix entry of build-rustdesk-linux: appimage and
   # flatpak need that job, and a failure here must not skip them.
   build-rustdesk-linux-drm:
     needs: [generate-bridge]
-    name: build subnetdesk linux drm x86_64
+    name: build localdesk linux drm x86_64
     runs-on: ubuntu-22.04
     steps:
       - name: Export GitHub Actions cache environment variables
@@ -1828,7 +1828,7 @@ jobs:
         shell: bash
 
       - uses: rustdesk-org/run-on-arch-action@d3fcfbb632b84cf7f6bc772bfaaa2c2f4f8789a8 # no release tag; commit 2026-05-26
-        name: Build subnetdesk
+        name: Build localdesk
         id: vcpkg
         with:
           arch: x86_64
@@ -1933,7 +1933,7 @@ jobs:
             export CARGO_INCREMENTAL=0
             export DEB_ARCH=amd64
             python3 ./build.py --flutter --drm --hwcodec --unix-file-copy-paste --skip-cargo
-            for name in subnetdesk*??.deb; do
+            for name in localdesk*??.deb; do
               mv "$name" "${name%%.deb}-x86_64.deb"
             done
 
@@ -1946,9 +1946,9 @@ jobs:
           # Resolve by glob, not from env.VERSION: build.py names the deb from Cargo.toml, so a
           # hardcoded name fails with a bare exit 1 the first time those two drift.
           shopt -s nullglob
-          debs=(subnetdesk-unattended-wayland-*-x86_64.deb)
+          debs=(localdesk-unattended-wayland-*-x86_64.deb)
           if [ "${#debs[@]}" -ne 1 ]; then
-            echo "::error::expected one subnetdesk-unattended-wayland-*-x86_64.deb, found ${#debs[@]}: ${debs[*]-none}"
+            echo "::error::expected one localdesk-unattended-wayland-*-x86_64.deb, found ${#debs[@]}: ${debs[*]-none}"
             exit 1
           fi
           deb="${debs[0]}"
@@ -1963,7 +1963,7 @@ jobs:
             exit 1
           fi
           rm -rf /tmp/deb && dpkg-deb -R "$deb" /tmp/deb
-          if ! grep -qF /usr/lib/rustdesk/libdrmtap.so.0 /tmp/deb/usr/share/subnetdesk/lib/librustdesk.so; then
+          if ! grep -qF /usr/lib/rustdesk/libdrmtap.so.0 /tmp/deb/usr/share/localdesk/lib/librustdesk.so; then
             echo "::error::$deb was not built with the drm feature"
             exit 1
           fi
@@ -2056,7 +2056,7 @@ jobs:
           echo "RUST_TOOLCHAIN_VERSION=$RUST_TOOLCHAIN_VERSION" >> $GITHUB_ENV
 
       - uses: rustdesk-org/run-on-arch-action@d3fcfbb632b84cf7f6bc772bfaaa2c2f4f8789a8 # no release tag; commit 2026-05-26
-        name: Build SubnetDesk sciter binary for ${{ matrix.job.arch }}
+        name: Build LocalDesk sciter binary for ${{ matrix.job.arch }}
         id: vcpkg
         with:
           arch: ${{ matrix.job.arch }}
@@ -2191,10 +2191,10 @@ jobs:
             export DEB_ARCH=${{ matrix.job.deb_arch }}
             ./build.py --package ./Release
 
-      - name: Rename SubnetDesk
+      - name: Rename LocalDesk
         shell: bash
         run: |
-          for name in subnetdesk-*.deb; do
+          for name in localdesk-*.deb; do
               # use cp to duplicate deb files to fit other packages.
               cp "$name" "${name%%.deb}-${{ matrix.job.arch }}-sciter.deb"
           done
@@ -2207,14 +2207,14 @@ jobs:
           generate_release_notes: true
           tag_name: ${{ env.TAG_NAME }}
           files: |
-            subnetdesk-${{ env.VERSION }}-${{ matrix.job.arch }}-sciter.deb
+            localdesk-${{ env.VERSION }}-${{ matrix.job.arch }}-sciter.deb
 
       - name: Upload deb
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: env.UPLOAD_ARTIFACT == 'true'
         with:
-          name: subnetdesk-${{ env.VERSION }}-${{ matrix.job.arch }}-sciter.deb
-          path: subnetdesk-${{ env.VERSION }}-${{ matrix.job.arch }}-sciter.deb
+          name: localdesk-${{ env.VERSION }}-${{ matrix.job.arch }}-sciter.deb
+          path: localdesk-${{ env.VERSION }}-${{ matrix.job.arch }}-sciter.deb
 
   build-appimage:
     name: Build appimage ${{ matrix.job.target }}
@@ -2236,12 +2236,12 @@ jobs:
       - name: Download Binary
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
-          name: subnetdesk-${{ env.VERSION }}-${{ matrix.job.arch }}.deb
+          name: localdesk-${{ env.VERSION }}-${{ matrix.job.arch }}.deb
           path: .
 
       - name: Rename Binary
         run: |
-          mv subnetdesk-${{ env.VERSION }}-${{ matrix.job.arch }}.deb appimage/subnetdesk.deb
+          mv localdesk-${{ env.VERSION }}-${{ matrix.job.arch }}.deb appimage/localdesk.deb
 
       - name: Build appimage package
         shell: bash
@@ -2257,7 +2257,7 @@ jobs:
           # run appimage-builder
           pushd appimage
           sudo appimage-builder --skip-tests --recipe ./AppImageBuilder-${{ matrix.job.arch }}.yml
-          sudo chown "$(id -u):$(id -g)" subnetdesk-*.AppImage
+          sudo chown "$(id -u):$(id -g)" localdesk-*.AppImage
 
       - name: Publish appimage package
         if: env.PUBLISH_RELEASE == 'true'
@@ -2267,14 +2267,14 @@ jobs:
           generate_release_notes: true
           tag_name: ${{ env.TAG_NAME }}
           files: |
-            ./appimage/subnetdesk-${{ env.VERSION }}-*.AppImage
+            ./appimage/localdesk-${{ env.VERSION }}-*.AppImage
 
       - name: Upload AppImage package
         if: env.UPLOAD_ARTIFACT == 'true'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: subnetdesk-appimage-${{ matrix.job.arch }}
-          path: ./appimage/subnetdesk-${{ env.VERSION }}-*.AppImage
+          name: localdesk-appimage-${{ matrix.job.arch }}
+          path: ./appimage/localdesk-${{ env.VERSION }}-*.AppImage
 
   build-flatpak:
     name: Build flatpak ${{ matrix.job.target }}${{ matrix.job.suffix }}
@@ -2311,15 +2311,15 @@ jobs:
       - name: Download Binary
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
-          name: subnetdesk-${{ env.VERSION }}-${{ matrix.job.arch }}${{ matrix.job.suffix }}.deb
+          name: localdesk-${{ env.VERSION }}-${{ matrix.job.arch }}${{ matrix.job.suffix }}.deb
           path: .
 
       - name: Rename Binary
         run: |
-          mv subnetdesk-${{ env.VERSION }}-${{ matrix.job.arch }}${{ matrix.job.suffix }}.deb flatpak/subnetdesk.deb
+          mv localdesk-${{ env.VERSION }}-${{ matrix.job.arch }}${{ matrix.job.suffix }}.deb flatpak/localdesk.deb
 
       - uses: rustdesk-org/run-on-arch-action@d3fcfbb632b84cf7f6bc772bfaaa2c2f4f8789a8 # no release tag; commit 2026-05-26
-        name: Build SubnetDesk flatpak package for ${{ matrix.job.arch }}
+        name: Build LocalDesk flatpak package for ${{ matrix.job.arch }}
         id: flatpak
         with:
           arch: ${{ matrix.job.arch }}
@@ -2343,7 +2343,7 @@ jobs:
             pushd flatpak
             git clone https://github.com/flathub/shared-modules.git --depth=1
             flatpak-builder --user --install-deps-from=flathub -y --force-clean --repo=repo ./build ./rustdesk.json
-            flatpak build-bundle ./repo subnetdesk-${{ env.VERSION }}-${{ matrix.job.arch }}${{ matrix.job.suffix }}.flatpak com.zibochen.SubnetDesk
+            flatpak build-bundle ./repo localdesk-${{ env.VERSION }}-${{ matrix.job.arch }}${{ matrix.job.suffix }}.flatpak dev.quanru.LocalDesk
 
       - name: Publish flatpak package
         if: env.PUBLISH_RELEASE == 'true'
@@ -2353,14 +2353,14 @@ jobs:
           generate_release_notes: true
           tag_name: ${{ env.TAG_NAME }}
           files: |
-            flatpak/subnetdesk-${{ env.VERSION }}-${{ matrix.job.arch }}${{ matrix.job.suffix }}.flatpak
+            flatpak/localdesk-${{ env.VERSION }}-${{ matrix.job.arch }}${{ matrix.job.suffix }}.flatpak
 
       - name: Upload flatpak package
         if: env.UPLOAD_ARTIFACT == 'true'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: subnetdesk-flatpak-${{ matrix.job.arch }}${{ matrix.job.suffix }}
-          path: flatpak/subnetdesk-${{ env.VERSION }}-${{ matrix.job.arch }}${{ matrix.job.suffix }}.flatpak
+          name: localdesk-flatpak-${{ matrix.job.arch }}${{ matrix.job.suffix }}
+          path: flatpak/localdesk-${{ env.VERSION }}-${{ matrix.job.arch }}${{ matrix.job.suffix }}.flatpak
 
   publish-download-table:
     name: Organize release downloads by system and architecture
@@ -2448,7 +2448,7 @@ jobs:
               ['通用包', 'universal'],
             ];
             const table = [
-              '<!-- subnetdesk-download-table:start -->',
+              '<!-- localdesk-download-table:start -->',
               tag === 'nightly'
                 ? '> ⚠️ Nightly 是主分支自动构建的测试版本，仅保留最新一次构建产物。'
                 : '> 请根据操作系统和 CPU 架构选择安装包。',
@@ -2467,11 +2467,11 @@ jobs:
               '- Android 不确定架构时优先选择 **通用包**。',
               '',
               '</details>',
-              '<!-- subnetdesk-download-table:end -->',
+              '<!-- localdesk-download-table:end -->',
             ].join('\n');
 
-            const start = '<!-- subnetdesk-download-table:start -->';
-            const end = '<!-- subnetdesk-download-table:end -->';
+            const start = '<!-- localdesk-download-table:start -->';
+            const end = '<!-- localdesk-download-table:end -->';
             const oldBody = release.body || '';
             const startIndex = oldBody.indexOf(start);
             const endIndex = oldBody.indexOf(end);
@@ -2490,7 +2490,7 @@ jobs:
             await github.rest.repos.updateRelease({
               ...context.repo,
               release_id: release.id,
-              name: tag === 'nightly' ? 'SubnetDesk Nightly' : release.name,
+              name: tag === 'nightly' ? 'LocalDesk Nightly' : release.name,
               body,
               prerelease: tag === 'nightly' || tag.includes('-'),
             });
@@ -2531,12 +2531,12 @@ jobs:
           mkdir update-assets
           gh release download "$TAG_NAME" \
             --dir update-assets \
-            --pattern "subnetdesk-${VERSION}-x86_64.msi" \
-            --pattern "subnetdesk-${VERSION}-x86_64.exe" \
-            --pattern "subnetdesk-${VERSION}-aarch64.msi" \
-            --pattern "subnetdesk-${VERSION}-aarch64.exe" \
-            --pattern "subnetdesk-${VERSION}-x86_64.dmg" \
-            --pattern "subnetdesk-${VERSION}-aarch64.dmg"
+            --pattern "localdesk-${VERSION}-x86_64.msi" \
+            --pattern "localdesk-${VERSION}-x86_64.exe" \
+            --pattern "localdesk-${VERSION}-aarch64.msi" \
+            --pattern "localdesk-${VERSION}-aarch64.exe" \
+            --pattern "localdesk-${VERSION}-x86_64.dmg" \
+            --pattern "localdesk-${VERSION}-aarch64.dmg"
 
       - name: Generate and sign update manifest
         if: steps.update_signing.outputs.enabled == 'true'
@@ -2551,8 +2551,8 @@ jobs:
             --output update-stable.json
 
           umask 077
-          signing_key="$RUNNER_TEMP/subnetdesk-update-private.pem"
-          signature_bin="$RUNNER_TEMP/subnetdesk-update-signature.bin"
+          signing_key="$RUNNER_TEMP/localdesk-update-private.pem"
+          signature_bin="$RUNNER_TEMP/localdesk-update-signature.bin"
           printf '%s' "$UPDATE_SIGNING_KEY_B64" | base64 --decode > "$signing_key"
           derived_public_key=$(openssl pkey -in "$signing_key" -pubout -outform DER | tail -c 32 | xxd -p -c 64)
           if [[ "$derived_public_key" != "$SUBNETDESK_UPDATE_PUBLIC_KEY" ]]; then

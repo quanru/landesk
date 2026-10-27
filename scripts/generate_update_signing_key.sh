@@ -8,8 +8,8 @@ fi
 
 output_dir=$1
 mkdir -p "$output_dir"
-private_key="$output_dir/subnetdesk-update-private.pem"
-public_key="$output_dir/subnetdesk-update-public.hex"
+private_key="$output_dir/localdesk-update-private.pem"
+public_key="$output_dir/localdesk-update-public.hex"
 
 if [[ -e $private_key || -e $public_key ]]; then
   echo "refusing to overwrite an existing update key" >&2

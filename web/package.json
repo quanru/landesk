@@ -1,5 +1,5 @@
 {
-  "name": "subnetdesk-web-client",
+  "name": "localdesk-web-client",
   "private": true,
   "type": "module",
   "packageManager": "bun@1.3.4",

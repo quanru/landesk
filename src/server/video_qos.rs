@@ -6,7 +6,7 @@ use std::{
 };
 
 /*
-SubnetDesk is LAN/VPN-only, so its default video profile starts at 100% custom
+LocalDesk is LAN/VPN-only, so its default video profile starts at 100% custom
 quality and 60 FPS without WAN-style delay-based downshifts. Explicit client
 quality/FPS choices and decoder capacity feedback are still respected.
 
@@ -170,7 +170,7 @@ impl VideoQoS {
     // Initialize new user session
     pub fn on_connection_open(&mut self, id: i32) {
         self.users.insert(id, UserData::default());
-        // SubnetDesk only accepts LAN/VPN direct connections. Do not apply the
+        // LocalDesk only accepts LAN/VPN direct connections. Do not apply the
         // WAN-oriented bitrate ramp and delay-based quality reduction by default.
         self.abr_config = false;
         self.new_user_instant = Instant::now();

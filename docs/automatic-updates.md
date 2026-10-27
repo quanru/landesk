@@ -1,4 +1,10 @@
-# SubnetDesk automatic updates
+# Upstream update implementation (disabled in LocalDesk)
+
+LocalDesk builds reject the `software-update` feature. The following inherited
+implementation notes are reference material only; LocalDesk does not run these
+update checks. Install updates manually.
+
+# LocalDesk automatic updates
 
 Automatic updates are supported for Flutter desktop builds on Windows and
 macOS. Stable installers remain hosted in GitHub Releases. The client trusts a
@@ -24,7 +30,7 @@ Configure these GitHub Actions secrets:
 For example, generate the private-key secret locally without printing it in CI:
 
 ```bash
-base64 < /secure/output/directory/subnetdesk-update-private.pem | tr -d '\n'
+base64 < /secure/output/directory/localdesk-update-private.pem | tr -d '\n'
 ```
 
 Back up the private key securely. Losing it prevents existing clients from

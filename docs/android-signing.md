@@ -1,6 +1,6 @@
 # Android release signing
 
-SubnetDesk release APKs must always use the same Android signing certificate. The release workflow refuses to publish when the signing credentials are incomplete, and verifies every signed APK against a pinned SHA-256 certificate fingerprint.
+LocalDesk release APKs must always use the same Android signing certificate. The release workflow refuses to publish when the signing credentials are incomplete, and verifies every signed APK against a pinned SHA-256 certificate fingerprint.
 
 ## Create the release key once
 
@@ -8,8 +8,8 @@ Keep the generated keystore in an encrypted, backed-up secret store. Losing it p
 
 ```bash
 keytool -genkeypair \
-  -keystore subnetdesk-release.jks \
-  -alias subnetdesk \
+  -keystore localdesk-release.jks \
+  -alias localdesk \
   -keyalg RSA \
   -keysize 4096 \
   -validity 10000
@@ -21,8 +21,8 @@ Do not commit the keystore or passwords. Do not generate a new key for each buil
 
 Set these repository secrets:
 
-- `ANDROID_SIGNING_KEY`: Base64-encoded contents of `subnetdesk-release.jks`.
-- `ANDROID_ALIAS`: Keystore alias, for example `subnetdesk`.
+- `ANDROID_SIGNING_KEY`: Base64-encoded contents of `localdesk-release.jks`.
+- `ANDROID_ALIAS`: Keystore alias, for example `localdesk`.
 - `ANDROID_KEY_STORE_PASSWORD`: Keystore password.
 - `ANDROID_KEY_PASSWORD`: Private-key password.
 - `ANDROID_SIGNING_CERT_SHA256`: Signing certificate SHA-256 fingerprint.
@@ -30,13 +30,13 @@ Set these repository secrets:
 Generate the Base64 value:
 
 ```bash
-base64 < subnetdesk-release.jks | tr -d '\n'
+base64 < localdesk-release.jks | tr -d '\n'
 ```
 
 Read the pinned fingerprint:
 
 ```bash
-keytool -list -v -keystore subnetdesk-release.jks -alias subnetdesk \
+keytool -list -v -keystore localdesk-release.jks -alias localdesk \
   | sed -n 's/^[[:space:]]*SHA256: //p'
 ```
 

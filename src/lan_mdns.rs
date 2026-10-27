@@ -14,7 +14,7 @@ use std::{
     time::{Duration, Instant},
 };
 
-const SERVICE_TYPE: &str = "_subnetdesk._tcp.local.";
+const SERVICE_TYPE: &str = "_localdesk._tcp.local.";
 const BROWSE_DURATION: Duration = Duration::from_secs(3);
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -134,7 +134,7 @@ pub(super) fn spawn_browse(tx: UnboundedSender<DiscoveryPeer>) -> ResultType<()>
     let daemon = ServiceDaemon::new().map_err(|err| anyhow!("Failed to start mDNS: {err}"))?;
     let receiver = daemon
         .browse(SERVICE_TYPE)
-        .map_err(|err| anyhow!("Failed to browse for SubnetDesk peers: {err}"))?;
+        .map_err(|err| anyhow!("Failed to browse for LocalDesk peers: {err}"))?;
     let local_fingerprint = device_fingerprint(&Config::get_key_pair().1);
 
     thread::spawn(move || {
@@ -352,7 +352,7 @@ fn safe_display_name(value: &str) -> String {
         .take(64)
         .collect::<String>();
     if filtered.is_empty() {
-        "SubnetDesk".to_owned()
+        "LocalDesk".to_owned()
     } else {
         filtered
     }
@@ -384,7 +384,7 @@ fn dns_host_label(display_name: &str, fingerprint: &str) -> String {
         }
     }
     let base = base.trim_matches('-');
-    let base = if base.is_empty() { "subnetdesk" } else { base };
+    let base = if base.is_empty() { "localdesk" } else { base };
     let suffix = fingerprint.get(..8).unwrap_or("device");
     let max_base_len = 63usize.saturating_sub(suffix.len() + 1);
     let mut base = base.chars().take(max_base_len).collect::<String>();
@@ -392,7 +392,7 @@ fn dns_host_label(display_name: &str, fingerprint: &str) -> String {
         base.pop();
     }
     if base.is_empty() {
-        base.push_str("subnetdesk");
+        base.push_str("localdesk");
     }
     format!("{base}-{suffix}")
 }

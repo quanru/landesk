@@ -35,8 +35,8 @@ body:
   - type: input
     id: version
     attributes:
-      label: SubnetDesk version(s) on local (controlling) side and remote (controlled) side
-      description: What SubnetDesk version(s) do you see this bug on? local (controlling) side -> remote (controlled) side.
+      label: LocalDesk version(s) on local (controlling) side and remote (controlled) side
+      description: What LocalDesk version(s) do you see this bug on? local (controlling) side -> remote (controlled) side.
       placeholder: |
         1.1.9 -> 1.1.8
     validations:

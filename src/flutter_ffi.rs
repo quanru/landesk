@@ -2511,7 +2511,7 @@ pub fn install_install_me(options: String, path: String) -> String {
                 String::new()
             }
             Err(err) => {
-                log::error!("Failed to launch SubnetDesk installation: {err}");
+                log::error!("Failed to launch LocalDesk installation: {err}");
                 err.to_string()
             }
         }

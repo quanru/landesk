@@ -45,7 +45,7 @@ static mut LATEST_SEED: i32 = 0;
 #[inline]
 fn get_update_temp_dir() -> PathBuf {
     let euid = unsafe { hbb_common::libc::geteuid() };
-    Path::new("/tmp").join(format!(".subnetdesk-update-{}", euid))
+    Path::new("/tmp").join(format!(".localdesk-update-{}", euid))
 }
 
 #[inline]
@@ -744,8 +744,8 @@ pub fn start_os_service() {
     /* // mouse/keyboard works in prelogin now with launchctl asuser.
        // below can avoid multi-users logged in problem, but having its own below problem.
        // Not find a good way to start --cm without root privilege (affect file transfer).
-       // one way is to start with `launchctl asuser <uid> open -n -a /Applications/SubnetDesk.app/ --args --cm`,
-       // this way --cm is started with the user privilege, but we will have problem to start another SubnetDesk.app
+       // one way is to start with `launchctl asuser <uid> open -n -a /Applications/LocalDesk.app/ --args --cm`,
+       // this way --cm is started with the user privilege, but we will have problem to start another LocalDesk.app
        // with open in explorer.
         use std::sync::{
             atomic::{AtomicBool, Ordering},
@@ -842,7 +842,7 @@ pub fn update_me() -> ResultType<()> {
     );
 
     let cmd = std::env::current_exe()?;
-    // SubnetDesk.app/Contents/MacOS/SubnetDesk
+    // LocalDesk.app/Contents/MacOS/LocalDesk
     let app_dir = cmd
         .parent()
         .and_then(|p| p.parent())
@@ -939,7 +939,7 @@ pub fn extract_update_dmg(file: &str) {
 
 fn extract_dmg(dmg_path: &str, target_dir: &str) -> ResultType<()> {
     let mount_point = format!(
-        "/Volumes/SubnetDeskUpdate-{}-{}",
+        "/Volumes/LocalDeskUpdate-{}-{}",
         std::process::id(),
         uuid::Uuid::new_v4().simple()
     );

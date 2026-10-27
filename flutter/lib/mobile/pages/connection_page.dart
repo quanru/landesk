@@ -263,7 +263,7 @@ class _ConnectionPageState extends State<ConnectionPage>
                           color: MyTheme.idColor,
                         ),
                         decoration: InputDecoration(
-                          labelText: '${translate('Local Address')} (IP / DNS)',
+                          labelText: '${translate('Local Address')} (IP)',
                           border: InputBorder.none,
                           helperStyle: const TextStyle(
                             fontWeight: FontWeight.bold,

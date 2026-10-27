@@ -1,4 +1,4 @@
-# SubnetDesk MSI project
+# LocalDesk MSI project
 
 Use Visual Studio 2022 to compile this project.
 

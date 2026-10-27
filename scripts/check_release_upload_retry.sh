@@ -8,7 +8,7 @@ nightly_workflow="$repo_root/.github/workflows/flutter-nightly.yml"
 uploader="$repo_root/scripts/upload_release_asset_with_retry.sh"
 
 grep -Fq 'build-mobile: false' "$nightly_workflow"
-grep -Fq 'bash scripts/upload_release_asset_with_retry.sh "$TAG_NAME" "subnetdesk-${VERSION}-${{ matrix.job.arch }}.dmg"' "$workflow"
+grep -Fq 'bash scripts/upload_release_asset_with_retry.sh "$TAG_NAME" "localdesk-${VERSION}-${{ matrix.job.arch }}.dmg"' "$workflow"
 
 test_dir="$(mktemp -d)"
 trap 'rm -rf "$test_dir"' EXIT
@@ -35,7 +35,7 @@ fi
 EOF
 chmod +x "$test_dir/gh"
 
-asset="$test_dir/subnetdesk-test-aarch64.dmg"
+asset="$test_dir/localdesk-test-aarch64.dmg"
 printf 'test asset' > "$asset"
 state="$test_dir/attempts"
 

@@ -179,11 +179,11 @@ pub fn is_support_file_transfer_resume_num(ver: i64) -> bool {
 }
 
 #[cfg(test)]
-mod subnetdesk_capability_tests {
+mod localdesk_capability_tests {
     use super::*;
 
     #[test]
-    fn current_subnetdesk_release_supports_multiple_displays() {
+    fn current_localdesk_release_supports_multiple_displays() {
         assert!(is_support_multi_ui_session("1.2.1"));
         assert!(!is_support_multi_ui_session("1.2.0"));
     }
@@ -1518,7 +1518,7 @@ pub fn get_builtin_option(key: &str) -> String {
 
 #[inline]
 pub fn is_custom_client() -> bool {
-    !matches!(get_app_name().as_str(), "RustDesk" | "SubnetDesk")
+    !matches!(get_app_name().as_str(), "RustDesk" | "LocalDesk")
 }
 
 pub fn verify_login(_raw: &str, _id: &str) -> bool {

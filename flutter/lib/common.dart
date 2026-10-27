@@ -805,9 +805,9 @@ Future<void> _activateViaKWinScript() async {
     // src/server/dbus.rs's activate_via_kwin_script()). createTemp() creates
     // a privately-owned, uniquely-named directory atomically.
     scriptDir =
-        await Directory.systemTemp.createTemp('subnetdesk-kwin-activate-');
+        await Directory.systemTemp.createTemp('localdesk-kwin-activate-');
     final scriptPath = '${scriptDir.path}/$pid.js';
-    final pluginName = 'subnetdesk-activate-$pid';
+    final pluginName = 'localdesk-activate-$pid';
     // `workspace.windowList()` (KWin 5) was renamed to the `workspace.windows`
     // property in KWin 6's scripting API; support either.
     //
@@ -2659,7 +2659,7 @@ List<String>? urlLinkToCmdArgs(Uri uri) {
       id = uri.path.substring(1);
     }
   } else if (uri.authority.length > 2 && uri.path.length <= 1) {
-    // subnetdesk://<endpoint>
+    // localdesk://<endpoint>
     command = '--connect';
     id = uri.authority;
   }
@@ -2977,7 +2977,7 @@ Future<void> onActiveWindowChanged() async {
     } catch (err) {
       debugPrintStack(label: "$err");
     } finally {
-      debugPrint("Start closing SubnetDesk...");
+      debugPrint("Start closing LocalDesk...");
       await windowManager.setPreventClose(false);
       await windowManager.close();
       if (isMacOS) {

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate SubnetDesk's deterministic stable-update manifest."""
+"""Generate LocalDesk's deterministic stable-update manifest."""
 
 import argparse
 import datetime as dt
@@ -52,12 +52,12 @@ def main() -> None:
 
     now = dt.datetime.now(dt.timezone.utc).replace(microsecond=0)
     filenames = {
-        "windows-x86_64-msi": f"subnetdesk-{args.version}-x86_64.msi",
-        "windows-x86_64-exe": f"subnetdesk-{args.version}-x86_64.exe",
-        "windows-aarch64-msi": f"subnetdesk-{args.version}-aarch64.msi",
-        "windows-aarch64-exe": f"subnetdesk-{args.version}-aarch64.exe",
-        "macos-x86_64-dmg": f"subnetdesk-{args.version}-x86_64.dmg",
-        "macos-aarch64-dmg": f"subnetdesk-{args.version}-aarch64.dmg",
+        "windows-x86_64-msi": f"localdesk-{args.version}-x86_64.msi",
+        "windows-x86_64-exe": f"localdesk-{args.version}-x86_64.exe",
+        "windows-aarch64-msi": f"localdesk-{args.version}-aarch64.msi",
+        "windows-aarch64-exe": f"localdesk-{args.version}-aarch64.exe",
+        "macos-x86_64-dmg": f"localdesk-{args.version}-x86_64.dmg",
+        "macos-aarch64-dmg": f"localdesk-{args.version}-aarch64.dmg",
     }
     manifest = {
         "schema": 1,
