@@ -16,6 +16,7 @@ import 'package:window_manager/window_manager.dart';
 import '../../common.dart';
 import '../../common/formatter/id_formatter.dart';
 import '../../common/widgets/peer_tab_page.dart';
+import '../../common/widgets/lan_connect_dialog.dart';
 import '../../models/favorite_group_model.dart';
 import '../../models/platform_model.dart';
 
@@ -540,119 +541,22 @@ class _ConnectionPageState extends State<ConnectionPage> with WindowListener {
   }
 
   Future<void> _showAddDeviceDialog(BuildContext context) async {
-    var showCredentials = false;
     _passwordController.clear();
     await showDialog<void>(
       context: context,
-      builder: (dialogContext) => StatefulBuilder(
-        builder: (context, setDialogState) {
-          Future<void> connectNow() async {
-            final connected = await onConnect();
-            if (connected && dialogContext.mounted) {
-              Navigator.of(dialogContext).pop();
-            }
-          }
-
-          Widget caption(String text) => Padding(
-            padding: const EdgeInsets.only(bottom: 8),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                text,
-                style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                  fontWeight: FontWeight.w500,
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
-              ),
-            ),
-          );
-          return AlertDialog(
-            title: Text(translate('Connect')),
-            content: SizedBox(
-              width: 440,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  caption('IP'),
-                  TextField(
-                    controller: _idEditingController,
-                    focusNode: _idFocusNode,
-                    autocorrect: false,
-                    enableSuggestions: false,
-                    decoration: InputDecoration(
-                      hintText: '192.168.1.2',
-                      prefixIcon: const Icon(Icons.desktop_windows_outlined),
-                    ),
-                    onChanged: (value) => _idController.id = value,
-                    onSubmitted: (_) => connectNow(),
-                  ),
-                  const SizedBox(height: 18),
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: TextButton.icon(
-                      onPressed: () => setDialogState(() {
-                        showCredentials = !showCredentials;
-                        if (!showCredentials) _passwordController.clear();
-                      }),
-                      icon: Icon(
-                        showCredentials ? Icons.expand_less : Icons.expand_more,
-                      ),
-                      label: Text(
-                        '${translate('Username')} · ${translate('Password')}',
-                      ),
-                    ),
-                  ),
-                  if (showCredentials) ...[
-                    caption(translate('Username')),
-                    TextField(
-                      controller: _usernameController,
-                      autocorrect: false,
-                      enableSuggestions: false,
-                      decoration: InputDecoration(
-                        prefixIcon: const Icon(Icons.person_outline),
-                      ),
-                    ),
-                    const SizedBox(height: 18),
-                    caption(translate('Password')),
-                    TextField(
-                      controller: _passwordController,
-                      obscureText: true,
-                      autocorrect: false,
-                      enableSuggestions: false,
-                      decoration: InputDecoration(
-                        prefixIcon: const Icon(Icons.lock_outline),
-                      ),
-                      onSubmitted: (_) => connectNow(),
-                    ),
-                    CheckboxListTile(
-                      value: _rememberPassword,
-                      onChanged: (value) => setDialogState(
-                        () => _rememberPassword = value == true,
-                      ),
-                      contentPadding: EdgeInsets.zero,
-                      dense: true,
-                      tileColor: Colors.transparent,
-                      controlAffinity: ListTileControlAffinity.leading,
-                      title: Text(translate('Remember password')),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(dialogContext).pop(),
-                child: Text(translate('Cancel')),
-              ),
-              ElevatedButton(
-                onPressed: connectNow,
-                child: Text(translate('Connect')),
-              ),
-            ],
-          );
+      builder: (_) => LanConnectDialog(
+        endpoint: _idEditingController,
+        username: _usernameController,
+        password: _passwordController,
+        remember: _rememberPassword,
+        translate: (text) => translate(text),
+        onConnect: (remember) {
+          _rememberPassword = remember;
+          return onConnect();
         },
       ),
     );
+    _passwordController.clear();
   }
 
   /// Callback for the connect button.
@@ -662,7 +566,7 @@ class _ConnectionPageState extends State<ConnectionPage> with WindowListener {
     bool isViewCamera = false,
     bool isTerminal = false,
   }) async {
-    final endpoint = _idController.id;
+    final endpoint = _idEditingController.text.trim();
     final username = _usernameController.text.trim();
     final password = _passwordController.text;
     if (endpoint.isEmpty || (username.isEmpty && password.isNotEmpty)) {
