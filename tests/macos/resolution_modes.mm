@@ -6,6 +6,7 @@
 #include <cstdio>
 struct Mode { size_t w, h, pw, ph; };
 static Mode low{1920,1080,1920,1080}, retina{1920,1080,3840,2160}, native{3840,2160,3840,2160};
+static Mode tinyRetina{960,540,1920,1080};
 static Mode *current = &retina, *configured = nullptr;
 static bool reject = false, cancelled = false;
 static CGDisplayModeRef testCopyMode(CGDirectDisplayID) { return (CGDisplayModeRef)current; }
@@ -17,8 +18,8 @@ static size_t testPixelHeight(CGDisplayModeRef m) { return ((Mode*)m)->ph; }
 static double testRefresh(CGDisplayModeRef) { return 60; }
 static CFStringRef testEncoding(CGDisplayModeRef) { return CFStringCreateCopy(nullptr, CFSTR("IO32BitDirectPixels")); }
 static CFArrayRef testModes(CGDirectDisplayID, CFDictionaryRef) {
- const void *modes[] = {&native, &retina, &low};
- return CFArrayCreate(nullptr, modes, 3, nullptr);
+ const void *modes[] = {&native, &retina, &tinyRetina, &low};
+ return CFArrayCreate(nullptr, modes, 4, nullptr);
 }
 static CGError testBegin(CGDisplayConfigRef *c) { *c=(CGDisplayConfigRef)&current; return kCGErrorSuccess; }
 static CGError testConfigure(CGDisplayConfigRef,CGDirectDisplayID,CGDisplayModeRef m,CFDictionaryRef) {
@@ -41,10 +42,10 @@ static CGError testCancel(CGDisplayConfigRef) { cancelled=true; return kCGErrorS
 #define CGCancelDisplayConfiguration testCancel
 #include "../../src/platform/macos.mm"
 int main() {
- uint32_t w=0,h=0,n=0,ws[3],hs[3]; bool hidpi[3];
+ uint32_t w=0,h=0,n=0,ws[4],hs[4]; bool hidpi[4];
  assert(MacGetMode(1,&w,&h));
  assert(w==3840 && h==2160); // A request for 1080p must not short-circuit.
- assert(MacGetModes(1,ws,hs,hidpi,3,&n) && n==3);
+ assert(MacGetModes(1,ws,hs,hidpi,4,&n) && n==4);
  assert(ws[0]==3840 && ws[1]==3840 && ws[2]==1920);
  assert(hs[0]==2160 && hs[1]==2160 && hs[2]==1080);
  assert(MacSetMode(1,1920,1080,true) && current==&low);

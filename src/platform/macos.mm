@@ -240,6 +240,7 @@ static bool setDisplayToMode(CGDirectDisplayID display, CGDisplayModeRef mode) {
 // Returns true if the display mode was successfully changed, false otherwise.
 // If no such mode is available, it will not change the display mode.
 //
+// Prefer a matching logical layout at the requested pixel size. Otherwise:
 // If `tryHiDPI` is true, it will try to set the display to a HiDPI mode if available.
 // If no HiDPI mode is available, it will fall back to a non-HiDPI mode with the same resolution.
 // If `tryHiDPI` is false, it sets the display to the first mode with the same resolution, no matter if it's HiDPI or not.
@@ -257,6 +258,7 @@ extern "C" bool MacSetMode(CGDirectDisplayID display, uint32_t width, uint32_t h
         return ret;
     }
     int numModes = CFArrayGetCount(allModes);
+    CGDisplayModeRef sameLayoutMode = NULL;
     CGDisplayModeRef preferredHiDPIMode = NULL;
     CGDisplayModeRef fallbackMode = NULL;
     for (int i = 0; i < numModes; i++) {
@@ -266,9 +268,15 @@ extern "C" bool MacSetMode(CGDirectDisplayID display, uint32_t width, uint32_t h
             CGDisplayModeGetRefreshRate(currentMode) == CGDisplayModeGetRefreshRate(mode) &&
             bitDepth(currentMode) == bitDepth(mode)) {
 
+            // Preserve the desktop's logical layout when reducing framebuffer size.
+            // Otherwise 1080p can select a 960x540 HiDPI mode and enlarge every UI element.
+            if (CGDisplayModeGetWidth(mode) == CGDisplayModeGetWidth(currentMode) &&
+                CGDisplayModeGetHeight(mode) == CGDisplayModeGetHeight(currentMode)) {
+                sameLayoutMode = mode;
+                break;
+            }
             if (isHiDPIMode(mode)) {
                 preferredHiDPIMode = mode;
-                break;
             } else {
                 fallbackMode = mode;
                 if (!tryHiDPI) {
@@ -278,7 +286,9 @@ extern "C" bool MacSetMode(CGDirectDisplayID display, uint32_t width, uint32_t h
         }
     }
 
-    if (preferredHiDPIMode) {
+    if (sameLayoutMode) {
+        ret = setDisplayToMode(display, sameLayoutMode);
+    } else if (preferredHiDPIMode) {
         ret = setDisplayToMode(display, preferredHiDPIMode);
     } else if (fallbackMode) {
         ret = setDisplayToMode(display, fallbackMode);

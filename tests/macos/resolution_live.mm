@@ -29,11 +29,22 @@ int main(int argc,char **argv) {
  bool changed=MacSetMode(display,1920,1080,true);
  std::this_thread::sleep_for(std::chrono::seconds(2));
  bool measured=snapshot(display,"after",w,h);
- bool passed=initial && changed && measured && w==1920 && h==1080;
+ auto selected=CGDisplayCopyDisplayMode(display);
+ bool layoutPreserved=selected &&
+   (CGDisplayModeGetWidth(original)!=1920 || CGDisplayModeGetHeight(original)!=1080 ||
+    (CGDisplayModeGetWidth(selected)==1920 && CGDisplayModeGetHeight(selected)==1080));
+ if(selected) CGDisplayModeRelease(selected);
+ bool passed=initial && changed && measured && layoutPreserved && w==1920 && h==1080;
  printf("requested1920x1080=%s\n",passed?"PASS":"FAIL");
  // Restore the exact original mode, including refresh rate and HiDPI scale,
  // even when the assertion above fails. Do not leave the user's display changed.
- auto restored=CGDisplaySetDisplayMode(display,original,nullptr);
+ CGDisplayConfigRef config=nullptr;
+ auto restored=CGBeginDisplayConfiguration(&config);
+ if(restored==kCGErrorSuccess) {
+   restored=CGConfigureDisplayWithDisplayMode(config,display,original,nullptr);
+   if(restored==kCGErrorSuccess) restored=CGCompleteDisplayConfiguration(config,kCGConfigureForSession);
+   else CGCancelDisplayConfiguration(config);
+ }
  std::this_thread::sleep_for(std::chrono::seconds(2));
  bool restoreMeasured=snapshot(display,"restored",w,h);
  bool restorePassed=restored==kCGErrorSuccess && restoreMeasured &&

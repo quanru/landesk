@@ -44,27 +44,55 @@ that attempt is not evidence of a working display change.
 - Fixed live read-only probe reports `reported=3840x2160 logical=1920x1080 pixels=3840x2160`.
 - Full Rust release build with Flutter and service passed (Rust 1.82, 2m19s).
 - Flutter macOS release build passed (61.9 MB); service bundled and ad-hoc signature
-  verified with `codesign --verify --deep --strict`. The installed host has not yet
-  been replaced.
+  verified with `codesign --verify --deep --strict`. The host was subsequently updated after unlock; see below.
 - Test/probe instructions: [tests/macos/README.md](../../tests/macos/README.md).
 
 Logs on the development Mac: `/tmp/landesk-resolution-before.log`,
 `/tmp/landesk-resolution-after.log`, `/tmp/landesk-resolution-rust-build.log`,
 `/tmp/landesk-resolution-macos-build.log`.
 
+## Post-unlock verification
+
+Actual DELL U2720Q measurement with the fixed native implementation:
+
+```text
+before reported=3840x2160 logical=1920x1080 pixels=3840x2160
+after reported=1920x1080 logical=1920x1080 pixels=1920x1080
+requested1920x1080=PASS
+restored reported=3840x2160 logical=1920x1080 pixels=3840x2160
+restore=PASS
+before reported=3840x2160 logical=1920x1080 pixels=3840x2160
+```
+
+Live testing found an additional issue: simply matching pixels while preferring
+HiDPI can select a 960x540 logical desktop for a 1920x1080 framebuffer. Selection
+now first prefers the current logical layout within the requested pixel size.
+The regression display includes this smaller HiDPI candidate before the native
+1080p candidate. The final live measurement preserves the 1920x1080 layout.
+
+The live probe now restores via a session-scoped display transaction. Temporary
+CGDisplaySetDisplayMode restoration had reverted when the probe exited; this was
+caught and corrected, and a separate post-exit read confirms 4K restoration.
+
+The final Rust release build passed. The rebuilt library and service were bundled
+into the existing Flutter release app. Installed at `/Applications/LocalDesk.app`,
+preserving bundle ID, executable name, app data and ad-hoc signing mode. The first
+staging copy lost framework symlinks; it was rebuilt preserving symlinks, reinstalled,
+and `codesign --verify --deep --strict` passed. Installed native-library SHA-256
+matches the build artifact:
+`bc1f3e1621101e8648cfe25bda51eaaf9755592503d907842307617f0d7928ae`.
+The GUI and user-session server were restarted; TCP 21118 is listening. The existing
+root service process was not restarted (it is not the display capture process).
+
 ## Remaining acceptance
 
-The Mac is locked; the user was asked to unlock and wake the display. Do not mark
-physical switching or remote decoded-frame dimensions as passed until then.
-After unlock:
+The iPad mini simulator reaches the actual LAN credentials dialog on the updated
+host. No saved credentials were available; the user was asked to enter credentials
+in the simulator, without sharing them in chat. Authentication was not bypassed.
 
-1. Run the live probe with `--switch-and-restore`, verifying 1920×1080 pixels and
-   restoration to the initial mode.
-2. Install the rebuilt Mac host using the existing application identity and signing
-   approach, then reconnect the iPad/iPhone client.
-3. Select 1920×1080 in the actual resolution menu and confirm the host capture log
-   and client's decoded picture dimensions both become 1920×1080.
-4. Exercise pointer accuracy, restore 3840×2160, disconnect and check restoration.
+After login, select 1920x1080 in the actual client menu and confirm host capture
+and client decoded-frame dimensions, pointer accuracy and disconnect restoration.
+These end-to-end checks remain pending; the live native probe is not a substitute.
 
 This change selects supported physical modes. It does not synthesize a new mode
 or add virtual monitors for displays lacking 1920×1080 support.
