@@ -104,6 +104,36 @@ class _PeersViewState extends State<_PeersView> {
       child: Consumer<Peers>(builder: (context, peers, child) {
         if (peers.peers.isEmpty) {
           gFFI.peerTabModel.setCurrentTabCachedPeers([]);
+          if (widget.peers.loadEvent == LoadEvent.lan) {
+            final chinese = Localizations.localeOf(context).languageCode == 'zh';
+            final theme = Theme.of(context);
+            return Center(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(24),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 360),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.devices_outlined, size: 36,
+                          color: theme.colorScheme.onSurfaceVariant),
+                      const SizedBox(height: 20),
+                      Text(chinese ? '尚未发现设备' : 'No devices discovered yet',
+                          textAlign: TextAlign.center,
+                          style: theme.textTheme.titleMedium),
+                      const SizedBox(height: 8),
+                      Text(chinese
+                          ? '确认另一台电脑已开启 landesk，并连接到同一网络。你也可以通过 IP 地址连接。'
+                          : 'Open landesk on another computer on the same network. You can also connect using its IP address.',
+                          textAlign: TextAlign.center,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant)),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          }
           return Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
