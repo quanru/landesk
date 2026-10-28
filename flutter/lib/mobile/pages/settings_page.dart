@@ -1,3 +1,4 @@
+import 'package:flutter_hbb/common/widgets/source_license_section.dart';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -171,6 +172,7 @@ class _SettingsState extends State<SettingsPage> {
             SettingsSectionCard(
               title: translate('About'),
               children: [
+                const Padding(padding: EdgeInsets.all(16), child: SourceLicenseSection()),
                 ListTile(
                   title: const Text('LanDesk'),
                   subtitle: Text('${translate('Version')}: $version'),

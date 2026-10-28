@@ -1,3 +1,4 @@
+import 'package:flutter_hbb/common/widgets/source_license_section.dart';
 import '../../common/widgets/settings_section_card.dart';
 import 'dart:async';
 import 'dart:convert';
@@ -1307,6 +1308,7 @@ class _AboutState extends State<_About> {
                         '${translate('Fingerprint')}: $fingerprint',
                       ).marginSymmetric(vertical: 4.0),
                     ),
+                  const SourceLicenseSection(),
                   if (!isWeb) _diagnosticsSection(),
                   Container(
                     decoration: BoxDecoration(color: Theme.of(context).colorScheme.primary),

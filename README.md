@@ -162,3 +162,7 @@ Bug reports, feature ideas, and pull requests are welcome. Before opening a chan
 landesk is based on [RustDesk](https://github.com/rustdesk/rustdesk) and retains its open-source foundations. landesk is an independent project and is not an official RustDesk release.
 
 Licensed under the [GNU Affero General Public License v3.0](LICENCE). Use remote-control software only on systems you own or are authorized to administer.
+
+## License and source / 开源许可与源码
+
+See [NOTICE](NOTICE), [AGPL v3](LICENCE), [version-specific sources](docs/licensing/releases.md), and [build/dependency coverage](docs/licensing/README.md).

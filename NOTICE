@@ -1,0 +1,22 @@
+LanDesk is an independently maintained modified version of RustDesk and
+SubnetDesk. It is not an official release of either upstream project.
+
+Upstream projects:
+  RustDesk: https://github.com/rustdesk/rustdesk
+  SubnetDesk: https://github.com/zibo-chen/SubnetDesk
+
+RustDesk copyright notices, including those of Purslane Tech Pte. Ltd.,
+remain applicable. Other upstream contributors retain their copyrights.
+LanDesk modifications: Copyright (c) 2026 quanru and contributors.
+Modification history and dates are recorded in Git commits.
+
+LanDesk is provided under GNU AGPL version 3; see LICENCE for the full text.
+It is supplied without warranty, to the extent permitted by applicable law.
+Individual dependencies retain their own licenses; this notice does not
+relicense third-party code or grant rights to upstream trademarks.
+
+Source and release mappings:
+https://github.com/quanru/landesk/blob/localdesk/main/docs/licensing/releases.md
+
+See docs/licensing/README.md for dependency coverage and open distribution
+questions. An upload accepted by a platform is not a license compliance audit.

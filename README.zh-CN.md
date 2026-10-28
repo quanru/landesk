@@ -157,3 +157,7 @@ cd landesk
 landesk 基于 [RustDesk](https://github.com/rustdesk/rustdesk) 开发并保留其开源基础。本项目独立维护，并非 RustDesk 官方发行版。
 
 项目采用 [GNU Affero General Public License v3.0](LICENCE) 许可。请仅在自己拥有或已获授权的设备上使用远程控制功能。
+
+## License and source / 开源许可与源码
+
+See [NOTICE](NOTICE), [AGPL v3](LICENCE), [version-specific sources](docs/licensing/releases.md), and [build/dependency coverage](docs/licensing/README.md).
