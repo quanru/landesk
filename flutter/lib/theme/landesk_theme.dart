@@ -53,8 +53,8 @@ class SuyaPalette {
 }
 
 class LandeskTheme {
-  static const controlRadius = 14.0;
-  static const cardRadius = 20.0;
+  static const controlRadius = 10.0;
+  static const cardRadius = 16.0;
   static const motion = Duration(milliseconds: 150);
 
   static ThemeData build(Brightness brightness, {TargetPlatform? platform}) {

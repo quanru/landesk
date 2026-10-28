@@ -336,7 +336,7 @@ class _PeerCardState extends State<_PeerCard>
     final muted = SuyaPalette.of(context).secondary;
     final offline = peer.online == false;
     final deviceColor = offline
-        ? const Color(0xFF77808E)
+        ? muted
         : SuyaPalette.of(context).accent;
     final child = Card(
       color: surface,

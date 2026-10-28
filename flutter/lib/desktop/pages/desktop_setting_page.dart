@@ -29,9 +29,7 @@ const double _kContentHSubMargin = _kContentHMargin + 33;
 const double _kCheckBoxLeftMargin = 10;
 const double _kRadioLeftMargin = 10;
 const double _kListViewBottomMargin = 15;
-const double _kTitleFontSize = 20;
 const double _kContentFontSize = 15;
-const Color _accentColor = MyTheme.accent;
 const String _kSettingPageControllerTag = 'settingPageController';
 const String _kSettingPageTabKeyTag = 'settingPageTabKey';
 
@@ -255,11 +253,7 @@ class _DesktopSettingPageState extends State<DesktopSettingPage>
     final settingsText = Text(
       translate('Settings'),
       textAlign: TextAlign.left,
-      style: const TextStyle(
-        color: _accentColor,
-        fontSize: _kTitleFontSize,
-        fontWeight: FontWeight.w400,
-      ),
+      style: Theme.of(context).textTheme.titleLarge,
     );
     return Row(
       children: [
@@ -323,13 +317,17 @@ class _DesktopSettingPageState extends State<DesktopSettingPage>
               children: [
                 Icon(
                   selected ? tab.selected : tab.unselected,
-                  color: selected ? _accentColor : null,
+                  color: selected
+                      ? Theme.of(context).colorScheme.onSurface
+                      : Theme.of(context).colorScheme.onSurfaceVariant,
                   size: 20,
                 ).marginOnly(left: 13, right: 10),
                 Text(
                   translate(tab.label),
                   style: TextStyle(
-                    color: selected ? _accentColor : null,
+                    color: selected
+                      ? Theme.of(context).colorScheme.onSurface
+                      : Theme.of(context).colorScheme.onSurfaceVariant,
                     fontWeight: FontWeight.w400,
                     fontSize: _kContentFontSize,
                   ),

@@ -332,6 +332,21 @@ class _ToolbarTheme {
 
   static const Color redColor = Colors.redAccent;
   static const Color hoverRedColor = Colors.red;
+
+  static Color actionForeground(BuildContext context, Color color) {
+    final scheme = Theme.of(context).colorScheme;
+    if (color == redColor) return scheme.error;
+    return color == inactiveColor ? scheme.onSurfaceVariant : scheme.onSurface;
+  }
+
+  static Color actionBackground(BuildContext context, Color color, bool hover) {
+    final scheme = Theme.of(context).colorScheme;
+    if (color == redColor) {
+      return hover ? scheme.errorContainer : Colors.transparent;
+    }
+    return hover ? scheme.surfaceContainerHighest : Colors.transparent;
+  }
+
   // kMinInteractiveDimension
   static const double height = 20.0;
   static const double dividerHeight = 12.0;
@@ -3103,7 +3118,9 @@ class _IconMenuButtonState extends State<_IconMenuButton> {
     final icon = widget.icon ??
         SvgPicture.asset(
           widget.assetName!,
-          colorFilter: ColorFilter.mode(Colors.white, BlendMode.srcIn),
+          colorFilter: ColorFilter.mode(
+            _ToolbarTheme.actionForeground(context, widget.color),
+            BlendMode.srcIn),
           width: _ToolbarTheme.buttonSize,
           height: _ToolbarTheme.buttonSize,
         );
@@ -3114,7 +3131,10 @@ class _IconMenuButtonState extends State<_IconMenuButton> {
           style: ButtonStyle(
               backgroundColor: MaterialStatePropertyAll(Colors.transparent),
               padding: MaterialStatePropertyAll(EdgeInsets.zero),
-              overlayColor: MaterialStatePropertyAll(Colors.transparent)),
+              overlayColor: WidgetStateProperty.resolveWith((states) =>
+                  states.contains(WidgetState.focused) || states.contains(WidgetState.pressed)
+                      ? Theme.of(context).colorScheme.onSurface.withValues(alpha: .12)
+                      : Colors.transparent)),
           onHover: (value) => setState(() {
                 hover = value;
               }),
@@ -3127,7 +3147,9 @@ class _IconMenuButtonState extends State<_IconMenuButton> {
                     decoration: BoxDecoration(
                       borderRadius:
                           BorderRadius.circular(_ToolbarTheme.iconRadius),
-                      color: hover ? widget.hoverColor : widget.color,
+                      color: widget.icon != null
+                          ? (hover ? widget.hoverColor : widget.color)
+                          : _ToolbarTheme.actionBackground(context, widget.color, hover),
                     ),
                     child: icon)),
           )),
@@ -3188,7 +3210,9 @@ class _IconSubmenuButtonState extends State<_IconSubmenuButton> {
     final icon = widget.icon ??
         SvgPicture.asset(
           widget.svg!,
-          colorFilter: ColorFilter.mode(Colors.white, BlendMode.srcIn),
+          colorFilter: ColorFilter.mode(
+            _ToolbarTheme.actionForeground(context, widget.color),
+            BlendMode.srcIn),
           width: _ToolbarTheme.buttonSize,
           height: _ToolbarTheme.buttonSize,
         );
@@ -3198,7 +3222,12 @@ class _IconSubmenuButtonState extends State<_IconSubmenuButton> {
         child: SubmenuButton(
             menuStyle:
                 widget.menuStyle ?? _ToolbarTheme.defaultMenuStyle(context),
-            style: _ToolbarTheme.defaultMenuButtonStyle,
+            style: _ToolbarTheme.defaultMenuButtonStyle.copyWith(
+              overlayColor: WidgetStateProperty.resolveWith((states) =>
+                  states.contains(WidgetState.focused) || states.contains(WidgetState.pressed)
+                      ? Theme.of(context).colorScheme.onSurface.withValues(alpha: .12)
+                      : Colors.transparent),
+            ),
             onHover: (value) => setState(() {
                   hover = value;
                 }),
@@ -3210,7 +3239,9 @@ class _IconSubmenuButtonState extends State<_IconSubmenuButton> {
                         decoration: BoxDecoration(
                           borderRadius:
                               BorderRadius.circular(_ToolbarTheme.iconRadius),
-                          color: hover ? widget.hoverColor : widget.color,
+                          color: widget.icon != null
+                          ? (hover ? widget.hoverColor : widget.color)
+                          : _ToolbarTheme.actionBackground(context, widget.color, hover),
                         ),
                         child: icon))),
             menuChildren: widget

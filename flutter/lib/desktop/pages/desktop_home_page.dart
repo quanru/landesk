@@ -1673,20 +1673,20 @@ class _DesktopHomePageState extends State<DesktopHomePage>
     final panelColor = SuyaPalette.of(context).background;
     final setupIssues = _setupReadinessIssues;
     return Container(
-      width: 280,
+      width: 248,
       color: panelColor,
       child: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(22, 20, 18, 18),
+            padding: const EdgeInsets.fromLTRB(20, 20, 18, 20),
             child: Row(
               children: [
                 ClipRRect(
                   borderRadius: BorderRadius.circular(14),
                   child: Image.asset(
                     'assets/icon.png',
-                    width: 46,
-                    height: 46,
+                    width: 36,
+                    height: 36,
                     semanticLabel: 'landesk',
                   ),
                 ),
