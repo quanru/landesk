@@ -58,10 +58,22 @@ using the new staging installer; strict deep verification passed, and the runnin
 user-session host listens on TCP 21118. Its designated requirement is certificate-
 backed instead of a code hash. Existing root launcher process was not restarted.
 
-System Settings still showed the old LocalDesk recording grant as on. Attempting
-to refresh that existing grant presented the macOS administrator password sheet.
-The user was asked to complete that sheet locally; no password was read, stored or
-requested in chat. Grant refresh and live capture are pending this user action.
-After confirmation, finish re-enabling the existing app grant, restart the host,
-reconnect, and validate real video plus another same-identity update. Do not claim
-permission persistence from the signing compatibility test alone.
+## Permission refresh and reinstall check
+
+After the user completed system authentication, toggling the old recording entry
+was insufficient: the app still reported missing recording permission. Removing
+that old entry and adding `/Applications/LocalDesk.app` through System Settings,
+then using Quit and Reopen, cleared the recording warning. The old accessibility
+entry was also refreshed through System Settings with user participation.
+
+The same release bundle was then installed again with `install-macos.py`, without
+`--migrate-adhoc`. The installer verified the previous designated requirement,
+restarted the GUI and host, and did not modify TCC. After this reinstall, the app
+showed the green desktop Ready state with no recording/accessibility warning;
+the user-session host listened on TCP 21118. This verifies permission retention
+for this same-build reinstall, not yet a different-code release upgrade.
+
+The iPad simulator remains at the LAN credentials form. Actual video delivery,
+input control, saved-credential reconnection and a different-code upgrade remain
+unverified until an authenticated connection is available. No password was read
+or requested in chat, and this check did not change the host display resolution.
