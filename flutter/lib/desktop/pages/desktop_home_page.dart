@@ -240,43 +240,6 @@ class _LanServerInfoPanelState extends State<LanServerInfoPanel> {
                       ),
                     ),
                   ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 5,
-                    ),
-                    decoration: BoxDecoration(
-                      color: statusColor.withOpacity(isDark ? 0.18 : 0.10),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          width: 6,
-                          height: 6,
-                          decoration: BoxDecoration(
-                            color: statusColor,
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                        const SizedBox(width: 5),
-                        ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: 78),
-                          child: Text(
-                            statusLabel,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              color: statusColor,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
                   if (configured) ...[
                     const SizedBox(width: 4),
                     IconButton(
@@ -291,6 +254,16 @@ class _LanServerInfoPanelState extends State<LanServerInfoPanel> {
                       icon: Icon(Icons.tune_rounded, size: 16, color: muted),
                     ),
                   ],
+                ],
+              ),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  Icon(Icons.circle, size: 6, color: statusColor),
+                  const SizedBox(width: 8),
+                  Expanded(child: Text(statusLabel,
+                    style: TextStyle(color: statusColor, fontSize: 12),
+                  )),
                 ],
               ),
               if (runtimeError.isNotEmpty) ...[

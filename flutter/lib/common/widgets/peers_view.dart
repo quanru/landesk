@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:collection';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_hbb/consts.dart';
@@ -13,6 +12,7 @@ import '../../models/favorite_group_model.dart';
 import '../../models/peer_model.dart';
 import '../../models/platform_model.dart';
 import 'peer_card.dart';
+import 'device_empty_state.dart';
 import 'responsive_layout.dart';
 
 typedef PeerFilter = bool Function(Peer peer);
@@ -80,11 +80,6 @@ class _PeersView extends StatefulWidget {
 
 /// State for the peer widget.
 class _PeersViewState extends State<_PeersView> {
-  final HashMap<String, String> _emptyMessages = HashMap.from({
-    LoadEvent.recent: 'empty_recent_tip',
-    LoadEvent.favorite: 'empty_favorite_tip',
-    LoadEvent.lan: 'empty_lan_tip',
-  });
   final space = (isDesktop || isWebDesktop) ? 12.0 : 8.0;
   final _scrollController = ScrollController();
 
@@ -104,59 +99,28 @@ class _PeersViewState extends State<_PeersView> {
       child: Consumer<Peers>(builder: (context, peers, child) {
         if (peers.peers.isEmpty) {
           gFFI.peerTabModel.setCurrentTabCachedPeers([]);
-          if (widget.peers.loadEvent == LoadEvent.lan) {
-            final chinese = Localizations.localeOf(context).languageCode == 'zh';
-            final theme = Theme.of(context);
-            return Center(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(24),
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 360),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.devices_outlined, size: 36,
-                          color: theme.colorScheme.onSurfaceVariant),
-                      const SizedBox(height: 20),
-                      Text(chinese ? '尚未发现设备' : 'No devices discovered yet',
-                          textAlign: TextAlign.center,
-                          style: theme.textTheme.titleMedium),
-                      const SizedBox(height: 8),
-                      Text(chinese
-                          ? '确认另一台电脑已开启 landesk，并连接到同一网络。你也可以通过 IP 地址连接。'
-                          : 'Open landesk on another computer on the same network. You can also connect using its IP address.',
-                          textAlign: TextAlign.center,
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                              color: theme.colorScheme.onSurfaceVariant)),
-                    ],
-                  ),
-                ),
-              ),
-            );
-          }
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.devices_outlined,
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  size: 28,
-                ).paddingOnly(bottom: 10),
-                Text(
-                  translate(
-                    _emptyMessages[widget.peers.loadEvent] ?? 'Empty',
-                  ),
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 12,
-                    height: 1.5,
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
-                ),
-              ],
+          final chinese = Localizations.localeOf(context).languageCode == 'zh';
+          final (title, description, icon) = switch (widget.peers.loadEvent) {
+            LoadEvent.lan => (
+              chinese ? '尚未发现设备' : 'No devices discovered yet',
+              chinese ? '确认另一台电脑已开启 landesk，并连接到同一网络。你也可以通过 IP 地址连接。'
+                  : 'Open landesk on another computer on the same network. You can also connect using its IP address.',
+              Icons.devices_outlined,
             ),
-          );
+            LoadEvent.recent => (
+              chinese ? '还没有连接记录' : 'No recent connections',
+              chinese ? '连接过的设备会显示在这里，方便下次访问。'
+                  : 'Devices you connect to will appear here for quick access next time.',
+              Icons.history_rounded,
+            ),
+            _ => (
+              chinese ? '还没有收藏设备' : 'No favorites yet',
+              chinese ? '收藏常用设备，下次就能更快找到它们。'
+                  : 'Add your frequently used devices to favorites to find them quickly.',
+              Icons.star_border_rounded,
+            ),
+          };
+          return DeviceEmptyState(title: title, description: description, icon: icon);
         } else {
           return _buildPeersView(peers);
         }
@@ -172,6 +136,27 @@ class _PeersViewState extends State<_PeersView> {
             var peers = snapshot.data!;
             if (peers.length > 1000) peers = peers.sublist(0, 1000);
             gFFI.peerTabModel.setCurrentTabCachedPeers(peers);
+            if (peers.isEmpty) {
+              final chinese = Localizations.localeOf(context).languageCode == 'zh';
+              final searching = filters[0].value.trim().isNotEmpty;
+              return DeviceEmptyState(
+                icon: searching ? Icons.search_off_rounded : Icons.folder_outlined,
+                title: searching
+                    ? (chinese ? '没有匹配的设备' : 'No matching devices')
+                    : (chinese ? '这里还没有设备' : 'No devices here yet'),
+                description: searching
+                    ? (chinese ? '试试其他设备名称或 IP 地址，或清除搜索查看全部设备。'
+                        : 'Try another device name or IP address, or clear the search to see all devices.')
+                    : (chinese ? '切换列表或分组查看其他设备。'
+                        : 'Choose another list or group to see other devices.'),
+                actionLabel: searching ? (chinese ? '清除搜索' : 'Clear search') : null,
+                onAction: searching ? () {
+                  peerSearchTextController.clear();
+                  peerSearchText.value = '';
+                } : null,
+              );
+            }
+
             buildOnePeer(Peer peer, bool isPortrait) {
               final peerCard = widget.peerCardBuilder(peer);
               // `Provider.of<PeerTabModel>(context)` will causes infinete loop.
