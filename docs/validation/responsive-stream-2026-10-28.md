@@ -99,3 +99,20 @@ The installed Mac 85 client connected to the installed Mac host using the app's
 Screenshot (local, not committed): `dist/screenshots/stream85/mac-loopback.png`.
 Runtime sources: `~/Library/Logs/LocalDesk/LocalDesk_rCURRENT.log` and
 `~/Library/Logs/LocalDesk/server/LocalDesk_rCURRENT.log`, 15:50:34–15:50:45.
+
+## User-selected speed profile verification
+
+At 15:56:51 the host logged `image_quality: Low`, followed by `custom_fps: 30`
+for the existing session after the user selected **速度最优化**. The previous
+English-derived instruction “优化响应时间” was not the actual Chinese UI label.
+
+The native quality monitor changed its target bitrate from 4146 kb to 1036 kb
+(approximately 75% lower). The observed post-change snapshot showed AV1,
+4:2:0, FPS 10, Speed 12.62 kB/s and Delay 0 ms. These are instantaneous values;
+30 is the configured frame ceiling, not measured sustained delivery. The
+monitor's loopback Delay value is not end-to-end input latency, and the two
+snapshots are not a controlled throughput or performance benchmark.
+
+A fresh physical-mode probe still reported 3840x2160 framebuffer pixels and
+1920x1080 logical desktop. Local screenshot: `dist/screenshots/stream85/speed-profile.png`.
+Full interaction/latency testing over Wi-Fi remains outstanding.
