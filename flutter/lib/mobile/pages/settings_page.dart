@@ -1,3 +1,4 @@
+import '../../common/widgets/theme_mode_selector.dart';
 import 'package:flutter_hbb/common/widgets/source_license_section.dart';
 import 'dart:convert';
 
@@ -150,15 +151,14 @@ class _SettingsState extends State<SettingsPage> {
             SettingsSectionCard(
               title: translate('Theme'),
               children: [
-                entry(
-                  'Theme',
-                  Icons.brightness_6_outlined,
-                  () => showThemeSettings(gFFI.dialogManager),
-                  subtitle: translate(
-                    switch (MyTheme.getThemeModePreference()) {
-                      ThemeMode.system => 'Follow System',
-                      ThemeMode.light => 'Light Theme',
-                      ThemeMode.dark => 'Dark Theme',
+                Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: ThemeModeSelector(
+                    value: MyTheme.getThemeModePreference(),
+                    translate: (text) => translate(text),
+                    onChanged: isOptionFixed(kCommConfKeyTheme) ? null : (value) async {
+                      await MyTheme.changeDarkMode(value);
+                      if (mounted) setState(() {});
                     },
                   ),
                 ),
@@ -475,47 +475,4 @@ void showLanguageSettings(OverlayDialogManager dialogManager) async {
       clickMaskDismiss: true,
     );
   } catch (_) {}
-}
-
-void showThemeSettings(OverlayDialogManager dialogManager) async {
-  var themeMode = MyTheme.getThemeModePreference();
-  dialogManager.show(
-    (setState, close, context) {
-      void setTheme(ThemeMode? value) {
-        if (value == null) return;
-        if (themeMode == value) return;
-        setState(() => themeMode = value);
-        MyTheme.changeDarkMode(themeMode);
-        Future.delayed(const Duration(milliseconds: 200), close);
-      }
-
-      final onChanged = isOptionFixed(kCommConfKeyTheme) ? null : setTheme;
-      return CustomAlertDialog(
-        content: Column(
-          children: [
-            getRadio<ThemeMode>(
-              Text(translate('Light')),
-              ThemeMode.light,
-              themeMode,
-              onChanged,
-            ),
-            getRadio<ThemeMode>(
-              Text(translate('Dark')),
-              ThemeMode.dark,
-              themeMode,
-              onChanged,
-            ),
-            getRadio<ThemeMode>(
-              Text(translate('Follow System')),
-              ThemeMode.system,
-              themeMode,
-              onChanged,
-            ),
-          ],
-        ),
-      );
-    },
-    backDismiss: true,
-    clickMaskDismiss: true,
-  );
 }

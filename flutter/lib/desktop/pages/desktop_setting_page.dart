@@ -1,3 +1,4 @@
+import '../../common/widgets/theme_mode_selector.dart';
 import 'package:flutter_hbb/common/widgets/source_license_section.dart';
 import '../../common/widgets/settings_section_card.dart';
 import 'dart:async';
@@ -291,54 +292,49 @@ class _DesktopSettingPageState extends State<DesktopSettingPage>
 
   Widget _listItem({required _TabInfo tab}) {
     return Obx(() {
-      bool selected = tab.key == selectedTab.value;
-      return SizedBox(
-        width: _kTabWidth,
-        height: _kTabHeight,
-        child: InkWell(
-          onTap: () {
-            if (selectedTab.value != tab.key) {
-              int index = DesktopSettingPage.tabKeys.indexOf(tab.key);
-              if (index == -1) {
-                return;
-              }
-              controller.jumpToPage(index);
-            }
-            selectedTab.value = tab.key;
-          },
-          child: Ink(
-            decoration: BoxDecoration(
-              color: selected
-                  ? Theme.of(context).colorScheme.surfaceContainer
-                  : null,
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  selected ? tab.selected : tab.unselected,
-                  color: selected
-                      ? Theme.of(context).colorScheme.onSurface
-                      : Theme.of(context).colorScheme.onSurfaceVariant,
-                  size: 20,
-                ).marginOnly(left: 13, right: 10),
-                Text(
-                  translate(tab.label),
-                  style: TextStyle(
-                    color: selected
-                      ? Theme.of(context).colorScheme.onSurface
-                      : Theme.of(context).colorScheme.onSurfaceVariant,
-                    fontWeight: FontWeight.w400,
-                    fontSize: _kContentFontSize,
-                  ),
-                ),
-              ],
+      final selected = tab.key == selectedTab.value;
+      final scheme = Theme.of(context).colorScheme;
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+        child: Semantics(
+          selected: selected,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(10),
+            onTap: () {
+              final index = DesktopSettingPage.tabKeys.indexOf(tab.key);
+              if (index == -1) return;
+              if (!selected) controller.jumpToPage(index);
+              selectedTab.value = tab.key;
+            },
+            child: Ink(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                color: selected ? scheme.surfaceContainer : null,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(minHeight: _kTabHeight - 20),
+                child: Row(children: [
+                  Icon(selected ? tab.selected : tab.unselected,
+                      color: selected ? scheme.onSurface : scheme.onSurfaceVariant,
+                      size: 20),
+                  const SizedBox(width: 10),
+                  Expanded(child: Text(translate(tab.label),
+                    style: TextStyle(
+                      color: selected ? scheme.onSurface : scheme.onSurfaceVariant,
+                      fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+                      fontSize: _kContentFontSize,
+                    ),
+                  )),
+                ]),
+              ),
             ),
           ),
         ),
       );
     });
   }
+
 }
 
 //#region pages
@@ -376,36 +372,19 @@ class _GeneralState extends State<_General> {
   }
 
   Widget theme() {
-    final current = MyTheme.getThemeModePreference().toShortString();
-    onChanged(String value) async {
-      await MyTheme.changeDarkMode(MyTheme.themeModeFromString(value));
-      setState(() {});
-    }
-
-    final isOptFixed = isOptionFixed(kCommConfKeyTheme);
     return _Card(
       title: 'Theme',
       children: [
-        _Radio<String>(
-          context,
-          value: 'light',
-          groupValue: current,
-          label: 'Light',
-          onChanged: isOptFixed ? null : onChanged,
-        ),
-        _Radio<String>(
-          context,
-          value: 'dark',
-          groupValue: current,
-          label: 'Dark',
-          onChanged: isOptFixed ? null : onChanged,
-        ),
-        _Radio<String>(
-          context,
-          value: 'system',
-          groupValue: current,
-          label: 'Follow System',
-          onChanged: isOptFixed ? null : onChanged,
+        Padding(
+          padding: const EdgeInsets.only(left: 16),
+          child: ThemeModeSelector(
+            value: MyTheme.getThemeModePreference(),
+            translate: (text) => translate(text),
+            onChanged: isOptionFixed(kCommConfKeyTheme) ? null : (value) async {
+              await MyTheme.changeDarkMode(value);
+              if (mounted) setState(() {});
+            },
+          ),
         ),
       ],
     );
