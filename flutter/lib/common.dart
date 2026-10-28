@@ -2102,13 +2102,9 @@ Future<bool> restoreWindowPosition(
     debugPrint("No window position saved, trying to center the window.");
     switch (type) {
       case WindowType.Main:
-        // Center the main window only if no position is saved (on first run).
-        if (isWindows || isLinux) {
-          await windowManager.center();
-        }
-        // For MacOS, the window is already centered by default.
-        // See https://github.com/rustdesk/rustdesk/blob/9b9276e7524523d7f667fefcd0694d981443df0e/flutter/macos/Runner/Base.lproj/MainMenu.xib#L333
-        // If `<windowPositionMask>` in `<window>` is not set, the window will be centered.
+        // Give the sidebar, device cards and connection form room on first run.
+        await windowManager.setSize(const Size(1100, 760));
+        await windowManager.center();
         break;
       default:
         // No need to change the position of a sub window if no position is saved,
@@ -2137,6 +2133,13 @@ Future<bool> restoreWindowPosition(
     }
   }
 
+  // Migrate the old compact home-window default; keep custom sizes intact.
+  if (type == WindowType.Main &&
+      lpos.width == 800 &&
+      (lpos.height == 510 || lpos.height == 600)) {
+    lpos.width = 1100;
+    lpos.height = 760;
+  }
   final size = await _adjustRestoreMainWindowSize(lpos.width, lpos.height);
   final offsetLeftTop = await _adjustRestoreMainWindowOffset(
     lpos.offsetWidth,
