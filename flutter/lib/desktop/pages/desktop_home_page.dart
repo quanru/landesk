@@ -1602,6 +1602,12 @@ class _DesktopHomePageState extends State<DesktopHomePage>
   PeerTabIndex _selectedPeerTab = PeerTabIndex.lan;
   String? _selectedFavoriteGroupId;
 
+  void _selectPeerTab(PeerTabIndex tab) {
+    setState(() => _selectedPeerTab = tab);
+    gFFI.peerTabModel.setCurrentTab(tab.index);
+    bind.setLocalFlutterOption(k: kOptionPeerTabIndex, v: '${tab.index}');
+  }
+
   final RxBool _editHover = false.obs;
   final RxBool _block = false.obs;
 
@@ -2255,8 +2261,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
               onTap ??
               () {
                 if (tab != null) {
-                  setState(() => _selectedPeerTab = tab);
-                  gFFI.peerTabModel.setCurrentTab(tab.index);
+                  _selectPeerTab(tab);
                 }
               },
           child: Container(
@@ -2378,8 +2383,8 @@ class _DesktopHomePageState extends State<DesktopHomePage>
         child: InkWell(
           borderRadius: BorderRadius.circular(8),
           onTap: () {
+            _selectPeerTab(PeerTabIndex.fav);
             setState(() {
-              _selectedPeerTab = PeerTabIndex.fav;
               _selectedFavoriteGroupId = id;
             });
           },
@@ -2981,6 +2986,13 @@ class _DesktopHomePageState extends State<DesktopHomePage>
   void initState() {
     super.initState();
     favoriteGroupModel.load();
+    final savedTab = int.tryParse(
+      bind.getLocalFlutterOption(k: kOptionPeerTabIndex),
+    );
+    if (savedTab != null && savedTab >= 0 && savedTab < PeerTabIndex.values.length) {
+      _selectedPeerTab = PeerTabIndex.values[savedTab];
+    }
+    gFFI.peerTabModel.setCurrentTab(_selectedPeerTab.index);
     if (isMacOS) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _checkLocalNetworkPermission();
