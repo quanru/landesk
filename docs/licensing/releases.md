@@ -5,6 +5,7 @@
 
 | 已提供的二进制 | 构建源码提交 | 源码快照 |
 | --- | --- | --- |
+| 本机 macOS 1.3.0 (78)，新增许可入口 | `638463eef` | [构建 78 源码及子模块](https://github.com/quanru/landesk/releases/download/v1.3.0-preview.20261028/landesk-78-source.tar.gz)（校验见 landesk-78-source.sha256） |
 | macOS 1.3.0 (75)，GitHub `v1.3.0-preview.20261028` | `88d5d5c18` | [Mac 源码及子模块](https://github.com/quanru/landesk/releases/download/v1.3.0-preview.20261028/landesk-macos-75-source.tar.gz) |
 | iOS TestFlight 1.3.0 (76) | `44dd99b6b` | [iOS 76 源码及子模块](https://github.com/quanru/landesk/releases/download/v1.3.0-preview.20261028/landesk-ios-76-source.tar.gz) |
 | iOS TestFlight 1.3.0 (77)；本机素雅主题 Mac 更新 | `ad0f04c5b` | [素雅主题源码及子模块](https://github.com/quanru/landesk/releases/download/v1.3.0-preview.20261028/landesk-ios-77-source.tar.gz) |
