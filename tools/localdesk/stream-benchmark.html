@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LanDesk 传输对比实验</title>
+<style>
+body{margin:24px;background:#f6f6f4;color:#252525;font:20px system-ui}header{display:flex;align-items:center;gap:24px;flex-wrap:wrap}h1{font-size:28px}button,input{font:inherit;padding:14px 20px;border:1px solid #aaa;border-radius:8px;background:white}button:focus-visible,input:focus-visible{outline:3px solid #555}canvas{display:block;width:100%;height:400px;background:white;border:1px solid #ccc;margin:20px 0}#rows{height:210px;overflow:auto;background:white;border:1px solid #ccc}#rows p{margin:0;padding:16px;border-bottom:1px solid #ddd}output{font-variant-numeric:tabular-nums}small{display:block;margin:16px 0;color:#555}
+</style>
+<header><h1>LanDesk 传输对比实验</h1><button id="start">开始 60 秒动画</button><output id="status">待开始</output></header>
+<small>两档画质使用相同窗口尺寸、编码器和 30 fps 上限。动画是固定轨迹的测试内容，不是帧率或延迟测量器。</small>
+<canvas id="scene" width="1600" height="400"></canvas>
+<header><button id="click">点击响应：0</button><input id="typing" placeholder="在手机上输入测试文字" aria-label="输入测试文字"><output id="events">滚动位置：0</output></header>
+<small>点击计数及输入文字只留在本页，不发送到网络。</small>
+<div id="rows" tabindex="0" aria-label="滚动测试列表"></div>
+<script>
+const scene=document.getElementById('scene'),ctx=scene.getContext('2d'),start=document.getElementById('start'),status=document.getElementById('status');
+let began=null,frame=null,last=-1,clicks=0;
+function draw(t){ctx.fillStyle='#fff';ctx.fillRect(0,0,1600,400);for(let i=0;i<12;i++){const x=(i*137+t*160)%1720-120,y=35+(i%4)*90;ctx.fillStyle=['#444','#7e939d','#a18d78','#899b86'][i%4];ctx.fillRect(x,y,115,60);ctx.fillStyle='#fff';ctx.font='22px monospace';ctx.fillText(String(i+1).padStart(2,'0'),x+14,y+38);}ctx.fillStyle='#222';ctx.font='24px monospace';ctx.fillText('CODE / TERMINAL / SCROLL   1920 x 1080 test content',24,390);}
+function stop(){cancelAnimationFrame(frame);began=null;start.textContent='开始 60 秒动画';}
+function animate(now){if(began===null)return;const elapsed=(now-began)/1000;if(elapsed>=60){stop();status.textContent='60 秒结束';return;}const tick=Math.floor(elapsed*30);if(tick!==last){draw(tick/30);last=tick;status.textContent=elapsed.toFixed(1)+' / 60 s';}frame=requestAnimationFrame(animate);}
+start.onclick=()=>{if(began!==null){stop();status.textContent='已停止';return;}last=-1;began=performance.now();start.textContent='停止动画';frame=requestAnimationFrame(animate);};
+document.getElementById('click').onclick=e=>{e.target.textContent='点击响应：'+(++clicks);};
+const rows=document.getElementById('rows');for(let i=1;i<=80;i++){const p=document.createElement('p');p.textContent=String(i).padStart(2,'0')+'  LanDesk remote input • 终端输入 / 编辑器滚动 / 网页调试';rows.appendChild(p);}rows.onscroll=()=>document.getElementById('events').textContent='滚动位置：'+Math.round(rows.scrollTop);draw(0);
+</script>
+</html>
