@@ -35,7 +35,10 @@ void main() {
           var selected = ThemeMode.system;
           var enabled = true;
           final capture = GlobalKey();
-          final theme = LandeskTheme.build(brightness);
+          final theme = LandeskTheme.build(
+            brightness,
+            platform: width < 500 ? TargetPlatform.iOS : TargetPlatform.macOS,
+          );
           final preview = output == null
               ? theme
               : theme.copyWith(
@@ -105,7 +108,7 @@ void main() {
           await tester.pumpAndSettle();
           expect(selected, ThemeMode.dark);
           expect(tester.takeException(), isNull);
-          if (output != null && width == 800 && scale == 1) {
+          if (output != null && scale == 1) {
             final boundary =
                 capture.currentContext!.findRenderObject()!
                     as RenderRepaintBoundary;
@@ -116,7 +119,7 @@ void main() {
               );
               await Directory(output).create(recursive: true);
               await File(
-                '$output/appearance-${brightness.name}.png',
+                '$output/appearance-${brightness.name}${width < 500 ? '-mobile' : ''}.png',
               ).writeAsBytes(bytes!.buffer.asUint8List());
               rendered.dispose();
             });
