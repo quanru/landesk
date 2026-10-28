@@ -9,8 +9,10 @@ import tempfile
 parser = argparse.ArgumentParser()
 parser.add_argument('--identity', required=True)
 parser.add_argument('--profile', required=True, type=Path)
+parser.add_argument('--app', type=Path, default=Path(__file__).resolve().parents[2] /
+                    'flutter/build/ios/iphoneos/Runner.app')
 args = parser.parse_args()
-app = Path(__file__).resolve().parents[2] / 'flutter/build/ios/iphoneos/Runner.app'
+app = args.app.resolve()
 info = plistlib.loads((app / 'Info.plist').read_bytes())
 assert info['CFBundleIdentifier'] == 'dev.quanru.localdesk'
 profile = plistlib.loads(subprocess.check_output(
