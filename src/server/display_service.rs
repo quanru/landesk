@@ -670,6 +670,20 @@ pub(super) fn update_sync_displays(all: &Vec<Display>) -> Vec<DisplayInfo> {
                     scale = d.scale();
                 }
             }
+            #[cfg(target_os = "macos")]
+            let original_resolution = {
+                // Resolution menus and restoration use pixels even when capture is scaled.
+                let mode = crate::platform::current_resolution(&display_name);
+                let (w, h) = match mode {
+                    Ok(mode) => (mode.width as usize, mode.height as usize),
+                    Err(e) => {
+                        log::warn!("Cannot read display mode '{}': {}", display_name, e);
+                        (d.width(), d.height())
+                    }
+                };
+                get_original_resolution(&display_name, w, h)
+            };
+            #[cfg(not(target_os = "macos"))]
             let original_resolution = get_original_resolution(
                 &display_name,
                 ((d.width() as f64) / scale).round() as usize,

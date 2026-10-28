@@ -3573,31 +3573,34 @@ impl Connection {
                     if virtual_display_manager::amyuni_idd::is_my_display(&name) {
                         record_changed = false;
                     }
-                    #[cfg(not(target_os = "macos"))]
-                    let scale = 1.0;
+                    // On macOS the capture scale can be disabled by another session;
+                    // query the mode itself so restoration always uses framebuffer pixels.
                     #[cfg(target_os = "macos")]
-                    let scale = display.scale();
-                    let original = (
-                        ((display.width() as f64) / scale).round() as _,
-                        (display.height() as f64 / scale).round() as _,
-                    );
-                    if record_changed {
-                        display_service::set_last_changed_resolution(
-                            &name,
-                            original,
-                            (r.width, r.height),
-                        );
-                    }
-                    if let Err(e) =
-                        crate::platform::change_resolution(&name, r.width as _, r.height as _)
-                    {
-                        log::error!(
+                    let original = match crate::platform::current_resolution(&name) {
+                        Ok(mode) => (mode.width, mode.height),
+                        Err(e) => {
+                            log::error!("Cannot read resolution of '{}': {}", name, e);
+                            return;
+                        }
+                    };
+                    #[cfg(not(target_os = "macos"))]
+                    let original = (display.width() as i32, display.height() as i32);
+                    match crate::platform::change_resolution(&name, r.width as _, r.height as _) {
+                        Ok(()) if record_changed => {
+                            display_service::set_last_changed_resolution(
+                                &name,
+                                original,
+                                (r.width, r.height),
+                            );
+                        }
+                        Ok(()) => {}
+                        Err(e) => log::error!(
                             "Failed to change resolution '{}' to ({},{}): {:?}",
                             &name,
                             r.width,
                             r.height,
                             e
-                        );
+                        ),
                     }
                 }
             }

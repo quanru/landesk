@@ -1098,14 +1098,13 @@ pub fn handle_application_should_open_untitled_file() {
 /// Get all resolutions of the display. The resolutions are:
 /// 1. Sorted by width and height in descending order, with duplicates removed.
 /// 2. Filtered out if the width is less than 800 (800x600) if there are too many (e.g., >15).
-/// 3. Contain HiDPI resolutions and the real resolutions.
+/// 3. Report framebuffer pixel sizes for both HiDPI and standard modes.
 ///
-/// We don't need to distinguish between HiDPI and real resolutions.
+/// Requests, current resolution and enumeration all use framebuffer pixels.
 /// When the controlling side changes the resolution, it will call `change_resolution_directly()`.
-/// `change_resolution_directly()` will try to use the HiDPI resolution first.
-/// This is how teamviewer does it for now.
+/// `change_resolution_directly()` prefers HiDPI only among modes with the requested pixel size.
 ///
-/// If we need to distinguish HiDPI and real resolutions, we can add a flag to the `Resolution` struct.
+/// This prevents a 1920x1080 request from silently selecting a 3840x2160 framebuffer.
 pub fn resolutions(name: &str) -> Vec<Resolution> {
     let mut v = vec![];
     if let Ok(display) = name.parse::<u32>() {

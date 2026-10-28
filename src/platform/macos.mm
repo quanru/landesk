@@ -192,8 +192,8 @@ extern "C" bool MacGetModes(CGDirectDisplayID display, uint32_t *widths, uint32_
         CGDisplayModeRef mode = (CGDisplayModeRef)CFArrayGetValueAtIndex(allModes, i);
         if (CGDisplayModeGetRefreshRate(currentMode) == CGDisplayModeGetRefreshRate(mode) &&
             bitDepth(currentMode) == bitDepth(mode)) {
-            widths[realNum] = (uint32_t)CGDisplayModeGetWidth(mode);
-            heights[realNum] = (uint32_t)CGDisplayModeGetHeight(mode);
+            widths[realNum] = (uint32_t)CGDisplayModeGetPixelWidth(mode);
+            heights[realNum] = (uint32_t)CGDisplayModeGetPixelHeight(mode);
             hidpis[realNum] = isHiDPIMode(mode);
             realNum++;
         }
@@ -209,8 +209,8 @@ extern "C" bool MacGetMode(CGDirectDisplayID display, uint32_t *width, uint32_t 
     if (mode == NULL) {
         return false;
     }
-    *width = (uint32_t)CGDisplayModeGetWidth(mode);
-    *height = (uint32_t)CGDisplayModeGetHeight(mode);
+    *width = (uint32_t)CGDisplayModeGetPixelWidth(mode);
+    *height = (uint32_t)CGDisplayModeGetPixelHeight(mode);
     CGDisplayModeRelease(mode);
     return true;
 }
@@ -224,6 +224,7 @@ static bool setDisplayToMode(CGDirectDisplayID display, CGDisplayModeRef mode) {
     }
     rc = CGConfigureDisplayWithDisplayMode(config, display, mode, NULL);
     if (rc != kCGErrorSuccess) {
+        CGCancelDisplayConfiguration(config);
         return false;
     }
     rc = CGCompleteDisplayConfiguration(config, kCGConfigureForSession);
@@ -233,7 +234,9 @@ static bool setDisplayToMode(CGDirectDisplayID display, CGDisplayModeRef mode) {
     return true;
 }
 
-// Set the display to a specific mode based on width and height.
+// Resolution requests describe framebuffer pixels, not macOS logical points.
+// A 1920x1080 HiDPI desktop has a 3840x2160 framebuffer.
+// Set the display to a specific mode based on pixel width and height.
 // Returns true if the display mode was successfully changed, false otherwise.
 // If no such mode is available, it will not change the display mode.
 //
@@ -258,8 +261,8 @@ extern "C" bool MacSetMode(CGDirectDisplayID display, uint32_t width, uint32_t h
     CGDisplayModeRef fallbackMode = NULL;
     for (int i = 0; i < numModes; i++) {
         CGDisplayModeRef mode = (CGDisplayModeRef)CFArrayGetValueAtIndex(allModes, i);
-        if (width == CGDisplayModeGetWidth(mode) &&
-            height == CGDisplayModeGetHeight(mode) && 
+        if (width == CGDisplayModeGetPixelWidth(mode) &&
+            height == CGDisplayModeGetPixelHeight(mode) &&
             CGDisplayModeGetRefreshRate(currentMode) == CGDisplayModeGetRefreshRate(mode) &&
             bitDepth(currentMode) == bitDepth(mode)) {
 
