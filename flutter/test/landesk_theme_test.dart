@@ -92,7 +92,7 @@ void main() {
             platform == TargetPlatform.android;
         expect(
           theme.elevatedButtonTheme.style!.minimumSize!.resolve({})!.height,
-          touch ? 44 : 40,
+          touch ? (platform == TargetPlatform.android ? 48 : 44) : 40,
         );
         expect(
           theme.elevatedButtonTheme.style!.backgroundColor!.resolve({

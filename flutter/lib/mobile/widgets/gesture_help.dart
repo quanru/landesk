@@ -97,10 +97,12 @@ class _GestureHelpState extends State<GestureHelp> {
                     children: [
                       ToggleSwitch(
                         initialLabelIndex: _selectedIndex,
-                        activeFgColor: Colors.white,
-                        inactiveFgColor: Colors.white60,
-                        activeBgColor: [MyTheme.accent],
-                        inactiveBgColor: Theme.of(context).hintColor,
+                        activeFgColor: Theme.of(context).colorScheme.onPrimary,
+                        inactiveFgColor: Theme.of(context).colorScheme.onSurfaceVariant,
+                        activeBgColor: [Theme.of(context).colorScheme.primary],
+                        inactiveBgColor: Theme.of(context).colorScheme.surfaceContainer,
+                        minHeight: 48,
+                        cornerRadius: 14,
                         totalSwitches: 2,
                         minWidth: compact ? 126 : 150,
                         fontSize: compact ? 13 : 15,

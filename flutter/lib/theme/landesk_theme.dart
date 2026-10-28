@@ -64,7 +64,8 @@ class LandeskTheme {
     final p = brightness == Brightness.dark
         ? SuyaPalette.dark
         : SuyaPalette.light;
-    final height = touch ? 44.0 : 40.0;
+    final touchSize = platform == TargetPlatform.android ? 48.0 : 44.0;
+    final height = touch ? touchSize : 40.0;
     final shape = RoundedRectangleBorder(
       borderRadius: BorderRadius.circular(controlRadius),
     );
@@ -287,14 +288,24 @@ class LandeskTheme {
       outlinedButtonTheme: OutlinedButtonThemeData(style: neutral),
       textButtonTheme: TextButtonThemeData(
         style: baseButton.copyWith(
-          foregroundColor: WidgetStatePropertyAll(p.accent),
+          foregroundColor: WidgetStateProperty.resolveWith(
+            (states) => states.contains(WidgetState.disabled)
+                ? p.secondary.withValues(alpha: .56)
+                : p.accent,
+          ),
         ),
       ),
       iconButtonTheme: IconButtonThemeData(
         style: baseButton.copyWith(
-          minimumSize: WidgetStatePropertyAll(Size.square(touch ? 44 : 32)),
+          minimumSize: WidgetStatePropertyAll(
+            Size.square(touch ? touchSize : 32),
+          ),
           padding: const WidgetStatePropertyAll(EdgeInsets.all(6)),
-          foregroundColor: WidgetStatePropertyAll(p.secondary),
+          foregroundColor: WidgetStateProperty.resolveWith(
+            (states) => states.contains(WidgetState.disabled)
+                ? p.secondary.withValues(alpha: .56)
+                : p.secondary,
+          ),
           shape: WidgetStatePropertyAll(
             RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
           ),
@@ -364,25 +375,43 @@ class LandeskTheme {
       ),
       checkboxTheme: CheckboxThemeData(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(5)),
-        side: BorderSide(color: p.strongBorder),
-        checkColor: WidgetStatePropertyAll(p.onAccent),
-        fillColor: WidgetStateProperty.resolveWith(
+        side: WidgetStateBorderSide.resolveWith(
+          (states) => BorderSide(
+            color: states.contains(WidgetState.disabled)
+                ? p.strongBorder
+                : p.secondary,
+          ),
+        ),
+        checkColor: WidgetStateProperty.resolveWith(
           (states) =>
-              states.contains(WidgetState.selected) ? p.accent : p.surface,
+              states.contains(WidgetState.disabled) ? p.secondary : p.onAccent,
+        ),
+        fillColor: WidgetStateProperty.resolveWith(
+          (states) => states.contains(WidgetState.disabled)
+              ? p.inset
+              : states.contains(WidgetState.selected)
+              ? p.accent
+              : p.surface,
         ),
       ),
       switchTheme: SwitchThemeData(
         thumbColor: WidgetStatePropertyAll(p.surface),
         trackOutlineColor: const WidgetStatePropertyAll(Colors.transparent),
         trackColor: WidgetStateProperty.resolveWith(
-          (states) =>
-              states.contains(WidgetState.selected) ? p.accent : p.strongBorder,
+          (states) => states.contains(WidgetState.disabled)
+              ? p.strongBorder
+              : states.contains(WidgetState.selected)
+              ? p.accent
+              : p.strongBorder,
         ),
       ),
       radioTheme: RadioThemeData(
         fillColor: WidgetStateProperty.resolveWith(
-          (states) =>
-              states.contains(WidgetState.selected) ? p.accent : p.secondary,
+          (states) => states.contains(WidgetState.disabled)
+              ? p.secondary.withValues(alpha: .56)
+              : states.contains(WidgetState.selected)
+              ? p.accent
+              : p.secondary,
         ),
       ),
       sliderTheme: SliderThemeData(
