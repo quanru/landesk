@@ -5888,6 +5888,27 @@ mod test {
         assert_eq!(pos.y, 510);
     }
 
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn logical_capture_keeps_pointer_and_wheel_coordinates() {
+        let mut retina = Retina {
+            displays: vec![DisplayInfo {
+                x: 100, y: 20, width: 1920, height: 1080, scale: 1.0,
+                ..Default::default()
+            }],
+        };
+        let mut mouse = MouseEvent { x: 1800, y: 900, ..Default::default() };
+        retina.on_mouse_event(&mut mouse, 0);
+        assert_eq!((mouse.x, mouse.y), (1800, 900));
+        let cursor = CursorPosition { x: 1800, y: 900, ..Default::default() };
+        assert!(retina.on_cursor_pos(&cursor, 0).is_none());
+        mouse.mask = crate::input::MOUSE_TYPE_WHEEL;
+        mouse.x = 0;
+        mouse.y = -3;
+        retina.on_mouse_event(&mut mouse, 0);
+        assert_eq!((mouse.x, mouse.y), (0, -3));
+    }
+
     #[test]
     fn ipv6() {
         assert!(Ipv6Addr::from_str("::1").is_ok());

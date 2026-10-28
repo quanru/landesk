@@ -382,7 +382,10 @@ impl Server {
                 video_service_count += 1;
             }
         }
-        *scrap::quartz::ENABLE_RETINA.lock().unwrap() = video_service_count < 2;
+        // Capture at logical desktop size by default; this does not change the
+        // physical display mode. Full Retina capture remains an explicit host option.
+        *scrap::quartz::ENABLE_RETINA.lock().unwrap() =
+            Config::get_option("enable-retina") == "Y" && video_service_count < 2;
     }
 }
 

@@ -5,17 +5,11 @@ use std::{
     time::{Duration, Instant},
 };
 
-/*
-LocalDesk is LAN/VPN-only, so its default video profile starts at 100% custom
-quality and 60 FPS without WAN-style delay-based downshifts. Explicit client
-quality/FPS choices and decoder capacity feedback are still respected.
-
-The legacy ratio adjustment helpers remain available for encoder compatibility,
-but `abr_config` stays disabled in the LAN-only product path.
-*/
+// Prefer responsive interaction on LAN and VPN links alike. Private addressing
+// does not imply unlimited bandwidth; adapt encoder quality when queues grow.
 
 // Constants
-pub const FPS: u32 = 60;
+pub const FPS: u32 = 30;
 pub const MIN_FPS: u32 = 1;
 pub const MAX_FPS: u32 = 120;
 pub const INIT_FPS: u32 = FPS;
@@ -25,7 +19,7 @@ const BR_MAX: f32 = 40.0; // 2000 * 2 / 100
 const BR_MIN: f32 = 0.2;
 const BR_MIN_HIGH_RESOLUTION: f32 = 0.1; // For high resolution, BR_MIN is still too high, so we set a lower limit
 const MAX_BR_MULTIPLE: f32 = 1.0;
-const LAN_DEFAULT_BITRATE_RATIO: f32 = 2.0; // 100% in the custom quality UI
+const LAN_DEFAULT_BITRATE_RATIO: f32 = BR_SPEED;
 
 const HISTORY_DELAY_LEN: usize = 2;
 const ADJUST_RATIO_INTERVAL: usize = 3; // Adjust quality ratio every 3 seconds
@@ -42,7 +36,7 @@ struct UserDelay {
 impl UserDelay {
     fn add_delay(&mut self, delay: u32) {
         self.rtt_calculator.update(delay);
-        if self.delay_history.len() > HISTORY_DELAY_LEN {
+        if self.delay_history.len() >= HISTORY_DELAY_LEN {
             self.delay_history.pop_front();
         }
         self.delay_history.push_back(delay);
@@ -107,7 +101,7 @@ impl Default for VideoQoS {
             displays: Default::default(),
             bitrate_store: 0,
             adjust_ratio_instant: Instant::now(),
-            abr_config: false,
+            abr_config: true,
             new_user_instant: Instant::now(),
         }
     }
@@ -170,9 +164,8 @@ impl VideoQoS {
     // Initialize new user session
     pub fn on_connection_open(&mut self, id: i32) {
         self.users.insert(id, UserData::default());
-        // LocalDesk only accepts LAN/VPN direct connections. Do not apply the
-        // WAN-oriented bitrate ramp and delay-based quality reduction by default.
-        self.abr_config = false;
+        // Wi-Fi and VPN connections can congest even without a relay.
+        self.abr_config = true;
         self.new_user_instant = Instant::now();
     }
 
@@ -499,11 +492,11 @@ mod tests {
     use super::*;
 
     #[test]
-    fn lan_profile_starts_with_full_quality_and_sixty_fps() {
+    fn lan_profile_starts_with_low_quality_and_thirty_fps() {
         let qos = VideoQoS::default();
 
-        assert_eq!(qos.fps(), 60);
-        assert_eq!(qos.latest_quality().ratio(), 2.0);
+        assert_eq!(qos.fps(), 30);
+        assert_eq!(qos.latest_quality().ratio(), BR_SPEED);
     }
 
     #[test]
@@ -513,7 +506,36 @@ mod tests {
 
         qos.user_network_delay(1, 750);
 
-        assert_eq!(qos.fps(), 60);
+        assert_eq!(qos.fps(), 30);
+    }
+
+    #[test]
+    fn congestion_reduces_quality_and_recovery_respects_requested_ceiling() {
+        let mut qos = VideoQoS::default();
+        qos.on_connection_open(1);
+        qos.new_display("test".into());
+        qos.set_support_changing_quality("test", true);
+        qos.user_network_delay(1, 750);
+        qos.adjust_ratio(true);
+        assert!(qos.ratio() < BR_SPEED);
+        assert_eq!(qos.fps(), 30);
+        // Replace the delay window with healthy responses, then recover.
+        for _ in 0..100 {
+            qos.user_network_delay(1, 10);
+            qos.adjust_ratio(true);
+        }
+        assert_eq!(qos.ratio(), BR_SPEED);
+    }
+
+    #[test]
+    fn fixed_quality_encoders_do_not_enter_adaptive_mode() {
+        let mut qos = VideoQoS::default();
+        qos.on_connection_open(1);
+        qos.new_display("fixed".into());
+        qos.user_network_delay(1, 750);
+        qos.adjust_ratio(true);
+        assert!(!qos.in_vbr_state());
+        assert_eq!(qos.ratio(), BR_SPEED);
     }
 
     #[test]

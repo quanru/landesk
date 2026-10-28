@@ -519,9 +519,9 @@ impl<T: InvokeUiSession> Session<T> {
         }
         if value != "custom" {
             let last_auto_fps = self.lc.read().unwrap().last_auto_fps;
-            if last_auto_fps.unwrap_or(usize::MAX) >= 60 {
-                // Non-custom quality keeps the LAN high-performance frame budget.
-                let msg = self.lc.write().unwrap().set_custom_fps(60, false);
+            if last_auto_fps.unwrap_or(usize::MAX) >= 30 {
+                // Keep preset quality modes within the responsive default frame budget.
+                let msg = self.lc.write().unwrap().set_custom_fps(30, false);
                 self.send(Data::Message(msg));
             }
         }
@@ -847,9 +847,11 @@ impl<T: InvokeUiSession> Session<T> {
     }
 
     pub fn switch_display(&self, display: i32) {
-        let (w, h) = match self.lc.read().unwrap().get_custom_resolution(display) {
-            Some((w, h)) => (w, h),
-            None => (0, 0),
+        // Switching monitors must not reapply a saved physical mode on Macs.
+        let (w, h) = if self.peer_platform() == "Mac OS" {
+            (0, 0)
+        } else {
+            self.lc.read().unwrap().get_custom_resolution(display).unwrap_or((0, 0))
         };
 
         let mut misc = Misc::new();
@@ -1721,7 +1723,11 @@ impl<T: InvokeUiSession> Interface for Session<T> {
                 return;
             }
             if !self.is_view_camera() {
-                self.try_change_init_resolution(pi.current_display);
+                // A saved physical resolution must not change the Mac desktop
+                // just to reconnect. Capture scaling handles the stream size.
+                if pi.platform != "Mac OS" {
+                    self.try_change_init_resolution(pi.current_display);
+                }
                 let p = self.lc.read().unwrap().should_auto_login();
                 if !p.is_empty() {
                     input_os_password(p, true, self.clone());
