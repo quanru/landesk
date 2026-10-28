@@ -73,3 +73,29 @@ prove end-to-end video reception.
 
 Local logs: `/tmp/landesk-responsive-{test,pointer,retina,defaults,capture,display,
 flutter-analyze,build-final,macos,install}.log`.
+
+## Desktop loopback session verification (15:50)
+
+The installed Mac 85 client connected to the installed Mac host using the app's
+`--connect` command. The native remote window visibly received the desktop
+(including the expected recursive image when capturing its own viewer).
+
+- The first, newly configured endpoint negotiated AV1 at 1920x1080 with initial
+  quality ratio 0.5. Client FPS control logged `Set fps to 30`.
+- A second, previously saved localhost endpoint also received the desktop but
+  restored its explicit old custom profile: ratio 2.0 and `Set fps to 60`.
+  This confirms saved profiles override new defaults; it is not evidence of a
+  30-FPS regression for new peers.
+- Host capture and encoder dimensions are both 1920x1080. Physical mode readback
+  during the sessions remains 3840x2160, with logical layout 1920x1080.
+- The decoder was created successfully for AV1, and received desktop imagery is
+  visible. Sustained delivered FPS, bitrate and input-to-display latency were
+  not measured. Loopback and two simultaneous viewers are not a Wi-Fi benchmark.
+- Native automation could open the toolbar, but subsequent actions failed with
+  `Computer Use server error -10005: noWindowsAvailable`. The user was asked to
+  select Optimize reaction time and enable the quality monitor in the old session.
+  Pointer/scroll end-to-end acceptance remains pending.
+
+Screenshot (local, not committed): `dist/screenshots/stream85/mac-loopback.png`.
+Runtime sources: `~/Library/Logs/LocalDesk/LocalDesk_rCURRENT.log` and
+`~/Library/Logs/LocalDesk/server/LocalDesk_rCURRENT.log`, 15:50:34–15:50:45.
