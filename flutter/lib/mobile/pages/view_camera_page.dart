@@ -287,8 +287,8 @@ class _ViewCameraPageState extends State<ViewCameraPage>
 
   Widget getBottomAppBar() {
     return BottomAppBar(
-      elevation: 10,
-      color: Theme.of(context).colorScheme.primary,
+      elevation: 0,
+      color: Theme.of(context).colorScheme.surface,
       child: Row(
         mainAxisSize: MainAxisSize.max,
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -296,14 +296,14 @@ class _ViewCameraPageState extends State<ViewCameraPage>
           Row(
               children: <Widget>[
                     IconButton(
-                      color: Colors.white,
+                      color: Theme.of(context).colorScheme.onSurface,
                       icon: Icon(Icons.clear),
                       onPressed: () {
                         clientClose(sessionId, gFFI);
                       },
                     ),
                     IconButton(
-                      color: Colors.white,
+                      color: Theme.of(context).colorScheme.onSurface,
                       icon: Icon(Icons.tv),
                       onPressed: () {
                         setState(() => _showEdit = false);
@@ -318,11 +318,11 @@ class _ViewCameraPageState extends State<ViewCameraPage>
                               future: gFFI.invokeMethod(
                                   "get_value", "KEY_IS_SUPPORT_VOICE_CALL"),
                               hasData: (isSupportVoiceCall) => IconButton(
-                                    color: Colors.white,
+                                    color: Theme.of(context).colorScheme.onSurface,
                                     icon: isAndroid && isSupportVoiceCall
                                         ? SvgPicture.asset('assets/chat.svg',
                                             colorFilter: ColorFilter.mode(
-                                                Colors.white, BlendMode.srcIn))
+                                                Theme.of(context).colorScheme.onSurface, BlendMode.srcIn))
                                         : Icon(Icons.message),
                                     onPressed: () =>
                                         isAndroid && isSupportVoiceCall
@@ -332,7 +332,7 @@ class _ViewCameraPageState extends State<ViewCameraPage>
                         ]) +
                   [
                     IconButton(
-                      color: Colors.white,
+                      color: Theme.of(context).colorScheme.onSurface,
                       icon: Icon(Icons.more_vert),
                       onPressed: () {
                         setState(() => _showEdit = false);
@@ -341,7 +341,7 @@ class _ViewCameraPageState extends State<ViewCameraPage>
                     ),
                   ]),
           Obx(() => IconButton(
-                color: Colors.white,
+                color: Theme.of(context).colorScheme.onSurface,
                 icon: Icon(Icons.expand_more),
                 onPressed: gFFI.ffiModel.waitForFirstImage.isTrue
                     ? null

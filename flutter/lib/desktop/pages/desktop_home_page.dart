@@ -2288,11 +2288,6 @@ class _DesktopHomePageState extends State<DesktopHomePage>
               },
           child: Container(
             height: 46,
-            decoration: selected
-                ? BoxDecoration(
-                    border: Border(left: BorderSide(color: primary, width: 3)),
-                  )
-                : null,
             padding: const EdgeInsets.symmetric(horizontal: 14),
             child: Row(
               children: [

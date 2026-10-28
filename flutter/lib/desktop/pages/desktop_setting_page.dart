@@ -311,27 +311,30 @@ class _DesktopSettingPageState extends State<DesktopSettingPage>
             }
             selectedTab.value = tab.key;
           },
-          child: Row(
-            children: [
-              Container(
-                width: 4,
-                height: _kTabHeight * 0.7,
-                color: selected ? _accentColor : null,
-              ),
-              Icon(
-                selected ? tab.selected : tab.unselected,
-                color: selected ? _accentColor : null,
-                size: 20,
-              ).marginOnly(left: 13, right: 10),
-              Text(
-                translate(tab.label),
-                style: TextStyle(
+          child: Ink(
+            decoration: BoxDecoration(
+              color: selected
+                  ? Theme.of(context).colorScheme.surfaceContainer
+                  : null,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  selected ? tab.selected : tab.unselected,
                   color: selected ? _accentColor : null,
-                  fontWeight: FontWeight.w400,
-                  fontSize: _kContentFontSize,
+                  size: 20,
+                ).marginOnly(left: 13, right: 10),
+                Text(
+                  translate(tab.label),
+                  style: TextStyle(
+                    color: selected ? _accentColor : null,
+                    fontWeight: FontWeight.w400,
+                    fontSize: _kContentFontSize,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       );

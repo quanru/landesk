@@ -153,11 +153,7 @@ class ScamWarningDialogState extends State<ScamWarningDialog> {
         child: SingleChildScrollView(
           child: Container(
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topRight,
-                end: Alignment.bottomLeft,
-                colors: [Color(0xffe242bc), Color(0xfff4727c)],
-              ),
+              color: Theme.of(context).colorScheme.surface,
             ),
             padding: EdgeInsets.all(25.0),
             child: Column(
@@ -166,12 +162,12 @@ class ScamWarningDialogState extends State<ScamWarningDialog> {
               children: [
                 Row(
                   children: [
-                    Icon(Icons.warning_amber_sharp, color: Colors.white),
+                    Icon(Icons.warning_amber_sharp, color: Theme.of(context).colorScheme.onSurface),
                     SizedBox(width: 10),
                     Text(
                       translate("Warning"),
                       style: TextStyle(
-                        color: Colors.white,
+                        color: Theme.of(context).colorScheme.onSurface,
                         fontWeight: FontWeight.bold,
                         fontSize: 20.0,
                       ),
@@ -185,7 +181,7 @@ class ScamWarningDialogState extends State<ScamWarningDialog> {
                   translate("scam_title"),
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    color: Colors.white,
+                    color: Theme.of(context).colorScheme.onSurface,
                     fontWeight: FontWeight.bold,
                     fontSize: 22.0,
                   ),
@@ -194,7 +190,7 @@ class ScamWarningDialogState extends State<ScamWarningDialog> {
                 Text(
                   "${translate("scam_text1")}\n\n${translate("scam_text2")}\n",
                   style: TextStyle(
-                    color: Colors.white,
+                    color: Theme.of(context).colorScheme.onSurface,
                     fontWeight: FontWeight.bold,
                     fontSize: 16.0,
                   ),
@@ -213,7 +209,7 @@ class ScamWarningDialogState extends State<ScamWarningDialog> {
                       child: Text(
                         translate("Don't show again"),
                         style: TextStyle(
-                          color: Colors.white,
+                          color: Theme.of(context).colorScheme.onSurface,
                           fontWeight: FontWeight.bold,
                           fontSize: 15.0,
                         ),

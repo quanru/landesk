@@ -250,17 +250,17 @@ class ColorThemeExtension extends ThemeExtension<ColorThemeExtension> {
 class MyTheme {
   MyTheme._();
 
-  static const Color grayBg = Color(0xFFF5F6F8);
-  static const Color accent = Color(0xFF2F7A4B);
+  static const Color grayBg = Color(0xFFF5F5F5);
+  static const Color accent = Color(0xFF333333);
   static const Color accent50 = Color(0x772F7A4B);
   static const Color accent80 = Color(0xAA2F7A4B);
   static const Color canvasColor = Color(0xFF212121);
   static const Color border = Color(0xFFCCCCCC);
-  static const Color idColor = Color(0xFF2F7A4B);
+  static const Color idColor = Color(0xFF333333);
   static const Color darkGray = Color.fromARGB(255, 148, 148, 148);
-  static const Color cmIdColor = Color(0xFF21790B);
+  static const Color cmIdColor = Color(0xFF666666);
   static const Color dark = Colors.black87;
-  static const Color button = Color(0xFF2F7A4B);
+  static const Color button = Color(0xFF333333);
   static const Color hoverBorder = Color(0xFF999999);
 
   // ListTile
@@ -1285,7 +1285,7 @@ Color? _msgboxColor(String type) {
   if (type.contains("error") || type == "re-input-password") {
     return Color(0xFFE04F5F);
   }
-  return Color(0xFF2F7A4B);
+  return Color(0xFF333333);
 }
 
 Widget msgboxIcon(String type) {

@@ -619,8 +619,8 @@ class _RemotePageState extends State<RemotePage> with WidgetsBindingObserver {
   Widget getBottomAppBar() {
     final ffiModel = Provider.of<FfiModel>(context);
     return BottomAppBar(
-      elevation: 10,
-      color: Theme.of(context).colorScheme.primary,
+      elevation: 0,
+      color: Theme.of(context).colorScheme.surface,
       child: Row(
         mainAxisSize: MainAxisSize.max,
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -628,14 +628,14 @@ class _RemotePageState extends State<RemotePage> with WidgetsBindingObserver {
           Row(
               children: <Widget>[
                     IconButton(
-                      color: Colors.white,
+                      color: Theme.of(context).colorScheme.onSurface,
                       icon: Icon(Icons.clear),
                       onPressed: () {
                         clientClose(sessionId, gFFI);
                       },
                     ),
                     IconButton(
-                      color: Colors.white,
+                      color: Theme.of(context).colorScheme.onSurface,
                       icon: Icon(Icons.tv),
                       onPressed: () {
                         setState(() => _showEdit = false);
@@ -648,11 +648,11 @@ class _RemotePageState extends State<RemotePage> with WidgetsBindingObserver {
                       : gFFI.ffiModel.isPeerAndroid
                           ? [
                               IconButton(
-                                  color: Colors.white,
+                                  color: Theme.of(context).colorScheme.onSurface,
                                   icon: Icon(Icons.keyboard),
                                   onPressed: openKeyboard),
                               IconButton(
-                                color: Colors.white,
+                                color: Theme.of(context).colorScheme.onSurface,
                                 icon: const Icon(Icons.build),
                                 onPressed: () => gFFI.dialogManager
                                     .toggleMobileActionsOverlay(ffi: gFFI),
@@ -660,11 +660,11 @@ class _RemotePageState extends State<RemotePage> with WidgetsBindingObserver {
                             ]
                           : [
                               IconButton(
-                                  color: Colors.white,
+                                  color: Theme.of(context).colorScheme.onSurface,
                                   icon: Icon(Icons.keyboard),
                                   onPressed: openKeyboard),
                               IconButton(
-                                color: Colors.white,
+                                color: Theme.of(context).colorScheme.onSurface,
                                 icon: Icon(gFFI.ffiModel.touchMode
                                     ? Icons.touch_app
                                     : Icons.mouse),
@@ -679,11 +679,11 @@ class _RemotePageState extends State<RemotePage> with WidgetsBindingObserver {
                               future: gFFI.invokeMethod(
                                   "get_value", "KEY_IS_SUPPORT_VOICE_CALL"),
                               hasData: (isSupportVoiceCall) => IconButton(
-                                    color: Colors.white,
+                                    color: Theme.of(context).colorScheme.onSurface,
                                     icon: isAndroid && isSupportVoiceCall
                                         ? SvgPicture.asset('assets/chat.svg',
                                             colorFilter: ColorFilter.mode(
-                                                Colors.white, BlendMode.srcIn))
+                                                Theme.of(context).colorScheme.onSurface, BlendMode.srcIn))
                                         : Icon(Icons.message),
                                     onPressed: () =>
                                         isAndroid && isSupportVoiceCall
@@ -693,7 +693,7 @@ class _RemotePageState extends State<RemotePage> with WidgetsBindingObserver {
                         ]) +
                   [
                     IconButton(
-                      color: Colors.white,
+                      color: Theme.of(context).colorScheme.onSurface,
                       icon: Icon(Icons.more_vert),
                       onPressed: () {
                         setState(() => _showEdit = false);
@@ -702,7 +702,7 @@ class _RemotePageState extends State<RemotePage> with WidgetsBindingObserver {
                     ),
                   ]),
           Obx(() => IconButton(
-                color: Colors.white,
+                color: Theme.of(context).colorScheme.onSurface,
                 icon: Icon(Icons.expand_more),
                 onPressed: gFFI.ffiModel.waitForFirstImage.isTrue
                     ? null
@@ -1016,12 +1016,12 @@ class _KeyHelpToolsState extends State<KeyHelpTools> {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(5.0),
           ),
-          backgroundColor: active == true ? Theme.of(context).colorScheme.primary.withValues(alpha: .8) : null,
+          backgroundColor: active == true ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.surfaceContainer,
         ),
         child: icon != null
-            ? Icon(icon, size: 14, color: Colors.white)
+            ? Icon(icon, size: 14, color: active == true ? Theme.of(context).colorScheme.onPrimary : Theme.of(context).colorScheme.onSurface)
             : Text(translate(text),
-                style: TextStyle(color: Colors.white, fontSize: 11)),
+                style: TextStyle(color: active == true ? Theme.of(context).colorScheme.onPrimary : Theme.of(context).colorScheme.onSurface, fontSize: 11)),
         onPressed: onPressed);
   }
 
@@ -1189,7 +1189,7 @@ class _KeyHelpToolsState extends State<KeyHelpTools> {
     });
     return Container(
         key: _key,
-        color: Color(0xAA000000),
+        color: Theme.of(context).colorScheme.surface,
         padding: EdgeInsets.only(
             top: _keyboardVisibilityController.isVisible ? 24 : 4, bottom: 8),
         child: Wrap(
