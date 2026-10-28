@@ -37,6 +37,7 @@ class DialogTextField extends StatelessWidget {
   final String title;
   final String? hintText;
   final bool obscureText;
+  final bool autofocus;
   final String? errorText;
   final String? helperText;
   final Widget? prefixIcon;
@@ -56,6 +57,7 @@ class DialogTextField extends StatelessWidget {
     Key? key,
     this.focusNode,
     this.obscureText = false,
+    this.autofocus = true,
     this.errorText,
     this.helperText,
     this.prefixIcon,
@@ -86,7 +88,9 @@ class DialogTextField extends StatelessWidget {
                 ),
                 controller: controller,
                 focusNode: focusNode,
-                autofocus: true,
+                autofocus: autofocus,
+                autocorrect: false,
+                enableSuggestions: false,
                 obscureText: obscureText,
                 keyboardType: keyboardType,
                 inputFormatters: inputFormatters,
@@ -198,6 +202,7 @@ class _PasswordWidgetState extends State<PasswordWidget> {
       obscureText: !_passwordVisible,
       errorText: widget.errorText,
       focusNode: _focusNode,
+      autofocus: widget.autoFocus,
       maxLength: widget.maxLength,
     );
   }

@@ -331,8 +331,8 @@ class _ConnectionPageState extends State<ConnectionPage> with WindowListener {
     return Column(
       children: [
         Container(
-          height: 72,
-          padding: const EdgeInsets.symmetric(horizontal: 22),
+          height: 56,
+          padding: const EdgeInsets.symmetric(horizontal: 20),
           decoration: BoxDecoration(
             color: Theme.of(context).scaffoldBackgroundColor,
             border: Border(bottom: BorderSide(color: border)),
@@ -342,30 +342,41 @@ class _ConnectionPageState extends State<ConnectionPage> with WindowListener {
               const Spacer(),
               ElevatedButton.icon(
                 onPressed: () => _showAddDeviceDialog(context),
-                icon: const Icon(Icons.add, size: 20),
+                icon: const Icon(Icons.add_rounded, size: 16),
                 label: Text(translate('Add')),
                 style: ElevatedButton.styleFrom(
                   foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                  minimumSize: const Size(0, 32),
+                  fixedSize: const Size.fromHeight(32),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  textStyle: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                  ),
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 18,
-                    vertical: 13,
+                    horizontal: 12,
+                    vertical: 0,
                   ),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(8),
                   ),
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 8),
               Flexible(
                 child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 290),
+                  constraints: const BoxConstraints(
+                    maxWidth: 240,
+                    maxHeight: 32,
+                  ),
                   child: TextField(
                     controller: peerSearchTextController,
+                    style: const TextStyle(fontSize: 13),
                     onChanged: (value) => peerSearchText.value = value,
                     decoration: InputDecoration(
                       hintText:
                           '${translate('Search')} · ${translate('Local Address')}',
-                      prefixIcon: const Icon(Icons.search, size: 21),
+                      prefixIcon: const Icon(Icons.search, size: 17),
                       suffixIcon: Obx(
                         () => peerSearchText.value.isEmpty
                             ? const SizedBox.shrink()
@@ -377,14 +388,23 @@ class _ConnectionPageState extends State<ConnectionPage> with WindowListener {
                                 icon: const Icon(Icons.close, size: 18),
                               ),
                       ),
+                      isDense: true,
+                      prefixIconConstraints: const BoxConstraints(
+                        minWidth: 32,
+                        minHeight: 32,
+                      ),
+                      suffixIconConstraints: const BoxConstraints(
+                        maxWidth: 32,
+                        maxHeight: 32,
+                      ),
                       filled: false,
-                      contentPadding: const EdgeInsets.symmetric(vertical: 11),
+                      contentPadding: const EdgeInsets.symmetric(vertical: 8),
                       enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(8),
                         borderSide: BorderSide(color: border),
                       ),
                       focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(8),
                         borderSide: BorderSide(
                           color: Theme.of(context).colorScheme.primary,
                         ),
@@ -393,9 +413,9 @@ class _ConnectionPageState extends State<ConnectionPage> with WindowListener {
                   ),
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 8),
               _buildSortButton(context, border),
-              const SizedBox(width: 10),
+              const SizedBox(width: 8),
               _buildViewButton(context, border),
             ],
           ),
@@ -472,15 +492,16 @@ class _ConnectionPageState extends State<ConnectionPage> with WindowListener {
 
   Widget _buildSortButton(BuildContext context, Color border) {
     return Container(
-      width: 44,
-      height: 44,
+      width: 32,
+      height: 32,
       decoration: BoxDecoration(
         border: Border.all(color: border),
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(8),
       ),
       child: PopupMenuButton<String>(
         tooltip: translate('Sort by'),
-        icon: const Icon(Icons.swap_vert_rounded),
+        padding: EdgeInsets.zero,
+        icon: const Icon(Icons.swap_vert_rounded, size: 18),
         initialValue: peerSort.value,
         onSelected: (value) {
           peerSort.value = value;
@@ -501,15 +522,21 @@ class _ConnectionPageState extends State<ConnectionPage> with WindowListener {
   Widget _buildViewButton(BuildContext context, Color border) {
     return Obx(
       () => Container(
-        height: 44,
+        height: 32,
         decoration: BoxDecoration(
           border: Border.all(color: border),
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(8),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             IconButton(
+              iconSize: 17,
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints.tightFor(width: 32, height: 30),
+              style: IconButton.styleFrom(
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
               tooltip: translate('Grid View'),
               onPressed: () => _setPeerCardUiType(PeerUiType.grid),
               icon: Icon(
@@ -520,6 +547,12 @@ class _ConnectionPageState extends State<ConnectionPage> with WindowListener {
               ),
             ),
             IconButton(
+              iconSize: 17,
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints.tightFor(width: 32, height: 30),
+              style: IconButton.styleFrom(
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
               tooltip: translate('List'),
               onPressed: () => _setPeerCardUiType(PeerUiType.list),
               icon: Icon(
