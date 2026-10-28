@@ -15,10 +15,7 @@ void main() {
     final font = Platform.environment['LANDESK_PREVIEW_FONT'];
     if (font != null) {
       for (final family in [
-        'Roboto',
-        '.SF UI Text',
-        '.SF UI Display',
-        'Ahem',
+        'Preview',
       ]) {
         await (FontLoader(family)..addFont(
               File(
@@ -50,10 +47,7 @@ void main() {
           key: capture,
           child: MaterialApp(
             debugShowCheckedModeBanner: false,
-            theme: LandeskTheme.build(
-              brightness,
-              platform: TargetPlatform.macOS,
-            ),
+            theme: previewTheme(brightness),
             home: Scaffold(
               body: LanConnectDialog(
                 endpoint: endpoint,
@@ -82,4 +76,30 @@ void main() {
       });
     });
   }
+}
+
+ThemeData previewTheme(Brightness brightness) {
+  final theme = LandeskTheme.build(brightness, platform: TargetPlatform.macOS);
+  TextStyle font(TextStyle? style) =>
+      (style ?? const TextStyle()).copyWith(fontFamily: 'Preview');
+  ButtonStyle button(ButtonStyle style) => style.copyWith(
+    textStyle: WidgetStatePropertyAll(font(style.textStyle?.resolve({}))),
+  );
+  return theme.copyWith(
+    textTheme: theme.textTheme.apply(fontFamily: 'Preview'),
+    dialogTheme: theme.dialogTheme.copyWith(
+      titleTextStyle: font(theme.dialogTheme.titleTextStyle),
+      contentTextStyle: font(theme.dialogTheme.contentTextStyle),
+    ),
+    inputDecorationTheme: theme.inputDecorationTheme.copyWith(
+      labelStyle: font(theme.inputDecorationTheme.labelStyle),
+      hintStyle: font(theme.inputDecorationTheme.hintStyle),
+    ),
+    textButtonTheme: TextButtonThemeData(
+      style: button(theme.textButtonTheme.style!),
+    ),
+    elevatedButtonTheme: ElevatedButtonThemeData(
+      style: button(theme.elevatedButtonTheme.style!),
+    ),
+  );
 }
