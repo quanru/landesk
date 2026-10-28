@@ -4,6 +4,9 @@ set -eu
 cd "$(dirname "$0")/../.."
 repo_dir="$PWD"
 : "${FLUTTER_BIN:?Set FLUTTER_BIN to Flutter 3.44.1}"
+LANDESK_CODESIGN_IDENTITY=${LANDESK_CODESIGN_IDENTITY:-$(git config --get landesk.codesignIdentity || true)}
+export LANDESK_CODESIGN_IDENTITY
+: "${LANDESK_CODESIGN_IDENTITY:?Set a fixed Apple signing certificate; do not use ad-hoc signing}"
 : "${VCPKG_ROOT:?Set VCPKG_ROOT with installed/arm64-osx libraries}"
 # Generated bridges are ignored by Git; always derive them from the current API.
 "${BRIDGE_CODEGEN_BIN:-flutter_rust_bridge_codegen}" \
@@ -19,7 +22,4 @@ XCODE_XCCONFIG_FILE="$repo_dir/tools/localdesk/macos-arm64.xcconfig" \
   "$FLUTTER_BIN" build macos --release
 app_path=build/macos/Build/Products/Release/landesk.app
 cp ../target/release/service "$app_path/Contents/MacOS/service"
-codesign --force --sign - --options runtime "$app_path/Contents/MacOS/service"
-codesign --force --sign - --options runtime \
-  --entitlements macos/Runner/UnsignedRelease.entitlements "$app_path"
-codesign --verify --deep --strict "$app_path"
+python3 "$repo_dir/tools/localdesk/sign-macos.py" "$app_path"

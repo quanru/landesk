@@ -1188,6 +1188,18 @@ impl Connection {
         if !self.connect_port_forward_if_needed().await {
             return false;
         }
+        // Do not report success and wait forever for a frame that macOS forbids.
+        // Check only desktop capture; terminal, files and camera do not need this grant.
+        #[cfg(target_os = "macos")]
+        if self.file_transfer.is_none()
+            && self.port_forward_socket.is_none()
+            && !self.view_camera
+            && !self.terminal
+            && !crate::platform::is_can_screen_recording(false)
+        {
+            self.send_login_error("config_screen").await;
+            return true;
+        }
         self.authorized = true;
         let (conn_type, auth_conn_type) = if self.file_transfer.is_some() {
             (1, AuthConnType::FileTransfer)
