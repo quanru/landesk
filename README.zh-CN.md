@@ -80,17 +80,11 @@ landesk 专注于一个明确场景：让本身已经网络互通的设备直接
 
 ## 📦 下载安装
 
-landesk 仍在开发中，尚未发布经过验收的稳定版本。请先查看[验证记录](docs/localdesk-migration.md)；各平台构建进度见 [GitHub Actions](https://github.com/quanru/landesk/actions)。
+[下载 macOS Apple Silicon 预览版（ZIP）](https://github.com/quanru/landesk/releases/download/v1.3.0-preview.20261028/landesk-1.3.0-preview.20261028-macos-arm64.zip) · [发布说明与 SHA-256 校验](https://github.com/quanru/landesk/releases/tag/v1.3.0-preview.20261028)
 
-| 平台 | 架构 | 安装包 |
-| --- | --- | --- |
-| Windows | x86_64、ARM64 | `.msi` 安装包（推荐优先使用）、免安装/便携版 `.exe` |
-| macOS | Intel、Apple Silicon | `.dmg` |
-| Linux | x86_64、ARM64 | `.deb`、`.rpm`、`.AppImage`、`.flatpak`；另提供 x86_64 Arch 包 |
-| Android | ARM64、ARMv7、x86_64、通用包 | `.apk` |
+这是开发预览版，使用 Apple Development 证书签名，**尚未公证**，其他 Mac 的 Gatekeeper 可能阻止打开；它不是 Developer ID 正式发行包。压缩包内为 `LocalDesk.app`（显示名 LanDesk），保留原有应用标识以兼容升级。解压后复制到“应用程序”。本次不提供 Intel 版本。
 
-> [!NOTE]
-> 下表列出计划支持的平台，不代表相应安装包已经构建或验收成功。
+Windows、Linux、Android 安装包及 iOS TestFlight 构建不在本次发布范围内。已有验证情况见[验证记录](docs/localdesk-migration.md)。
 
 <a id="quick-start"></a>
 

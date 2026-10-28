@@ -68,3 +68,6 @@ res/pkg/
 
 # Original source for the landesk application icon.
 !res/landesk-icon.png
+
+# Locally packaged release artifacts
+/dist/releases/

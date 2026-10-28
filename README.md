@@ -85,17 +85,11 @@ That makes it a good fit for home labs, offices, classrooms, on-site support, an
 
 ## 📦 Download
 
-landesk is under development. No stable landesk release has been verified yet. Build results are available in [GitHub Actions](https://github.com/quanru/landesk/actions); see [validation status](docs/localdesk-migration.md) before installing.
+[Download macOS Apple Silicon preview (.zip)](https://github.com/quanru/landesk/releases/download/v1.3.0-preview.20261028/landesk-1.3.0-preview.20261028-macos-arm64.zip) · [Release notes and SHA-256](https://github.com/quanru/landesk/releases/tag/v1.3.0-preview.20261028)
 
-| Platform | Architectures | Packages |
-| --- | --- | --- |
-| Windows | x86_64, ARM64 | `.msi` installer (recommended), portable/no-install `.exe` |
-| macOS | Intel, Apple Silicon | `.dmg` |
-| Linux | x86_64, ARM64 | `.deb`, `.rpm`, `.AppImage`, `.flatpak`; Arch package on x86_64 |
-| Android | ARM64, ARMv7, x86_64, universal | `.apk` |
+This is a development preview, signed with an Apple Development certificate, **not notarized**. Gatekeeper may block it on another Mac; it is not a Developer ID distribution. The archive contains `LocalDesk.app` (display name LanDesk); the existing bundle identity is retained for upgrade compatibility. Extract it and copy it to Applications. No Intel build is available in this release.
 
-> [!NOTE]
-> Nightly packages are development builds. Prefer the latest stable release for daily use.
+Windows, Linux and Android packages, and an iOS TestFlight build, are not included in this release. See [validation status](docs/localdesk-migration.md).
 
 <a id="quick-start"></a>
 
