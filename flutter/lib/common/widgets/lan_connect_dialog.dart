@@ -22,7 +22,7 @@ class LanConnectDialog extends StatefulWidget {
 
 class _LanConnectDialogState extends State<LanConnectDialog> {
   final _form = GlobalKey<FormState>();
-  bool _expanded = false, _busy = false;
+  bool _expanded = false, _busy = false, _passwordVisible = false;
   late bool _remember = widget.remember;
 
   Future<void> _submit() async {
@@ -39,13 +39,6 @@ class _LanConnectDialogState extends State<LanConnectDialog> {
   @override
   Widget build(BuildContext context) {
     final tr = widget.translate;
-    Widget caption(String label) => Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Align(
-        alignment: Alignment.centerLeft,
-        child: Text(label, style: Theme.of(context).textTheme.labelLarge),
-      ),
-    );
     return AlertDialog(
       scrollable: true,
       title: Text(tr('Connect')),
@@ -56,37 +49,49 @@ class _LanConnectDialogState extends State<LanConnectDialog> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              caption('IP'),
               TextFormField(
                 key: const ValueKey('lan-endpoint'),
                 controller: widget.endpoint,
+                enabled: !_busy,
+                textInputAction: TextInputAction.done,
                 autocorrect: false,
                 enableSuggestions: false,
                 autovalidateMode: AutovalidateMode.onUserInteraction,
                 validator: (value) =>
                     (value ?? '').trim().isEmpty ? tr('Invalid IP') : null,
                 decoration: const InputDecoration(
-                  hintText: 'IP / IP:port',
+                  labelText: 'IP',
+                  hintText: '192.168.1.2:21118',
                   prefixIcon: Icon(Icons.desktop_windows_outlined),
                 ),
                 onFieldSubmitted: (_) => _submit(),
               ),
-              const SizedBox(height: 18),
+              const SizedBox(height: 16),
               Align(
                 alignment: Alignment.centerLeft,
                 child: TextButton.icon(
-                  onPressed: () => setState(() {
-                    _expanded = !_expanded;
-                    if (!_expanded) widget.password.clear();
-                  }),
+                  onPressed: _busy
+                      ? null
+                      : () => setState(() {
+                          _expanded = !_expanded;
+                          if (!_expanded) widget.password.clear();
+                        }),
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 4,
+                      vertical: 8,
+                    ),
+                    alignment: Alignment.centerLeft,
+                  ),
                   icon: Icon(_expanded ? Icons.expand_less : Icons.expand_more),
                   label: Text('${tr('Username')} · ${tr('Password')}'),
                 ),
               ),
               if (_expanded) ...[
-                caption(tr('Username')),
                 TextFormField(
                   controller: widget.username,
+                  enabled: !_busy,
+                  textInputAction: TextInputAction.next,
                   autocorrect: false,
                   enableSuggestions: false,
                   validator: (value) =>
@@ -94,27 +99,46 @@ class _LanConnectDialogState extends State<LanConnectDialog> {
                           (value ?? '').trim().isEmpty
                       ? tr('Username missed')
                       : null,
-                  decoration: const InputDecoration(
-                    prefixIcon: Icon(Icons.person_outline),
+                  decoration: InputDecoration(
+                    labelText: tr('Username'),
+                    prefixIcon: const Icon(Icons.person_outline),
                   ),
                 ),
-                const SizedBox(height: 18),
-                caption(tr('Password')),
+                const SizedBox(height: 16),
                 TextFormField(
                   controller: widget.password,
-                  obscureText: true,
+                  enabled: !_busy,
+                  obscureText: !_passwordVisible,
                   autocorrect: false,
                   enableSuggestions: false,
-                  decoration: const InputDecoration(
-                    prefixIcon: Icon(Icons.lock_outline),
+                  decoration: InputDecoration(
+                    labelText: tr('Password'),
+                    prefixIcon: const Icon(Icons.lock_outline),
+                    suffixIcon: IconButton(
+                      tooltip: tr(
+                        _passwordVisible ? 'Hide password' : 'Show password',
+                      ),
+                      onPressed: _busy
+                          ? null
+                          : () => setState(
+                              () => _passwordVisible = !_passwordVisible,
+                            ),
+                      icon: Icon(
+                        _passwordVisible
+                            ? Icons.visibility_off_outlined
+                            : Icons.visibility_outlined,
+                        size: 20,
+                      ),
+                    ),
                   ),
                   onFieldSubmitted: (_) => _submit(),
                 ),
                 CheckboxListTile(
                   key: const ValueKey('lan-remember'),
                   value: _remember,
-                  onChanged: (value) =>
-                      setState(() => _remember = value == true),
+                  onChanged: _busy
+                      ? null
+                      : (value) => setState(() => _remember = value == true),
                   contentPadding: EdgeInsets.zero,
                   controlAffinity: ListTileControlAffinity.leading,
                   title: Text(tr('Remember password')),
@@ -131,7 +155,23 @@ class _LanConnectDialogState extends State<LanConnectDialog> {
         ),
         ElevatedButton(
           onPressed: _busy ? null : _submit,
-          child: Text(tr('Connect')),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (_busy) ...[
+                SizedBox(
+                  width: 14,
+                  height: 14,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(width: 8),
+              ],
+              Text(tr(_busy ? 'Connecting...' : 'Connect')),
+            ],
+          ),
         ),
       ],
     );

@@ -536,7 +536,13 @@ class _ConnectionPageState extends State<ConnectionPage> with WindowListener {
               constraints: const BoxConstraints.tightFor(width: 32, height: 30),
               style: IconButton.styleFrom(
                 tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              ),
+                backgroundColor: Colors.transparent,
+                highlightColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+              ).copyWith(backgroundColor: WidgetStateProperty.resolveWith((states) =>
+                states.contains(WidgetState.selected)
+                    ? Theme.of(context).colorScheme.surfaceContainerHighest
+                    : Colors.transparent)),
+              isSelected: peerCardUiType.value == PeerUiType.grid,
               tooltip: translate('Grid View'),
               onPressed: () => _setPeerCardUiType(PeerUiType.grid),
               icon: Icon(
@@ -552,7 +558,13 @@ class _ConnectionPageState extends State<ConnectionPage> with WindowListener {
               constraints: const BoxConstraints.tightFor(width: 32, height: 30),
               style: IconButton.styleFrom(
                 tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              ),
+                backgroundColor: Colors.transparent,
+                highlightColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+              ).copyWith(backgroundColor: WidgetStateProperty.resolveWith((states) =>
+                states.contains(WidgetState.selected)
+                    ? Theme.of(context).colorScheme.surfaceContainerHighest
+                    : Colors.transparent)),
+              isSelected: peerCardUiType.value == PeerUiType.list,
               tooltip: translate('List'),
               onPressed: () => _setPeerCardUiType(PeerUiType.list),
               icon: Icon(
