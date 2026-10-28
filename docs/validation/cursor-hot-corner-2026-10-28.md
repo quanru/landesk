@@ -44,12 +44,17 @@ identity and strict signature, preserved system permissions, and restarted the
 GUI and user-session server. Installed CFBundleVersion was verified as 86.
 Logs: `/tmp/landesk-macos86-flutter.log`, `/tmp/landesk-macos86-install.log`.
 
-At this point, the phone is paired but locked. Xcode reports
-`Unlock Leyang's iPhone 15 Pro to Continue`; the WDA startup is waiting for it.
-Installation and real-device connection acceptance remain pending. Unit-test
-evidence does not establish that the visible popup is eliminated on the phone.
+After the user unlocked the phone, devicectl successfully installed build 86.
+Launching both LanDesk and WDA was then rejected by iOS with a Security error
+(invalid signature, entitlements, or profile not explicitly trusted). WDA's
+Xcode log specifically reports `Developer App Certificate is not trusted`.
+Both local app bundles pass strict codesign verification; their provisioning
+profiles include this phone and expire on 2027-08-10. The user was asked to
+check the developer trust/verification page on the phone. Real-device connection
+acceptance remains pending; successful installation is not launch acceptance.
+Install log: `/tmp/landesk-iphone86-install.log`.
 
-After unlocking: install build 86, place the Mac pointer away from corners,
+After resolving device trust: launch build 86, place the Mac pointer away from corners,
 connect without touching the remote image, and check the pointer remains in
 place with no hot-corner UI. Disconnect/reconnect and repeat; then verify touch
 clicks, dragging and the dedicated scroll control still work.
