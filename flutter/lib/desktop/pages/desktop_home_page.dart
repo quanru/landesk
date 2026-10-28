@@ -2908,13 +2908,10 @@ class _DesktopHomePageState extends State<DesktopHomePage>
           ),
           child: Container(
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.centerLeft,
-                end: Alignment.centerRight,
-                colors: [
-                  Color.fromARGB(255, 226, 66, 188),
-                  Color.fromARGB(255, 244, 114, 124),
-                ],
+              color: Theme.of(context).colorScheme.surfaceContainer,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: Theme.of(context).colorScheme.outlineVariant,
               ),
             ),
             padding: EdgeInsets.all(20),
@@ -2928,7 +2925,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                             child: Text(
                               translate(title),
                               style: TextStyle(
-                                color: Colors.white,
+                                color: Theme.of(context).colorScheme.onSurface,
                                 fontWeight: FontWeight.bold,
                                 fontSize: 15,
                               ),
@@ -2942,7 +2939,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                         translate(content),
                         style: TextStyle(
                           height: 1.5,
-                          color: Colors.white,
+                          color: Theme.of(context).colorScheme.onSurface,
                           fontWeight: FontWeight.normal,
                           fontSize: 13,
                         ),
@@ -2958,8 +2955,12 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                                 padding: 8,
                                 isOutline: true,
                                 text: translate(btnText),
-                                textColor: Colors.white,
-                                borderColor: Colors.white,
+                                textColor: Theme.of(
+                                  context,
+                                ).colorScheme.onSurface,
+                                borderColor: Theme.of(
+                                  context,
+                                ).colorScheme.onSurface,
                                 textSize: 20,
                                 radius: 10,
                                 onTap: onPressed,
@@ -2976,9 +2977,11 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                                   await launchUrl(Uri.parse(link)),
                               child: Text(
                                 translate(help),
-                                style: const TextStyle(
+                                style: TextStyle(
                                   decoration: TextDecoration.underline,
-                                  color: Colors.white,
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.onSurface,
                                   fontSize: 12,
                                 ),
                               ),
@@ -2994,7 +2997,11 @@ class _DesktopHomePageState extends State<DesktopHomePage>
             top: 18,
             right: 0,
             child: IconButton(
-              icon: Icon(Icons.close, color: Colors.white, size: 20),
+              icon: Icon(
+                Icons.close,
+                color: Theme.of(context).colorScheme.onSurface,
+                size: 20,
+              ),
               onPressed: closeCard,
             ),
           ),

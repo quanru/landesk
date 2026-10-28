@@ -85,6 +85,9 @@ class LandeskTheme {
           onSecondary: p.onAccent,
           secondaryContainer: p.selection,
           onSecondaryContainer: p.text,
+          // Legacy desktop pages still read these deprecated background fields.
+          background: p.background,
+          onBackground: p.text,
           surface: p.surface,
           onSurface: p.text,
           onSurfaceVariant: p.secondary,
