@@ -3625,7 +3625,7 @@ class CursorModel with ChangeNotifier {
     _displayOriginY = y;
     _x = xCursor;
     _y = yCursor;
-    parent.target?.inputModel.moveMouse(x, y);
+    // Restoring the local canvas must not move the host cursor to its origin.
     notifyListeners();
   }
 
@@ -4407,6 +4407,9 @@ Future<void> initializeCursorAndCanvas(FFI ffi) async {
     ffi.cursorModel.updateDisplayOrigin(
       ffi.ffiModel.rect?.left ?? 0,
       ffi.ffiModel.rect?.top ?? 0,
+      // The first frame only initializes local geometry. Moving the host
+      // pointer here triggers hot corners and overwrites its current position.
+      updateCursorPos: false,
     );
     return;
   }
