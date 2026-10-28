@@ -14,6 +14,8 @@ Validation:
 - Targeted analysis has no errors; existing deprecation/info findings remain.
 - macOS release and iOS 1.3.0 (77) unsigned archive build successfully.
 - Windows/Linux/Android receive the shared code but were not built or device-tested.
-- Physical iPhone is unavailable; TestFlight upload for build 77 is in progress.
+- macOS installed with matching signing identity; GUI/server restarted.
+- Physical iPhone is unavailable. Build 77 uploaded successfully at 13:25;
+  App Store Connect confirms Processing. Availability to testers is pending.
 - Live desktop screenshot access has previously timed out; component previews
   are not full product screenshots. No claim of all-screen visual acceptance.
