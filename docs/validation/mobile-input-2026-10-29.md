@@ -163,3 +163,12 @@ The simulator observed the Mac lock screen before installation, then disconnecte
 during the host restart. A fresh connection reached the LAN credential form.
 Desktop chat display/reply still requires an unlocked, authenticated session;
 this follow-up does not claim end-to-end chat or voice acceptance.
+
+After the user unlocked the Mac, the simulator authenticated and displayed the
+desktop with the new CM window. The running process uses `--cm`. Sending
+`LAN93 ping` from the mobile chat at 13:09 displayed that text in the Mac chat
+window, visible in the remote image after closing the mobile overlay. This
+confirms client-to-host message delivery and display with Mac build 93.
+The desktop UI tool now reads the main app, but cannot select the separate CM
+process window. Host-to-client reply acceptance is waiting for a manual
+`LAN93 pong` reply; no reply has yet appeared in the simulator.
