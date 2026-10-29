@@ -166,7 +166,7 @@ void runMainApp(bool startService) async {
 
   // Set window option.
   WindowOptions windowOptions = getHiddenTitleBarWindowOptions(
-    isMainWindow: true,
+    useNativeBackground: true,
     alwaysOnTop: alwaysOnTop,
   );
   windowManager.waitUntilReadyToShow(windowOptions, () async {
@@ -300,6 +300,7 @@ bool _isCmReadyToShow = false;
 showCmWindow({bool isStartup = false}) async {
   if (isStartup) {
     WindowOptions windowOptions = getHiddenTitleBarWindowOptions(
+      useNativeBackground: true,
       size: kConnectionManagerWindowSizeClosedChat,
       alwaysOnTop: true,
     );
@@ -333,6 +334,7 @@ showCmWindow({bool isStartup = false}) async {
 hideCmWindow({bool isStartup = false}) async {
   if (isStartup) {
     WindowOptions windowOptions = getHiddenTitleBarWindowOptions(
+      useNativeBackground: true,
       size: kConnectionManagerWindowSizeClosedChat,
     );
     windowManager.setOpacity(0);
@@ -403,7 +405,7 @@ void runInstallPage() async {
 }
 
 WindowOptions getHiddenTitleBarWindowOptions({
-  bool isMainWindow = false,
+  bool useNativeBackground = false,
   Size? size,
   bool center = false,
   bool? alwaysOnTop,
@@ -411,7 +413,7 @@ WindowOptions getHiddenTitleBarWindowOptions({
   return WindowOptions(
     size: size,
     center: center,
-    backgroundColor: (isMacOS && isMainWindow) ? null : Colors.transparent,
+    backgroundColor: (isMacOS && useNativeBackground) ? null : Colors.transparent,
     skipTaskbar: false,
     titleBarStyle: TitleBarStyle.hidden,
     alwaysOnTop: alwaysOnTop,

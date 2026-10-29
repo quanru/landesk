@@ -97,6 +97,8 @@ class _DesktopServerPageState extends State<DesktopServerPage>
             backgroundColor: Theme.of(context).colorScheme.background,
             body: ConnectionManager(),
           );
+          // AppKit draws the macOS window edge and rounded corners.
+          if (isMacOS) return body;
           return isLinux
               ? buildVirtualWindowFrame(context, body)
               : workaroundWindowBorder(

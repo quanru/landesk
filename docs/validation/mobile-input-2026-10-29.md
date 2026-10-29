@@ -172,3 +172,25 @@ confirms client-to-host message delivery and display with Mac build 93.
 The desktop UI tool now reads the main app, but cannot select the separate CM
 process window. Host-to-client reply acceptance is waiting for a manual
 `LAN93 pong` reply; no reply has yet appeared in the simulator.
+
+## Bidirectional chat and Mac frame follow-up (build 94)
+
+At 14:10 the simulator displayed the user's Mac reply `LAN93 pong` (14:08),
+confirming the reverse direction as well. Evidence is stored locally at
+`/tmp/landesk-cm94-evidence/bidirectional-chat.png`; it includes private desktop
+content and must not be published with the repository.
+
+The user supplied a close-up of black lines around the Mac CM window. The CM
+still requested a transparent native background and drew an additional Flutter
+border. It now uses the same native-background policy as the main Mac window,
+and leaves macOS frame/corner rendering to AppKit. Other platform borders remain.
+
+Targeted Dart analysis completed with no errors or warnings (9 deprecation
+infos). Mac release build 94 and same-identity installation passed. A fresh
+authenticated simulator connection displayed the desktop; `LAN94 border check`
+was received in the Mac window. Its visible right and bottom edges/corners no
+longer showed the hard black lines, but the mobile overlay obscured the left
+edge and the user switched foreground apps before a full close-up was obtained.
+All-edge close-up and dark appearance checks remain pending. Logs:
+`/tmp/landesk-cm94-analyze.log`, `/tmp/landesk-cm94-flutter.log`,
+`/tmp/landesk-cm94-install.log`.
