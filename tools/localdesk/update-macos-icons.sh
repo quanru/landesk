@@ -2,7 +2,7 @@
 # Refresh branding with the same certificate identity. Does not modify TCC grants.
 set -eu
 repo_dir=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
-app_path=${1:-/Applications/LocalDesk.app}
+app_path=${1:-/Applications/LanDesk.app}
 framework="$app_path/Contents/Frameworks/App.framework"
 assets="$framework/Versions/A/Resources/flutter_assets/assets"
 [ -f "$app_path/Contents/Resources/AppIcon.icns" ]
@@ -19,7 +19,7 @@ fi
 python3 "$repo_dir/scripts/generate_localdesk_icons.py" --check
 stage_dir=$(mktemp -d -t landesk-icons)
 trap 'rm -rf "$stage_dir"' EXIT
-stage_app="$stage_dir/LocalDesk.app"
+stage_app="$stage_dir/LanDesk.app"
 ditto "$app_path" "$stage_app"
 framework="$stage_app/Contents/Frameworks/App.framework"
 assets="$framework/Versions/A/Resources/flutter_assets/assets"

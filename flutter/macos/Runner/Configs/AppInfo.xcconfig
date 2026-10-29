@@ -6,6 +6,7 @@
 
 // The application's name. By default this is also the title of the Flutter window.
 PRODUCT_NAME = landesk
+EXECUTABLE_NAME = LanDesk
 
 // The application's bundle identifier
 PRODUCT_BUNDLE_IDENTIFIER = dev.quanru.localdesk

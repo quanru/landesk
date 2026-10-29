@@ -14,7 +14,7 @@ def main():
     root = Path(__file__).resolve().parents[2]
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('app', type=Path)
-    parser.add_argument('--destination', type=Path, default=Path('/Applications/LocalDesk.app'))
+    parser.add_argument('--destination', type=Path, default=Path('/Applications/LanDesk.app'))
     parser.add_argument('--identity', default=os.environ.get('LANDESK_CODESIGN_IDENTITY'))
     parser.add_argument('--migrate-adhoc', action='store_true')
     args = parser.parse_args()
@@ -24,28 +24,33 @@ def main():
     if not args.identity or args.identity == '-':
         parser.error('Configure landesk.codesignIdentity with a fixed certificate')
     dest = args.destination.resolve()
+    if dest == Path('/Applications/LanDesk.app') and Path('/Applications/LocalDesk.app').exists():
+        parser.error('Run migrate-macos-name.py first to migrate the installed background services')
     if dest.suffix != '.app' or args.app.resolve() == dest:
         parser.error('Use a separate built .app as the source')
     with (args.app / 'Contents/Info.plist').open('rb') as f:
         info = plistlib.load(f)
     if info.get('CFBundleIdentifier') != 'dev.quanru.localdesk':
         parser.error('Unexpected source bundle identity')
-    old_exe = info['CFBundleExecutable']
+    old_exe = 'LanDesk'
     if dest.exists():
         with (dest / 'Contents/Info.plist').open('rb') as f:
             old = plistlib.load(f)
         if old.get('CFBundleIdentifier') != info['CFBundleIdentifier']:
             parser.error('Destination bundle identity differs')
-        old_exe = old['CFBundleExecutable']
+        if old['CFBundleExecutable'] != 'LanDesk':
+            parser.error('Migrate the existing executable name before installing')
     with tempfile.TemporaryDirectory(prefix='landesk-install-') as tmp:
         stage = Path(tmp) / dest.name
         shutil.copytree(args.app, stage, symlinks=True)
         source_exe = info['CFBundleExecutable']
+        info['CFBundleName'] = 'LanDesk'
+        info['CFBundleDisplayName'] = 'LanDesk'
         if old_exe != source_exe:
             (stage / 'Contents/MacOS' / source_exe).rename(stage / 'Contents/MacOS' / old_exe)
             info['CFBundleExecutable'] = old_exe
-            with (stage / 'Contents/Info.plist').open('wb') as f:
-                plistlib.dump(info, f)
+        with (stage / 'Contents/Info.plist').open('wb') as f:
+            plistlib.dump(info, f)
         sign = ['python3', str(root / 'tools/localdesk/sign-macos.py'), str(stage), '--identity', args.identity]
         if dest.exists():
             sign += ['--previous-app', str(dest)]
