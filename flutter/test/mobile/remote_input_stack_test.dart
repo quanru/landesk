@@ -4,6 +4,31 @@ import 'package:flutter_hbb/mobile/widgets/remote_input_stack.dart';
 import 'package:flutter_hbb/common/widgets/overlay.dart';
 
 void main() {
+  testWidgets('connecting toolbar mask leaves room for session login dialogs', (
+    tester,
+  ) async {
+    for (final height in [0.0, 80.0]) {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: const SizedBox.expand(key: ValueKey('session body')),
+            bottomNavigationBar: Stack(
+              children: [
+                SizedBox(height: height),
+                const RemoteToolbarMask(color: Colors.black),
+              ],
+            ),
+          ),
+        ),
+      );
+      expect(
+        tester.getSize(find.byKey(const ValueKey('session body'))).height,
+        tester.view.physicalSize.height / tester.view.devicePixelRatio - height,
+      );
+      expect(tester.takeException(), isNull);
+    }
+  });
+
   testWidgets(
     'keyboard inset and floating controls preserve the input connection',
     (tester) async {

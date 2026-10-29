@@ -222,7 +222,10 @@ class _RemotePageState extends State<RemotePage> with WidgetsBindingObserver {
     setState(() {});
   }
 
-  Widget emptyOverlay(Color bgColor) => Container(color: bgColor);
+  // A connection mask only covers the toolbar; it must not determine its
+  // height or steal the space needed by the session's login/dialog overlay.
+  Widget emptyOverlay(Color bgColor) =>
+      RemoteToolbarMask(color: bgColor);
 
   void onSoftKeyboardChanged(bool visible) {
     if (!visible) {
