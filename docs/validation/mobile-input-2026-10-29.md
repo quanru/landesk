@@ -194,3 +194,12 @@ edge and the user switched foreground apps before a full close-up was obtained.
 All-edge close-up and dark appearance checks remain pending. Logs:
 `/tmp/landesk-cm94-analyze.log`, `/tmp/landesk-cm94-flutter.log`,
 `/tmp/landesk-cm94-install.log`.
+
+## Mac build 95: neutral connection-manager and chat styling
+
+- Replaced the colored initial avatar (the white I in an orange tile was the device-name initial, not a relay indicator) with a neutral devices glyph. Preserved supplied avatars.
+- Reduced avatar/name sizing, made long peer IDs ellipsize with a full-ID tooltip, and replaced the low-contrast chat asset with a themed outlined icon and tooltip.
+- Shared chat bubbles, timestamps, input borders and send icon now use semantic theme colors. CM controls use neutral surfaces; disconnect retains an error-colored label.
+- Targeted Dart analysis passed with no errors or warnings (three existing infos). macOS release build 95 and guarded installation passed using the existing signing identity.
+- Simulator build 92 reconnected to Mac 95. Sent `LAN95 neutral theme`; Mac displayed the message. Landscape screenshot confirmed neutral device card, incoming bubble, input and disconnect control with rounded window edges.
+- Dark appearance, outgoing bubble appearance and mobile installation of the shared styling have not been visually verified in this round. Simulator remains build 92.

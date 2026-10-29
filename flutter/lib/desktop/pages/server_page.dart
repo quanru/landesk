@@ -471,24 +471,25 @@ class _CmHeaderState extends State<_CmHeader>
               mainAxisAlignment: MainAxisAlignment.start,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                FittedBox(
-                  child: Text(
-                    client.name,
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.onSurface,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 20,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    maxLines: 1,
+                Text(
+                  client.name,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurface,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 15,
                   ),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
                 ),
-                FittedBox(
+                Tooltip(
+                  message: client.peerId,
                   child: Text(
-                    "(${client.peerId})",
+                    client.peerId,
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
                     style: TextStyle(
-                      color: Theme.of(context).colorScheme.onSurface,
-                      fontSize: 14,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      fontSize: 12,
                     ),
                   ),
                 ),
@@ -573,10 +574,15 @@ class _CmHeaderState extends State<_CmHeader>
                   );
                 }
               }),
-              icon: SvgPicture.asset(
+              tooltip: translate(
+                client.type_() == ClientType.file ? 'Transfer file' : 'Chat',
+              ),
+              icon: Icon(
                 client.type_() == ClientType.file
-                    ? 'assets/file_transfer.svg'
-                    : 'assets/chat2.svg',
+                    ? Icons.folder_outlined
+                    : Icons.chat_bubble_outline_rounded,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                size: 20,
               ),
               splashRadius: kDesktopIconButtonSplashRadius,
             ),
@@ -592,8 +598,8 @@ class _CmHeaderState extends State<_CmHeader>
   Widget _buildClientAvatar() {
     return buildAvatarWidget(
           avatar: client.avatar,
-          size: 70,
-          borderRadius: 15,
+          size: 44,
+          borderRadius: 12,
           fallback: _buildInitialAvatar(),
         ) ??
         _buildInitialAvatar();
@@ -601,20 +607,17 @@ class _CmHeaderState extends State<_CmHeader>
 
   Widget _buildInitialAvatar() {
     return Container(
-      width: 70,
-      height: 70,
+      width: 44,
+      height: 44,
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: str2color(client.name),
-        borderRadius: BorderRadius.circular(15.0),
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(12.0),
       ),
-      child: Text(
-        client.name.isNotEmpty ? client.name[0] : '?',
-        style: TextStyle(
-          fontWeight: FontWeight.bold,
-          color: Colors.white,
-          fontSize: 55,
-        ),
+      child: Icon(
+        Icons.devices_rounded,
+        color: Theme.of(context).colorScheme.onSurfaceVariant,
+        size: 24,
       ),
     );
   }
@@ -651,7 +654,7 @@ class _CmControlPanel extends StatelessWidget {
               Expanded(
                 child: buildButton(
                   context,
-                  color: MyTheme.accent,
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
                   onClick: null,
                   onTapDown: (details) async {
                     final devicesInfo = await AudioInput.getDevicesInfo(
@@ -714,23 +717,23 @@ class _CmControlPanel extends StatelessWidget {
                           .toList(),
                     );
                   },
-                  icon: Icon(Icons.call_rounded, color: Colors.white, size: 14),
+                  icon: Icon(Icons.call_rounded, color: Theme.of(context).colorScheme.onSurface, size: 14),
                   text: "Audio input",
-                  textColor: Colors.white,
+                  textColor: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
               Expanded(
                 child: buildButton(
                   context,
-                  color: Colors.red,
+                  color: Theme.of(context).colorScheme.surfaceContainer,
                   onClick: () => closeVoiceCall(),
                   icon: Icon(
                     Icons.call_end_rounded,
-                    color: Colors.white,
+                    color: Theme.of(context).colorScheme.onSurface,
                     size: 14,
                   ),
                   text: "Stop voice call",
-                  textColor: Colors.white,
+                  textColor: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
             ],
@@ -743,25 +746,25 @@ class _CmControlPanel extends StatelessWidget {
               Expanded(
                 child: buildButton(
                   context,
-                  color: MyTheme.accent,
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
                   onClick: () => handleVoiceCall(true),
-                  icon: Icon(Icons.call_rounded, color: Colors.white, size: 14),
+                  icon: Icon(Icons.call_rounded, color: Theme.of(context).colorScheme.onSurface, size: 14),
                   text: "Accept",
-                  textColor: Colors.white,
+                  textColor: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
               Expanded(
                 child: buildButton(
                   context,
-                  color: Colors.red,
+                  color: Theme.of(context).colorScheme.surfaceContainer,
                   onClick: () => handleVoiceCall(false),
                   icon: Icon(
                     Icons.phone_disabled_rounded,
-                    color: Colors.white,
+                    color: Theme.of(context).colorScheme.onSurface,
                     size: 14,
                   ),
                   text: "Dismiss",
-                  textColor: Colors.white,
+                  textColor: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
             ],
@@ -771,14 +774,14 @@ class _CmControlPanel extends StatelessWidget {
           offstage: !showElevation,
           child: buildButton(
             context,
-            color: MyTheme.accent,
+            color: Theme.of(context).colorScheme.surfaceContainerHighest,
             onClick: () {
               handleElevate(context);
               windowManager.minimize();
             },
-            icon: Icon(Icons.security_rounded, color: Colors.white, size: 14),
+            icon: Icon(Icons.security_rounded, color: Theme.of(context).colorScheme.onSurface, size: 14),
             text: 'Elevate',
-            textColor: Colors.white,
+            textColor: Theme.of(context).colorScheme.onSurface,
           ),
         ),
         Row(
@@ -786,15 +789,16 @@ class _CmControlPanel extends StatelessWidget {
             Expanded(
               child: buildButton(
                 context,
-                color: Colors.redAccent,
+                color: Theme.of(context).colorScheme.surfaceContainer,
+                border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
                 onClick: handleDisconnect,
                 text: 'Disconnect',
                 icon: Icon(
                   Icons.link_off_rounded,
-                  color: Colors.white,
+                  color: Theme.of(context).colorScheme.error,
                   size: 14,
                 ),
-                textColor: Colors.white,
+                textColor: Theme.of(context).colorScheme.error,
               ),
             ),
           ],
@@ -810,10 +814,10 @@ class _CmControlPanel extends StatelessWidget {
         Expanded(
           child: buildButton(
             context,
-            color: MyTheme.accent,
+            color: Theme.of(context).colorScheme.surfaceContainerHighest,
             onClick: handleClose,
             text: 'Close',
-            textColor: Colors.white,
+            textColor: Theme.of(context).colorScheme.onSurface,
           ),
         ),
       ],
