@@ -639,7 +639,7 @@ class BlockableOverlayState extends OverlayKeyState {
   }
 }
 
-class BlockableOverlay extends StatelessWidget {
+class BlockableOverlay extends StatefulWidget {
   final Widget underlying;
   final List<OverlayEntry>? upperLayer;
 
@@ -649,9 +649,33 @@ class BlockableOverlay extends StatelessWidget {
       {required this.underlying, required this.state, this.upperLayer});
 
   @override
+  State<BlockableOverlay> createState() => _BlockableOverlayWidgetState();
+}
+
+class _BlockableOverlayWidgetState extends State<BlockableOverlay> {
+  late final _underlying = OverlayEntry(builder: (_) => widget.underlying);
+
+  @override
+  void didUpdateWidget(covariant BlockableOverlay oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Overlay.initialEntries is ignored after mounting. Rebuild the existing
+    // entry so changes such as showing the remote text field reach its subtree.
+    _underlying.markNeedsBuild();
+  }
+
+  @override
+  void dispose() {
+    _underlying.remove();
+    _underlying.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final state = widget.state;
+    final upperLayer = widget.upperLayer;
     final initialEntries = [
-      OverlayEntry(builder: (_) => underlying),
+      _underlying,
 
       /// middle layer
       OverlayEntry(

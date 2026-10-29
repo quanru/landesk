@@ -1,3 +1,4 @@
+import '../widgets/remote_input_stack.dart';
 import '../widgets/custom_key_overlay.dart';
 import '../widgets/remote_shortcut.dart';
 import 'dart:async';
@@ -221,18 +222,7 @@ class _RemotePageState extends State<RemotePage> with WidgetsBindingObserver {
     setState(() {});
   }
 
-  // to-do: It should be better to use transparent color instead of the bgColor.
-  // But for now, the transparent color will cause the canvas to be white.
-  // I'm sure that the white color is caused by the Overlay widget in BlockableOverlay.
-  // But I don't know why and how to fix it.
-  Widget emptyOverlay(Color bgColor) => BlockableOverlay(
-        /// the Overlay key will be set with _blockableOverlayState in BlockableOverlay
-        /// see override build() in [BlockableOverlay]
-        state: _blockableOverlayState,
-        underlying: Container(
-          color: bgColor,
-        ),
-      );
+  Widget emptyOverlay(Color bgColor) => Container(color: bgColor);
 
   void onSoftKeyboardChanged(bool visible) {
     if (!visible) {
@@ -262,6 +252,7 @@ class _RemotePageState extends State<RemotePage> with WidgetsBindingObserver {
       _iosKeyboardWorkaroundTimer = null;
       _timer?.cancel();
       _timer = Timer(kMobileDelaySoftKeyboardFocus, () {
+        if (!mounted) return;
         SystemChrome.setEnabledSystemUIMode(SystemUiMode.manual,
             overlays: SystemUiOverlay.values);
         _mobileFocusNode.requestFocus();
@@ -409,6 +400,7 @@ class _RemotePageState extends State<RemotePage> with WidgetsBindingObserver {
   }
 
   void _openKeyboardUnlocked() {
+    _iosKeyboardWorkaroundTimer?.cancel();
     inputModel.keyboardInputAllowed = true;
     gFFI.invokeMethod("enable_soft_keyboard", true);
     // destroy first, so that our _value trick can work
@@ -417,11 +409,13 @@ class _RemotePageState extends State<RemotePage> with WidgetsBindingObserver {
     setState(() => _showEdit = false);
     _timer?.cancel();
     _timer = Timer(kMobileDelaySoftKeyboard, () {
+      if (!mounted) return;
       // show now, and sleep a while to requestFocus to
       // make sure edit ready, so that keyboard won't show/hide/show/hide happen
       setState(() => _showEdit = true);
       _timer?.cancel();
       _timer = Timer(kMobileDelaySoftKeyboardFocus, () {
+        if (!mounted) return;
         SystemChrome.setEnabledSystemUIMode(SystemUiMode.manual,
             overlays: SystemUiOverlay.values);
         _mobileFocusNode.requestFocus();
@@ -493,9 +487,9 @@ class _RemotePageState extends State<RemotePage> with WidgetsBindingObserver {
                 ],
               )),
           body: Obx(
-            () => getRawPointerAndKeyBody(Overlay(
-              initialEntries: [
-                OverlayEntry(builder: (context) {
+            () => getRawPointerAndKeyBody(BlockableOverlay(
+              state: _blockableOverlayState,
+              underlying: Builder(builder: (context) {
                   return Container(
                     color: kColorCanvas,
                     child: isWebDesktop
@@ -523,8 +517,7 @@ class _RemotePageState extends State<RemotePage> with WidgetsBindingObserver {
                             }),
                           ),
                   );
-                })
-              ],
+                }),
             )),
           )),
     );
@@ -549,20 +542,18 @@ class _RemotePageState extends State<RemotePage> with WidgetsBindingObserver {
   Widget _withVirtualKeys(Widget child) {
     final screen = MediaQuery.sizeOf(context);
     final phonePortrait = screen.shortestSide < 600 && screen.height >= screen.width;
-    if (!isIOS ||
+    final hideVirtualKeys = !isIOS ||
         phonePortrait ||
         keyboardVisibilityController.isVisible ||
         MediaQuery.viewInsetsOf(context).bottom > 0 ||
         _showGestureHelp ||
         !gFFI.ffiModel.pi.isSet.isTrue ||
         gFFI.ffiModel.waitForFirstImage.isTrue ||
-        inputModel.isViewCamera) {
-      return child;
-    }
+        inputModel.isViewCamera;
     final isMac = gFFI.ffiModel.pi.platform == kPeerPlatformMacOS;
-    return Stack(fit: StackFit.expand, children: [
-      child,
-      SafeArea(
+    return RemoteInputStack(
+      child: child,
+      controls: hideVirtualKeys ? null : SafeArea(
           minimum: const EdgeInsets.all(12),
           child: CustomKeyOverlay(
         key: ValueKey('virtual-keys-${widget.id}-$isMac'),
@@ -612,7 +603,7 @@ class _RemotePageState extends State<RemotePage> with WidgetsBindingObserver {
           });
         },
       )),
-    ]);
+    );
   }
 
 
@@ -680,6 +671,7 @@ class _RemotePageState extends State<RemotePage> with WidgetsBindingObserver {
                                   "get_value", "KEY_IS_SUPPORT_VOICE_CALL"),
                               hasData: (isSupportVoiceCall) => IconButton(
                                     color: Theme.of(context).colorScheme.onSurface,
+                                    tooltip: translate('Text chat'),
                                     icon: isAndroid && isSupportVoiceCall
                                         ? SvgPicture.asset('assets/chat.svg',
                                             colorFilter: ColorFilter.mode(
