@@ -118,11 +118,12 @@ class _ConnectionPageState extends State<ConnectionPage>
     return LayoutBuilder(
       builder: (context, constraints) {
         if (constraints.maxWidth >= 760) {
+          final compact = constraints.maxHeight < 400;
           return Center(
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 1120),
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(24, 24, 32, 24),
+                padding: EdgeInsets.fromLTRB(24, compact ? 4 : 24, 32, compact ? 4 : 24),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -132,7 +133,7 @@ class _ConnectionPageState extends State<ConnectionPage>
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Padding(
+                            if (!compact) Padding(
                               padding: const EdgeInsets.only(
                                 left: 12,
                                 bottom: 4,
@@ -142,7 +143,7 @@ class _ConnectionPageState extends State<ConnectionPage>
                                 style: Theme.of(context).textTheme.titleLarge,
                               ),
                             ),
-                            _buildRemoteIDTextField(),
+                            _buildRemoteIDTextField(compact: compact),
                           ],
                         ),
                       ),
@@ -234,7 +235,7 @@ class _ConnectionPageState extends State<ConnectionPage>
 
   /// UI for the remote endpoint field.
   /// Search for a peer and connect to it if the id exists.
-  Widget _buildRemoteIDTextField() {
+  Widget _buildRemoteIDTextField({bool compact = false}) {
     final availableWidth = MediaQuery.sizeOf(context).width;
     final address = RawAutocomplete<Peer>(
       optionsBuilder: (TextEditingValue textEditingValue) {
@@ -405,14 +406,14 @@ class _ConnectionPageState extends State<ConnectionPage>
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 500),
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(12, 16, 12, 24),
+          padding: EdgeInsets.fromLTRB(12, compact ? 4 : 16, 12, compact ? 8 : 24),
           child: AutofillGroup(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                label('IP'),
+                if (!compact) label('IP'),
                 address,
-                const SizedBox(height: 18),
+                SizedBox(height: compact ? 4 : 18),
                 Align(
                   alignment: Alignment.centerLeft,
                   child: TextButton.icon(
