@@ -149,15 +149,12 @@ class ChatModel with ChangeNotifier {
   ChatUser? get currentUser => _messages[_currentKey]?.chatUser;
 
   showChatIconOverlay({Offset offset = const Offset(200, 50)}) {
-    if (chatIconOverlayEntry != null) {
-      chatIconOverlayEntry!.remove();
-    }
-    // mobile check navigationBar
-    final bar = navigationBarKey.currentWidget;
-    if (bar != null) {
-      if ((bar as BottomNavigationBar).currentIndex == 1) {
-        return;
-      }
+    hideChatIconOverlay();
+    // The home screen may use a NavigationBar or NavigationRail. Its actual
+    // chat tab index also varies with the enabled connection modes.
+    if (!currentKey.isOut &&
+        (HomePage.homeKey.currentState?.isChatPageCurrentTab ?? false)) {
+      return;
     }
 
     final overlayState = _blockableOverlayState.state;

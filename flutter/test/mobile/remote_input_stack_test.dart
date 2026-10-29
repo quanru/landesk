@@ -4,6 +4,65 @@ import 'package:flutter_hbb/mobile/widgets/remote_input_stack.dart';
 import 'package:flutter_hbb/common/widgets/overlay.dart';
 
 void main() {
+  testWidgets('iOS chat fits above the landscape keyboard and respects safe area', (
+    tester,
+  ) async {
+    final position = DraggableKeyPosition('test chat');
+    for (final height in [600.0, 158.0, 600.0]) {
+      await tester.pumpWidget(MaterialApp(
+        home: MediaQuery(
+          data: const MediaQueryData(padding: EdgeInsets.only(left: 62)),
+          child: Align(
+            alignment: Alignment.topLeft,
+            child: SizedBox(
+              width: 874,
+              height: height,
+              child: IOSDraggable(
+                position: position,
+                width: 250,
+                height: 350,
+                builder: (_) => const Column(children: [
+                  SizedBox(height: 50, child: Text('close chat')),
+                  Spacer(),
+                  SizedBox(height: 48, child: Text('chat input')),
+                ]),
+              ),
+            ),
+          ),
+        ),
+      ));
+      expect(tester.getBottomRight(find.text('chat input')).dy,
+          lessThanOrEqualTo(height));
+      expect(tester.getTopLeft(find.text('close chat')).dx,
+          greaterThanOrEqualTo(62));
+      expect(tester.takeException(), isNull);
+    }
+  });
+
+  testWidgets('authentication keeps the session overlay and remote body mounted', (
+    tester,
+  ) async {
+    final overlay = BlockableOverlayState();
+    Widget app(bool connected) => MaterialApp(
+      home: Scaffold(
+        body: BlockableOverlay(
+          state: overlay,
+          underlying: RemoteInputStack(
+            child: connected
+                ? const FocusScope(child: Text('remote body'))
+                : const Text('remote body'),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpWidget(app(false));
+    final state = overlay.key!.currentState;
+    await tester.pumpWidget(app(true));
+    expect(overlay.key!.currentState, same(state));
+    expect(find.text('remote body'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('connecting toolbar mask leaves room for session login dialogs', (
     tester,
   ) async {

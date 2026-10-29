@@ -490,9 +490,11 @@ class _RemotePageState extends State<RemotePage> with WidgetsBindingObserver {
                 ],
               )),
           body: Obx(
-            () => getRawPointerAndKeyBody(BlockableOverlay(
+            () => BlockableOverlay(
               state: _blockableOverlayState,
-              underlying: Builder(builder: (context) {
+              // Keep the session overlay outside the physical-key wrapper,
+              // which is inserted once authentication completes.
+              underlying: getRawPointerAndKeyBody(Builder(builder: (context) {
                   return Container(
                     color: kColorCanvas,
                     child: isWebDesktop
@@ -520,8 +522,8 @@ class _RemotePageState extends State<RemotePage> with WidgetsBindingObserver {
                             }),
                           ),
                   );
-                }),
-            )),
+                })),
+            ),
           )),
     );
   }
