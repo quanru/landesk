@@ -117,3 +117,21 @@ through the desktop UI tool timed out. A blank TextEdit document was prepared,
 but the host foreground continued switching between the user's working apps.
 No remote test text was sent to those apps; input acceptance waits for the user
 to leave the blank test document in front briefly.
+
+## Remote text delivery verified (build 92, 12:18 follow-up)
+
+With the user keeping the blank TextEdit document in front, Midscene/WDA entered
+`landesk landscape 92` through the simulator's active remote software keyboard.
+The remote image showed the text in TextEdit (initial letter capitalized). Tapping
+the visible iOS backspace key removed the final `2`. Rotating to portrait retained
+the keyboard; entering `2 portrait` restored that digit and appended the suffix.
+Rotating back to landscape and entering ` landscape-again` also succeeded.
+
+Independent, read-only Mac accessibility inspection confirmed the final document
+value exactly: `Landesk landscape 92 portrait landscape-again`. No Mac-side typing
+or paste API was used for these inputs. This verifies actual remote delivery,
+backspace, and continued input across both orientation changes in the simulator.
+Evidence: `/tmp/landesk-sim92-evidence/remote-text-rotation.png`.
+
+Mac chat UI inspection still timed out (`timeoutReached`), so chat receipt/reply
+remains unverified. Physical iPhone and voice acceptance also remain pending.
