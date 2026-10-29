@@ -108,3 +108,12 @@ authenticated but waited for its first screen frame. Actual remote text entry,
 chat delivery/reply, voice audio, and physical iPhone acceptance are not verified.
 The landscape chat input remains narrower than desirable because its content
 also applies safe-area padding; this is a remaining presentation issue.
+
+After the user unlocked the Mac, build 92 reconnected and displayed the live
+desktop again. Landscape software keyboard opening was rechecked. The simulator
+submitted the test chat message `LAN92-1048` and displayed its outgoing bubble;
+Mac receipt/reply is still unconfirmed because querying the installed Mac app
+through the desktop UI tool timed out. A blank TextEdit document was prepared,
+but the host foreground continued switching between the user's working apps.
+No remote test text was sent to those apps; input acceptance waits for the user
+to leave the blank test document in front briefly.
