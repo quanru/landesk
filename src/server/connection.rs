@@ -5013,8 +5013,10 @@ impl Connection {
 }
 
 #[cfg(not(any(target_os = "android", target_os = "ios")))]
-fn connection_manager_launch_args() -> Vec<&'static str> {
-    vec!["--cm-no-ui"]
+fn connection_manager_launch_args(headless: bool) -> Vec<&'static str> {
+    // Desktop sessions need the CM event stream for chat and voice controls.
+    // Keep the no-UI process only for Linux sessions without a desktop.
+    vec![if headless { "--cm-no-ui" } else { "--cm" }]
 }
 
 #[cfg(not(any(target_os = "android", target_os = "ios")))]
@@ -5048,7 +5050,7 @@ async fn start_ipc(
         }
     }
     if stream.is_none() {
-        let args = connection_manager_launch_args();
+        let args = connection_manager_launch_args(headless_cm);
         #[allow(unused_mut)]
         #[cfg(target_os = "linux")]
         let mut user = None;
@@ -5918,8 +5920,9 @@ mod test {
 
     #[cfg(not(any(target_os = "android", target_os = "ios")))]
     #[test]
-    fn lan_connection_manager_is_always_headless() {
-        assert_eq!(connection_manager_launch_args(), vec!["--cm-no-ui"]);
+    fn desktop_connection_manager_keeps_chat_ui() {
+        assert_eq!(connection_manager_launch_args(false), vec!["--cm"]);
+        assert_eq!(connection_manager_launch_args(true), vec!["--cm-no-ui"]);
     }
 
     fn msg(set: impl FnOnce(&mut Message)) -> Message {

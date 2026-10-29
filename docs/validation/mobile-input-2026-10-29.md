@@ -135,3 +135,31 @@ Evidence: `/tmp/landesk-sim92-evidence/remote-text-rotation.png`.
 
 Mac chat UI inspection still timed out (`timeoutReached`), so chat receipt/reply
 remains unverified. Physical iPhone and voice acceptance also remain pending.
+
+## Desktop chat receiver follow-up (build 93)
+
+The installed Mac ran its connection manager as `--cm-no-ui`. Source inspection
+showed every desktop session was forced into that mode. Incoming chat forwards
+to the CM process, whose Flutter handler requires an `APP_TYPE_CM` event stream;
+the no-UI process never creates that Flutter UI. This prevents the desktop user
+from seeing and replying to messages, independently of the mobile bubble fix.
+
+Desktop sessions now launch `--cm`; the existing Linux headless path retains
+`--cm-no-ui`. This restores the existing session UI and chat/voice controls,
+without changing authentication, peer transport, or private-address restrictions.
+An ordinary incoming session may show the connection manager window again.
+
+The focused Rust regression test passed (1 passed), and the Mac Rust release
+library/service build passed. Logs: `/tmp/landesk-cm93-test.log` and
+`/tmp/landesk-cm93-build.log`. The local dependency setup needed an installed-root
+mapping for magnum-opus: `/tmp/landesk-host-vcpkg93/installed` points to the existing
+`.toolchains/rustdesk-device-deps` directory. No dependency versions changed.
+
+Mac Flutter release build 93 passed and was installed with the existing signing
+identity; the installer verified compatibility with the previous designated
+requirement and left TCC settings unchanged. The restarted host listens on TCP
+21118. Logs: `/tmp/landesk-cm93-flutter.log`, `/tmp/landesk-cm93-install.log`.
+The simulator observed the Mac lock screen before installation, then disconnected
+during the host restart. A fresh connection reached the LAN credential form.
+Desktop chat display/reply still requires an unlocked, authenticated session;
+this follow-up does not claim end-to-end chat or voice acceptance.
