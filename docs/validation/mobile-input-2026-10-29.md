@@ -203,3 +203,11 @@ All-edge close-up and dark appearance checks remain pending. Logs:
 - Targeted Dart analysis passed with no errors or warnings (three existing infos). macOS release build 95 and guarded installation passed using the existing signing identity.
 - Simulator build 92 reconnected to Mac 95. Sent `LAN95 neutral theme`; Mac displayed the message. Landscape screenshot confirmed neutral device card, incoming bubble, input and disconnect control with rounded window edges.
 - Dark appearance, outgoing bubble appearance and mobile installation of the shared styling have not been visually verified in this round. Simulator remains build 92.
+
+## Build 97: remaining neutral-theme surfaces
+
+- Updated device autocomplete, mobile remote/camera monitor selection, desktop monitor icons, readiness dialog, Android incoming-session avatars/service controls, and TCP/RDP listening banner to semantic neutral theme colors. Selected monitor colors now use paired primary/onPrimary values.
+- On simulator 96, dark chat exposed a pale title bar with white text. Fixed the shared mobile overlay header to surfaceContainerHighest/onSurface with a smaller title; simulator 97 visually confirmed the correction.
+- Targeted analysis passed without errors/warnings; existing informational diagnostics remain. macOS release 97 and iOS simulator debug 97 built successfully. An intermediate macOS attempt failed with a generated FlutterFramework package-product error; a separate rebuild succeeded.
+- Installed simulator 97. Verified light/dark settings and connection UI on build 96, and authenticated simulator 97 to Mac 96, opening the corrected dark chat header/input. Final Mac 97 uses the existing guarded installer/signing identity.
+- Not visually accepted this round: multi-monitor selection (no multi-monitor peer exercised), Android controlled-device UI, device autocomplete popup, desktop readiness dialog, TCP/RDP banner, and all hover/disabled states. Desktop CUA app binding timed out. Physical iPhone/iPad and Android builds were not installed.

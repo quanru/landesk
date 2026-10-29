@@ -142,7 +142,7 @@ class AutocompletePeerTile extends StatefulWidget {
 class AutocompletePeerTileState extends State<AutocompletePeerTile> {
   @override
   Widget build(BuildContext context) {
-    final double tileRadius = 5;
+    final double tileRadius = 10;
     final name =
         '${widget.peer.username}${widget.peer.username.isNotEmpty && widget.peer.hostname.isNotEmpty ? '@' : ''}${widget.peer.hostname}';
     final greyStyle = TextStyle(
@@ -161,10 +161,7 @@ class AutocompletePeerTileState extends State<AutocompletePeerTile> {
             children: [
               Container(
                 decoration: BoxDecoration(
-                  color: str2color(
-                    '${widget.peer.id}${widget.peer.platform}',
-                    0x7f,
-                  ),
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
                   borderRadius: BorderRadius.only(
                     topLeft: Radius.circular(tileRadius),
                     bottomLeft: Radius.circular(tileRadius),

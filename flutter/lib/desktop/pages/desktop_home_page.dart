@@ -2103,12 +2103,12 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                 width: 38,
                 height: 38,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFFFF4DD),
+                  color: Theme.of(dialogContext).colorScheme.surfaceContainerHighest,
                   borderRadius: BorderRadius.circular(11),
                 ),
                 child: Icon(
                   Icons.fact_check_outlined,
-                  color: Color(0xFFF59E0B),
+                  color: Theme.of(dialogContext).colorScheme.onSurfaceVariant,
                   size: 21,
                 ),
               ),

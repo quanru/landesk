@@ -981,8 +981,8 @@ class _MobileActionMenu extends StatelessWidget {
           onPressed: () => ffi.dialogManager.setMobileActionsOverlayVisible(
               !ffi.dialogManager.mobileActionsOverlayVisible.value),
           color: ffi.dialogManager.mobileActionsOverlayVisible.isTrue
-              ? _ToolbarTheme.blueColor
-              : _ToolbarTheme.inactiveColor,
+              ? Theme.of(context).colorScheme.onSurface
+              : Theme.of(context).colorScheme.onSurfaceVariant,
           hoverColor: ffi.dialogManager.mobileActionsOverlayVisible.isTrue
               ? _ToolbarTheme.hoverBlueColor
               : _ToolbarTheme.hoverInactiveColor,
@@ -1050,15 +1050,15 @@ class _MainMonitorSwitchButton extends StatelessWidget {
               SvgPicture.asset(
                 'assets/display_switcher.svg',
                 colorFilter:
-                    const ColorFilter.mode(Colors.white, BlendMode.srcIn),
+                    ColorFilter.mode(Theme.of(context).colorScheme.onSurfaceVariant, BlendMode.srcIn),
                 width: _ToolbarTheme.buttonSize,
                 height: _ToolbarTheme.buttonSize,
               ),
               Text(
                 label,
                 textAlign: TextAlign.center,
-                style: const TextStyle(
-                  color: Colors.black,
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurface,
                   fontSize: 11,
                   height: 1,
                   fontWeight: FontWeight.bold,
@@ -1107,7 +1107,7 @@ class _MonitorMenu extends StatelessWidget {
   Widget buildMonitorMenu(BuildContext context) {
     final width = SimpleWrapper<double>(0);
     final monitorsIcon =
-        globalMonitorsWidget(width, Colors.white, Colors.black38);
+        globalMonitorsWidget(context, width);
     return _IconSubmenuButton(
         tooltip: 'Select Monitor',
         icon: monitorsIcon,
@@ -1151,12 +1151,12 @@ class _MonitorMenu extends StatelessWidget {
         child: Text(translate('Show displays as individual windows')));
   }
 
-  buildOneMonitorButton(i, curDisplay) => Text(
+  buildOneMonitorButton(BuildContext context, i, curDisplay) => Text(
         '${i + 1}',
         style: TextStyle(
           color: i == curDisplay
-              ? _ToolbarTheme.blueColor
-              : _ToolbarTheme.inactiveColor,
+              ? Theme.of(context).colorScheme.onSurface
+              : Theme.of(context).colorScheme.onSurfaceVariant,
           fontSize: 12,
           fontWeight: FontWeight.bold,
         ),
@@ -1173,8 +1173,7 @@ class _MonitorMenu extends StatelessWidget {
           final width = SimpleWrapper<double>(0);
           Widget? monitorsIcon;
           if (isAllMonitors) {
-            monitorsIcon = globalMonitorsWidget(
-                width, Colors.white, _ToolbarTheme.blueColor);
+            monitorsIcon = globalMonitorsWidget(context, width);
           }
           return _IconMenuButton(
             tooltip: isMulti
@@ -1204,9 +1203,9 @@ class _MonitorMenu extends StatelessWidget {
                         SvgPicture.asset(
                           "assets/screen.svg",
                           colorFilter:
-                              ColorFilter.mode(Colors.white, BlendMode.srcIn),
+                              ColorFilter.mode(Theme.of(context).colorScheme.onSurfaceVariant, BlendMode.srcIn),
                         ),
-                        Obx(() => buildOneMonitorButton(i, display.value)),
+                        Obx(() => buildOneMonitorButton(context, i, display.value)),
                       ],
                     ),
                   ),
@@ -1224,7 +1223,8 @@ class _MonitorMenu extends StatelessWidget {
   }
 
   globalMonitorsWidget(
-      SimpleWrapper<double> width, Color activeTextColor, Color activeBgColor) {
+      BuildContext context, SimpleWrapper<double> width) {
+    final colors = Theme.of(context).colorScheme;
     getMonitors() {
       final pi = ffi.ffiModel.pi;
       RxInt display = CurrentDisplayState.find(id);
@@ -1259,15 +1259,15 @@ class _MonitorMenu extends StatelessWidget {
                 color: Colors.grey,
                 width: 1.0,
               ),
-              color: display.value == i ? activeBgColor : Colors.white,
+              color: display.value == i ? colors.primary : colors.surfaceContainer,
             ),
             child: Center(
                 child: Text(
               '${i + 1}',
               style: TextStyle(
                 color: display.value == i
-                    ? activeTextColor
-                    : _ToolbarTheme.inactiveColor,
+                    ? colors.onPrimary
+                    : colors.onSurface,
                 fontSize: fontSize,
                 fontWeight: FontWeight.bold,
               ),

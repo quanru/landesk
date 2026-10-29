@@ -123,18 +123,22 @@ class _PortForwardPageState extends State<PortForwardPage>
           offstage: pfs.isEmpty && !widget.isRDP,
           child: Container(
               height: 45,
-              color: const Color(0xFF007F00),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surfaceContainer,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+              ),
               child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
                       translate('Listening ...'),
-                      style: const TextStyle(fontSize: 16, color: Colors.white),
+                      style: TextStyle(fontSize: 14, color: Theme.of(context).colorScheme.onSurface),
                     ),
                     Text(
                       translate('not_close_tcp_tip'),
-                      style: const TextStyle(
-                          fontSize: 10, color: Color(0xFFDDDDDD), height: 1.2),
+                      style: TextStyle(
+                          fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant, height: 1.2),
                     )
                   ])).marginOnly(bottom: 8),
         ));

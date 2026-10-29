@@ -579,14 +579,10 @@ void showOptions(
   if (pi.displays.length > 1 && pi.currentDisplay != kAllDisplayValue) {
     final cur = pi.currentDisplay;
     final children = <Widget>[];
-    final isDarkTheme = MyTheme.currentThemeMode() == ThemeMode.dark;
-    final numColorSelected = Colors.white;
-    final numColorUnselected = isDarkTheme ? Colors.grey : Colors.black87;
-    // We can't use `Theme.of(context).primaryColor` here, the color is:
-    // - light theme: 0xff2196f3 (Colors.blue)
-    // - dark theme: 0xff212121 (the canvas color?)
-    final numBgSelected =
-        Theme.of(context).colorScheme.primary.withOpacity(0.6);
+    final colors = Theme.of(context).colorScheme;
+    final numColorSelected = colors.onPrimary;
+    final numColorUnselected = colors.onSurface;
+    final numBgSelected = colors.primary;
     for (var i = 0; i < pi.displays.length; ++i) {
       children.add(InkWell(
           onTap: () {
@@ -598,9 +594,9 @@ void showOptions(
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                  border: Border.all(color: Theme.of(context).hintColor),
-                  borderRadius: BorderRadius.circular(2),
-                  color: i == cur ? numBgSelected : null),
+                  border: Border.all(color: colors.outlineVariant),
+                  borderRadius: BorderRadius.circular(10),
+                  color: i == cur ? numBgSelected : colors.surfaceContainer),
               child: Center(
                   child: Text((i + 1).toString(),
                       style: TextStyle(

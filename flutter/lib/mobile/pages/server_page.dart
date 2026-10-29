@@ -308,7 +308,8 @@ class _PermissionCheckerState extends State<PermissionChecker> {
           serverModel.mediaOk && !hideStopService
               ? ElevatedButton.icon(
                   style: ButtonStyle(
-                    backgroundColor: MaterialStateProperty.all(Colors.red),
+                    backgroundColor: MaterialStateProperty.all(Theme.of(context).colorScheme.surfaceContainerHighest),
+                    foregroundColor: MaterialStateProperty.all(Theme.of(context).colorScheme.error),
                   ),
                   icon: const Icon(Icons.stop),
                   onPressed: serverModel.toggleService,
@@ -433,7 +434,7 @@ class ConnectionManager extends StatelessWidget {
                       ),
                     ],
                   ),
-                  _buildDisconnectButton(client),
+                  _buildDisconnectButton(context, client),
                   if (client.incomingVoiceCall && !client.inVoiceCall)
                     ..._buildNewVoiceCallHint(context, serverModel, client),
                 ],
@@ -444,9 +445,10 @@ class ConnectionManager extends StatelessWidget {
     );
   }
 
-  Widget _buildDisconnectButton(Client client) {
+  Widget _buildDisconnectButton(BuildContext context, Client client) {
     final disconnectButton = ElevatedButton.icon(
-      style: ButtonStyle(backgroundColor: MaterialStatePropertyAll(Colors.red)),
+      style: ButtonStyle(backgroundColor: MaterialStatePropertyAll(Theme.of(context).colorScheme.surfaceContainerHighest),
+            foregroundColor: MaterialStatePropertyAll(Theme.of(context).colorScheme.error)),
       icon: const Icon(Icons.close),
       onPressed: () {
         bind.cmCloseConnection(connId: client.id);
@@ -460,7 +462,8 @@ class ConnectionManager extends StatelessWidget {
         0,
         ElevatedButton.icon(
           style: ButtonStyle(
-            backgroundColor: MaterialStatePropertyAll(Colors.red),
+            backgroundColor: MaterialStatePropertyAll(Theme.of(context).colorScheme.surfaceContainerHighest),
+            foregroundColor: MaterialStatePropertyAll(Theme.of(context).colorScheme.error),
           ),
           icon: const Icon(Icons.phone),
           label: Text(translate("Stop")),
@@ -605,11 +608,9 @@ class ClientInfo extends StatelessWidget {
 
   Widget _buildAvatar(BuildContext context) {
     final fallback = CircleAvatar(
-      backgroundColor: str2color(
-        client.name,
-        Theme.of(context).brightness == Brightness.light ? 255 : 150,
-      ),
-      child: Text(client.name.isNotEmpty ? client.name[0] : '?'),
+      backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+      child: Icon(Icons.devices_rounded,
+          color: Theme.of(context).colorScheme.onSurfaceVariant),
     );
     return buildAvatarWidget(
           avatar: client.avatar,
