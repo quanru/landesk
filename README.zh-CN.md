@@ -80,11 +80,11 @@ landesk 专注于一个明确场景：让本身已经网络互通的设备直接
 
 ## 📦 下载安装
 
-[下载 macOS Apple Silicon 预览版（ZIP）](https://github.com/quanru/landesk/releases/download/v1.3.0-preview.20261028/landesk-1.3.0-preview.20261028-macos-arm64.zip) · [发布说明与 SHA-256 校验](https://github.com/quanru/landesk/releases/tag/v1.3.0-preview.20261028)
+[下载 macOS Apple Silicon 预览版（ZIP）](https://github.com/quanru/landesk/releases/download/v1.3.0-preview.20261030/landesk-1.3.0-99-macos-arm64.zip) · [发布说明与 SHA-256 校验](https://github.com/quanru/landesk/releases/tag/v1.3.0-preview.20261030)
 
-这是开发预览版，使用 Apple Development 证书签名，**尚未公证**，其他 Mac 的 Gatekeeper 可能阻止打开；它不是 Developer ID 正式发行包。压缩包内为 `LocalDesk.app`（显示名 LanDesk），保留原有应用标识以兼容升级。解压后复制到“应用程序”。本次不提供 Intel 版本。
+这是开发预览版，使用 Apple Development 证书签名，**尚未公证**，其他 Mac 的 Gatekeeper 可能阻止打开；它不是 Developer ID 正式发行包。压缩包内为 `LanDesk.app`，保留原有应用标识以兼容升级。首次安装可解压后复制到“应用程序”；已有 `LocalDesk.app` 请先阅读[名称迁移步骤](docs/validation/macos-name-migration-2026-10-29.md)，同步迁移后台服务路径。
 
-Windows、Linux、Android 安装包及 iOS TestFlight 构建不在本次发布范围内。已有验证情况见[验证记录](docs/localdesk-migration.md)。
+Windows、Linux、Android 和其他 Mac 架构的安装包见 [Nightly](https://github.com/quanru/landesk/releases/tag/nightly)。请核对页面标注的提交和构建状态；构建中的平台暂不可下载。iPhone / iPad 使用 TestFlight 内部测试，需要测试组邀请，暂无公开测试链接。已有验证情况见[验证记录](docs/localdesk-migration.md)。
 
 <a id="quick-start"></a>
 

@@ -85,11 +85,11 @@ That makes it a good fit for home labs, offices, classrooms, on-site support, an
 
 ## 📦 Download
 
-[Download macOS Apple Silicon preview (.zip)](https://github.com/quanru/landesk/releases/download/v1.3.0-preview.20261028/landesk-1.3.0-preview.20261028-macos-arm64.zip) · [Release notes and SHA-256](https://github.com/quanru/landesk/releases/tag/v1.3.0-preview.20261028)
+[Download macOS Apple Silicon preview (.zip)](https://github.com/quanru/landesk/releases/download/v1.3.0-preview.20261030/landesk-1.3.0-99-macos-arm64.zip) · [Release notes and SHA-256](https://github.com/quanru/landesk/releases/tag/v1.3.0-preview.20261030)
 
-This is a development preview, signed with an Apple Development certificate, **not notarized**. Gatekeeper may block it on another Mac; it is not a Developer ID distribution. The archive contains `LocalDesk.app` (display name LanDesk); the existing bundle identity is retained for upgrade compatibility. Extract it and copy it to Applications. No Intel build is available in this release.
+This is a development preview, signed with an Apple Development certificate, **not notarized**. Gatekeeper may block it on another Mac; it is not a Developer ID distribution. The archive contains `LanDesk.app`; the existing bundle identity is retained. For a new installation, extract it and copy it to Applications. Existing `LocalDesk.app` installations must follow the [name migration steps](docs/validation/macos-name-migration-2026-10-29.md) to update background service paths.
 
-Windows, Linux and Android packages, and an iOS TestFlight build, are not included in this release. See [validation status](docs/localdesk-migration.md).
+Windows, Linux, Android and other Mac architectures are available through [Nightly](https://github.com/quanru/landesk/releases/tag/nightly). Check its commit and build status; platforms still building are not yet available. iPhone and iPad use internal TestFlight distribution, requiring a testing-group invitation; no public beta link is available. See [validation status](docs/localdesk-migration.md).
 
 <a id="quick-start"></a>
 
