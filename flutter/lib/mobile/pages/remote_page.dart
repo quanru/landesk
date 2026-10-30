@@ -572,39 +572,41 @@ class _RemotePageState extends State<RemotePage> with WidgetsBindingObserver {
           await bind.sessionInputKey(sessionId: sessionId, name: name,
             down: down, press: false, ctrl: ctrl, alt: alt, shift: shift, command: command);
         },
-        send: (shortcut) async {
-          if (!inputModel.keyboardPerm ||
-              inputModel.isViewOnly ||
-              !inputModel.keyboardInputAllowed ||
-              gFFI.closed ||
-              inputModel.ctrl ||
-              inputModel.alt ||
-              inputModel.shift ||
-              inputModel.command) {
-            throw StateError('Remote keyboard is unavailable');
-          }
-          final targetSession = sessionId;
-          await sendRemoteShortcut(shortcut, (name, down,
-              {required ctrl,
-              required alt,
-              required shift,
-              required command}) async {
-            await bind.sessionInputKey(
-              sessionId: targetSession,
-              name: name,
-              down: down,
-              press: false,
-              ctrl: ctrl,
-              alt: alt,
-              shift: shift,
-              command: command,
-            );
-          });
-        },
+        send: _sendShortcut,
       )),
     );
   }
 
+
+  Future<void> _sendShortcut(RemoteShortcut shortcut) async {
+    if (!inputModel.keyboardPerm ||
+        inputModel.isViewOnly ||
+        !inputModel.keyboardInputAllowed ||
+        gFFI.closed ||
+        inputModel.ctrl ||
+        inputModel.alt ||
+        inputModel.shift ||
+        inputModel.command) {
+      throw StateError('Remote keyboard is unavailable');
+    }
+    final targetSession = sessionId;
+    await sendRemoteShortcut(shortcut, (name, down,
+        {required ctrl,
+        required alt,
+        required shift,
+        required command}) async {
+      await bind.sessionInputKey(
+        sessionId: targetSession,
+        name: name,
+        down: down,
+        press: false,
+        ctrl: ctrl,
+        alt: alt,
+        shift: shift,
+        command: command,
+      );
+    });
+  }
 
   Widget getSideAppBar() {
     final chinese = Localizations.localeOf(context).languageCode == 'zh';
@@ -649,23 +651,24 @@ class _RemotePageState extends State<RemotePage> with WidgetsBindingObserver {
             showOptions(context, widget.id, gFFI.dialogManager);
           },
         ),
-        if (!isWeb)
-          futureBuilder(
-            future: gFFI.invokeMethod("get_value", "KEY_IS_SUPPORT_VOICE_CALL"),
-            hasData: (supported) => RemoteRailButton(
-              icon: Icons.chat_bubble_outline,
-              label: chinese ? '聊天' : translate('Chat'),
-              onPressed: () {
-                gFFI.dialogManager.dismissAll();
-                setState(() {
-                  _showOperations = false;
-                  _showGestureHelp = false;
-                });
-                isAndroid && supported
-                    ? showChatOptions(widget.id)
-                    : onPressedTextChat(widget.id);
-              },
-            ),
+        if (ffiModel.pi.platform == kPeerPlatformMacOS)
+          RemoteRailButton(
+            icon: Icons.window_outlined,
+            label: chinese ? '所有窗口' : 'All windows',
+            onPressed: ffiModel.viewOnly || !ffiModel.keyboard ? null : () async {
+              gFFI.dialogManager.dismissAll();
+              setState(() {
+                _showOperations = false;
+                _showGestureHelp = false;
+              });
+              try {
+                // Send the Mac's F3 window-overview shortcut to the peer.
+                await _sendShortcut(const RemoteShortcut(
+                    'Mission Control', 'VK_F3'));
+              } catch (_) {
+                showToast(translate('Failed'));
+              }
+            },
           ),
       ],
     );
@@ -696,6 +699,24 @@ class _RemotePageState extends State<RemotePage> with WidgetsBindingObserver {
                 });
               }
             },
+          ),
+        if (!isWeb)
+          futureBuilder(
+            future: gFFI.invokeMethod("get_value", "KEY_IS_SUPPORT_VOICE_CALL"),
+            hasData: (supported) => ListTile(
+              leading: const Icon(Icons.chat_bubble_outline),
+              title: Text(translate('Chat')),
+              onTap: () {
+                gFFI.dialogManager.dismissAll();
+                setState(() {
+                  _showOperations = false;
+                  _showGestureHelp = false;
+                });
+                isAndroid && supported
+                    ? showChatOptions(widget.id)
+                    : onPressedTextChat(widget.id);
+              },
+            ),
           ),
         for (final menu in menus)
           ListTile(
