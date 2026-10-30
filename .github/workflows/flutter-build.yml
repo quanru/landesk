@@ -12,6 +12,9 @@ on:
       build-mobile:
         type: boolean
         default: true
+      build-ios:
+        type: boolean
+        default: true
       upload-tag:
         type: string
         default: "nightly"
@@ -483,7 +486,7 @@ jobs:
             ./SignOutput/localdesk-*.exe
 
   build-rustdesk-ios:
-    if: ${{ inputs.upload-artifact && inputs.build-mobile }}
+    if: ${{ inputs.upload-artifact && inputs.build-mobile && inputs.build-ios }}
     name: Build landesk ios ipa
     runs-on: ${{ matrix.job.os }}
     needs: [generate-bridge]
