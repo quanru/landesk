@@ -104,7 +104,7 @@ class _GestureHelpState extends State<GestureHelp> {
                         minHeight: 48,
                         cornerRadius: 14,
                         totalSwitches: 2,
-                        minWidth: compact ? 126 : 150,
+                        minWidth: ((size.width - 2 * space) / 2).clamp(0.0, 150.0),
                         fontSize: compact ? 13 : 15,
                         iconSize: compact ? 16 : 18,
                         labels: [

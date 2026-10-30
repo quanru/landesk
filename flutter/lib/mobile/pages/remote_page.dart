@@ -1,3 +1,4 @@
+import '../widgets/remote_session_sidebar.dart';
 import '../widgets/remote_input_stack.dart';
 import '../widgets/custom_key_overlay.dart';
 import '../widgets/remote_shortcut.dart';
@@ -60,6 +61,7 @@ class RemotePage extends StatefulWidget {
 class _RemotePageState extends State<RemotePage> with WidgetsBindingObserver {
   Timer? _timer;
   bool _showBar = !isWebDesktop;
+  bool _showOperations = false;
   bool _showGestureHelp = false;
   String _value = '';
   Orientation? _currentOrientation;
@@ -221,11 +223,6 @@ class _RemotePageState extends State<RemotePage> with WidgetsBindingObserver {
     _physicalFocusNode.requestFocus();
     setState(() {});
   }
-
-  // A connection mask only covers the toolbar; it must not determine its
-  // height or steal the space needed by the session's login/dialog overlay.
-  Widget emptyOverlay(Color bgColor) =>
-      RemoteToolbarMask(color: bgColor);
 
   void onSoftKeyboardChanged(bool visible) {
     if (!visible) {
@@ -426,17 +423,11 @@ class _RemotePageState extends State<RemotePage> with WidgetsBindingObserver {
     });
   }
 
-  Widget _bottomWidget() => _showGestureHelp
-      ? getGestureHelp()
-      : (_showBar && gFFI.ffiModel.pi.displays.isNotEmpty
-          ? getBottomAppBar()
-          : Offstage());
-
   @override
   Widget build(BuildContext context) {
     final keyboardIsVisible =
         keyboardVisibilityController.isVisible && _showEdit;
-    final showActionButton = !_showBar || keyboardIsVisible || _showGestureHelp;
+    final showActionButton = !_showBar || keyboardIsVisible;
 
     return WillPopScope(
       onWillPop: () async {
@@ -455,7 +446,7 @@ class _RemotePageState extends State<RemotePage> with WidgetsBindingObserver {
                   child: Icon(
                     (keyboardIsVisible || _showGestureHelp)
                         ? Icons.expand_more
-                        : Icons.expand_less,
+                        : Icons.chevron_left,
                     color: Theme.of(context).colorScheme.onPrimary,
                   ),
                   backgroundColor: Theme.of(context).colorScheme.primary,
@@ -473,24 +464,25 @@ class _RemotePageState extends State<RemotePage> with WidgetsBindingObserver {
                       }
                     });
                   }),
-          bottomNavigationBar: Obx(() => Stack(
-                alignment: Alignment.bottomCenter,
-                children: [
-                  gFFI.ffiModel.pi.isSet.isTrue &&
-                          gFFI.ffiModel.waitForFirstImage.isTrue
-                      ? emptyOverlay(MyTheme.canvasColor)
-                      : () {
-                          gFFI.ffiModel.tryShowAndroidActionsOverlay();
-                          return Offstage();
-                        }(),
-                  _bottomWidget(),
-                  gFFI.ffiModel.pi.isSet.isFalse
-                      ? emptyOverlay(MyTheme.canvasColor)
-                      : Offstage(),
-                ],
-              )),
-          body: Obx(
-            () => BlockableOverlay(
+          body: Obx(() {
+            final ready = gFFI.ffiModel.pi.isSet.isTrue &&
+                gFFI.ffiModel.waitForFirstImage.isFalse &&
+                gFFI.ffiModel.pi.displays.isNotEmpty;
+            if (ready) gFFI.ffiModel.tryShowAndroidActionsOverlay();
+            return RemoteSessionLayout(
+              rail: ready && _showBar && !keyboardIsVisible
+                  ? getSideAppBar()
+                  : null,
+              panel: ready && !keyboardIsVisible && _showBar
+                  ? (_showGestureHelp
+                      ? RemoteSessionPanel(
+                          title: translate('Touch mode'),
+                          onClose: () => setState(() => _showGestureHelp = false),
+                          child: getGestureHelp(),
+                        )
+                      : _showOperations ? getOperationsPanel() : null)
+                  : null,
+              child: BlockableOverlay(
               state: _blockableOverlayState,
               // Keep the session overlay outside the physical-key wrapper,
               // which is inserted once authentication completes.
@@ -523,8 +515,9 @@ class _RemotePageState extends State<RemotePage> with WidgetsBindingObserver {
                           ),
                   );
                 })),
-            ),
-          )),
+              ),
+            );
+          })),
     );
   }
 
@@ -552,6 +545,7 @@ class _RemotePageState extends State<RemotePage> with WidgetsBindingObserver {
         keyboardVisibilityController.isVisible ||
         MediaQuery.viewInsetsOf(context).bottom > 0 ||
         _showGestureHelp ||
+        _showOperations ||
         !gFFI.ffiModel.pi.isSet.isTrue ||
         gFFI.ffiModel.waitForFirstImage.isTrue ||
         inputModel.isViewCamera;
@@ -612,103 +606,113 @@ class _RemotePageState extends State<RemotePage> with WidgetsBindingObserver {
   }
 
 
-  Widget getBottomAppBar() {
+  Widget getSideAppBar() {
+    final chinese = Localizations.localeOf(context).languageCode == 'zh';
     final ffiModel = Provider.of<FfiModel>(context);
-    return BottomAppBar(
-      elevation: 0,
-      color: Theme.of(context).colorScheme.surface,
-      child: Row(
-        mainAxisSize: MainAxisSize.max,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: <Widget>[
-          Row(
-              children: <Widget>[
-                    IconButton(
-                      color: Theme.of(context).colorScheme.onSurface,
-                      icon: Icon(Icons.clear),
-                      onPressed: () {
-                        clientClose(sessionId, gFFI);
-                      },
-                    ),
-                    IconButton(
-                      color: Theme.of(context).colorScheme.onSurface,
-                      icon: Icon(Icons.tv),
-                      onPressed: () {
-                        setState(() => _showEdit = false);
-                        showOptions(context, widget.id, gFFI.dialogManager);
-                      },
-                    )
-                  ] +
-                  (isWebDesktop || ffiModel.viewOnly || !ffiModel.keyboard
-                      ? []
-                      : gFFI.ffiModel.isPeerAndroid
-                          ? [
-                              IconButton(
-                                  color: Theme.of(context).colorScheme.onSurface,
-                                  icon: Icon(Icons.keyboard),
-                                  onPressed: openKeyboard),
-                              IconButton(
-                                color: Theme.of(context).colorScheme.onSurface,
-                                icon: const Icon(Icons.build),
-                                onPressed: () => gFFI.dialogManager
-                                    .toggleMobileActionsOverlay(ffi: gFFI),
-                              )
-                            ]
-                          : [
-                              IconButton(
-                                  color: Theme.of(context).colorScheme.onSurface,
-                                  icon: Icon(Icons.keyboard),
-                                  onPressed: openKeyboard),
-                              IconButton(
-                                color: Theme.of(context).colorScheme.onSurface,
-                                icon: Icon(gFFI.ffiModel.touchMode
-                                    ? Icons.touch_app
-                                    : Icons.mouse),
-                                onPressed: () => setState(
-                                    () => _showGestureHelp = !_showGestureHelp),
-                              ),
-                            ]) +
-                  (isWeb
-                      ? []
-                      : <Widget>[
-                          futureBuilder(
-                              future: gFFI.invokeMethod(
-                                  "get_value", "KEY_IS_SUPPORT_VOICE_CALL"),
-                              hasData: (isSupportVoiceCall) => IconButton(
-                                    color: Theme.of(context).colorScheme.onSurface,
-                                    tooltip: translate('Text chat'),
-                                    icon: isAndroid && isSupportVoiceCall
-                                        ? SvgPicture.asset('assets/chat.svg',
-                                            colorFilter: ColorFilter.mode(
-                                                Theme.of(context).colorScheme.onSurface, BlendMode.srcIn))
-                                        : Icon(Icons.message),
-                                    onPressed: () =>
-                                        isAndroid && isSupportVoiceCall
-                                            ? showChatOptions(widget.id)
-                                            : onPressedTextChat(widget.id),
-                                  ))
-                        ]) +
-                  [
-                    IconButton(
-                      color: Theme.of(context).colorScheme.onSurface,
-                      icon: Icon(Icons.more_vert),
-                      onPressed: () {
-                        setState(() => _showEdit = false);
-                        showActions(widget.id);
-                      },
-                    ),
-                  ]),
-          Obx(() => IconButton(
-                color: Theme.of(context).colorScheme.onSurface,
-                icon: Icon(Icons.expand_more),
-                onPressed: gFFI.ffiModel.waitForFirstImage.isTrue
-                    ? null
-                    : () {
-                        setState(() => _showBar = !_showBar);
-                      },
-              )),
-        ],
-      ),
+    return RemoteActionRail(
+      collapseLabel: translate('Hide'),
+      onCollapse: () => setState(() {
+        _showBar = false;
+        _showOperations = false;
+        _showGestureHelp = false;
+      }),
+      children: [
+        RemoteRailButton(
+          icon: Icons.tune,
+          label: chinese ? '操作' : translate('Control Actions'),
+          selected: _showOperations || _showGestureHelp,
+          onPressed: () => showActions(widget.id),
+        ),
+        if (!isWebDesktop && !ffiModel.viewOnly && ffiModel.keyboard)
+          RemoteRailButton(
+            icon: Icons.keyboard_outlined,
+            label: chinese ? '键盘' : 'Keyboard',
+            onPressed: () {
+              gFFI.dialogManager.dismissAll();
+              setState(() {
+                _showOperations = false;
+                _showGestureHelp = false;
+              });
+              openKeyboard();
+            },
+          ),
+        RemoteRailButton(
+          icon: Icons.desktop_windows_outlined,
+          label: translate('Display'),
+          onPressed: () {
+            gFFI.dialogManager.dismissAll();
+            setState(() {
+              _showEdit = false;
+              _showOperations = false;
+              _showGestureHelp = false;
+            });
+            showOptions(context, widget.id, gFFI.dialogManager);
+          },
+        ),
+        if (!isWeb)
+          futureBuilder(
+            future: gFFI.invokeMethod("get_value", "KEY_IS_SUPPORT_VOICE_CALL"),
+            hasData: (supported) => RemoteRailButton(
+              icon: Icons.chat_bubble_outline,
+              label: chinese ? '聊天' : translate('Chat'),
+              onPressed: () {
+                gFFI.dialogManager.dismissAll();
+                setState(() {
+                  _showOperations = false;
+                  _showGestureHelp = false;
+                });
+                isAndroid && supported
+                    ? showChatOptions(widget.id)
+                    : onPressedTextChat(widget.id);
+              },
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget getOperationsPanel() {
+    final menus = [
+      ..._getMobileActionMenus(),
+      ...toolbarControls(context, widget.id, gFFI),
+    ];
+    return RemoteSessionPanel(
+      title: translate('Control Actions'),
+      onClose: () => setState(() => _showOperations = false),
+      child: Column(mainAxisSize: MainAxisSize.min, children: [
+        if (!gFFI.ffiModel.viewOnly && gFFI.ffiModel.keyboard)
+          ListTile(
+            leading: Icon(gFFI.ffiModel.touchMode ? Icons.touch_app_outlined : Icons.mouse_outlined),
+            title: Text(translate('Touch mode')),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () {
+              if (gFFI.ffiModel.isPeerAndroid) {
+                setState(() => _showOperations = false);
+                gFFI.dialogManager.toggleMobileActionsOverlay(ffi: gFFI);
+              } else {
+                setState(() {
+                  _showOperations = false;
+                  _showGestureHelp = true;
+                });
+              }
+            },
+          ),
+        for (final menu in menus)
+          ListTile(
+            title: menu.getChild(),
+            enabled: menu.onPressed != null,
+            onTap: menu.onPressed == null ? null : () {
+              setState(() => _showOperations = false);
+              menu.onPressed?.call();
+            },
+          ),
+        const Divider(),
+        ListTile(
+          leading: Icon(Icons.logout, color: Theme.of(context).colorScheme.error),
+          title: Text(translate('Disconnect'), style: TextStyle(color: Theme.of(context).colorScheme.error)),
+          onTap: () => clientClose(sessionId, gFFI),
+        ),
+      ]),
     );
   }
 
@@ -828,44 +832,13 @@ class _RemotePageState extends State<RemotePage> with WidgetsBindingObserver {
     ];
   }
 
-  void showActions(String id) async {
-    final size = MediaQuery.of(context).size;
-    final x = 120.0;
-    final y = size.height;
-    final mobileActionMenus = _getMobileActionMenus();
-    final menus = toolbarControls(context, id, gFFI);
-
-    final List<PopupMenuEntry<int>> more = [
-      ...mobileActionMenus
-          .asMap()
-          .entries
-          .map((e) =>
-              PopupMenuItem<int>(child: e.value.getChild(), value: e.key))
-          .toList(),
-      if (mobileActionMenus.isNotEmpty) PopupMenuDivider(),
-      ...menus
-          .asMap()
-          .entries
-          .map((e) => PopupMenuItem<int>(
-              child: e.value.getChild(),
-              value: e.key + mobileActionMenus.length))
-          .toList(),
-    ];
-    () async {
-      var index = await showMenu(
-        context: context,
-        position: RelativeRect.fromLTRB(x, y, x, y),
-        items: more,
-        elevation: 8,
-      );
-      if (index != null) {
-        if (index < mobileActionMenus.length) {
-          mobileActionMenus[index].onPressed?.call();
-        } else if (index < mobileActionMenus.length + more.length) {
-          menus[index - mobileActionMenus.length].onPressed?.call();
-        }
-      }
-    }();
+  void showActions(String id) {
+    gFFI.dialogManager.dismissAll();
+    setState(() {
+      _showEdit = false;
+      _showGestureHelp = false;
+      _showOperations = !_showOperations;
+    });
   }
 
   onPressedTextChat(String id) {
@@ -926,11 +899,11 @@ class _RemotePageState extends State<RemotePage> with WidgetsBindingObserver {
         .toList();
     Future.delayed(Duration.zero, () async {
       final size = MediaQuery.of(context).size;
-      final x = 120.0;
-      final y = size.height;
+      final x = size.width - RemoteActionRail.width;
+      final y = MediaQuery.paddingOf(context).top + 48;
       var index = await showMenu(
         context: context,
-        position: RelativeRect.fromLTRB(x, y, x, y),
+        position: RelativeRect.fromLTRB(x, y, RemoteActionRail.width, 0),
         items: menuItems,
         elevation: 8,
       );
@@ -941,22 +914,16 @@ class _RemotePageState extends State<RemotePage> with WidgetsBindingObserver {
   }
 
   /// aka changeTouchMode
-  BottomAppBar getGestureHelp() {
-    return BottomAppBar(
-        child: SingleChildScrollView(
-            controller: ScrollController(),
-            padding: EdgeInsets.symmetric(vertical: 10),
-            child: GestureHelp(
-              touchMode: gFFI.ffiModel.touchMode,
-              onTouchModeChange: (t) {
-                gFFI.ffiModel.toggleTouchMode();
-                final v = gFFI.ffiModel.touchMode ? 'Y' : 'N';
-                bind.mainSetLocalOption(key: kOptionTouchMode, value: v);
-              },
-              virtualMouseMode: gFFI.ffiModel.virtualMouseMode,
-              inputModel: gFFI.inputModel,
-            )));
-  }
+  Widget getGestureHelp() => GestureHelp(
+    touchMode: gFFI.ffiModel.touchMode,
+    onTouchModeChange: (t) {
+      gFFI.ffiModel.toggleTouchMode();
+      final v = gFFI.ffiModel.touchMode ? 'Y' : 'N';
+      bind.mainSetLocalOption(key: kOptionTouchMode, value: v);
+    },
+    virtualMouseMode: gFFI.ffiModel.virtualMouseMode,
+    inputModel: gFFI.inputModel,
+  );
 
   // * Currently mobile does not enable map mode
   // void changePhysicalKeyboardInputMode() async {
@@ -1473,14 +1440,19 @@ void showOptions(
       popupDialogMenus.add(const Divider(color: MyTheme.border));
     }
 
-    return CustomAlertDialog(
-      content: Column(
+    return Align(
+      alignment: Alignment.centerRight,
+      child: RemoteSessionPanel(
+        title: translate('Display'),
+        onClose: close,
+        child: Column(
           mainAxisSize: MainAxisSize.min,
           children: displays +
               radios +
               popupDialogMenus +
               toggles +
               [privacyModeWidget]),
+      ),
     );
   }, clickMaskDismiss: true, backDismiss: true).then((value) {
     _disableAndroidSoftKeyboard();

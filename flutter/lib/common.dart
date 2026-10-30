@@ -684,7 +684,8 @@ Future<void> windowOnTop(int? id) async {
   }
 }
 
-typedef DialogBuilder = CustomAlertDialog Function(
+// Overlay content can be a dialog or an edge-aligned session panel.
+typedef DialogBuilder = Widget Function(
   StateSetter setState,
   void Function([dynamic]) close,
   BuildContext context,
