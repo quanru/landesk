@@ -47,10 +47,12 @@ class _SettingsState extends State<SettingsPage> {
   var _buildDate = '';
   var _preventSleepWhileConnected = true;
   var _showTerminalExtraKeys = false;
+  var _oneHandGestures = false;
 
   @override
   void initState() {
     super.initState();
+    _oneHandGestures = mainGetLocalBoolOptionSync(kOptionEnableOneHandGestures);
     _preventSleepWhileConnected = mainGetLocalBoolOptionSync(
       kOptionKeepAwakeDuringOutgoingSessions,
     );
@@ -135,6 +137,18 @@ class _SettingsState extends State<SettingsPage> {
             SettingsSectionCard(
               title: translate('Input Control'),
               children: [
+                SwitchListTile(
+                  title: Text(Localizations.localeOf(context).languageCode == 'zh'
+                      ? '单手缩放手势' : 'One-handed zoom gestures'),
+                  subtitle: Text(Localizations.localeOf(context).languageCode == 'zh'
+                      ? '双指上下滑动滚动；单指双击后按住，上拖放大、下拖缩小。下次连接生效。'
+                      : 'Scroll with two fingers. Double-tap and hold, then drag up to zoom in or down to zoom out. Applies on the next connection.'),
+                  value: _oneHandGestures,
+                  onChanged: (value) async {
+                    await mainSetLocalBoolOption(kOptionEnableOneHandGestures, value);
+                    if (mounted) setState(() => _oneHandGestures = value);
+                  },
+                ),
                 SwitchListTile(
                   title: Text(translate('Show terminal extra keys')),
                   value: _showTerminalExtraKeys,

@@ -658,3 +658,5 @@ enum WindowsTarget {
 extension WindowsTargetExt on int {
   WindowsTarget get windowsVersion => getWindowsTarget(this);
 }
+
+const String kOptionEnableOneHandGestures = 'one-hand-gestures';
