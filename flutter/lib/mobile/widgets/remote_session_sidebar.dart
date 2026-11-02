@@ -202,3 +202,35 @@ class RemoteSessionPanel extends StatelessWidget {
     },
   );
 }
+
+/// A reserved edge strip, so keyboard dismissal never covers the remote view.
+class RemoteEdgeControl extends StatelessWidget {
+  const RemoteEdgeControl({
+    super.key,
+    required this.label,
+    required this.icon,
+    required this.onPressed,
+  });
+  final String label;
+  final IconData icon;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) => Material(
+    color: Theme.of(context).colorScheme.surface,
+    child: SafeArea(
+      left: false,
+      child: SizedBox(
+        width: 48,
+        child: Center(
+          child: IconButton(
+            tooltip: label,
+            constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+            icon: Icon(icon),
+            onPressed: onPressed,
+          ),
+        ),
+      ),
+    ),
+  );
+}

@@ -12,6 +12,22 @@ void main() {
     ],
   );
 
+  testWidgets('collapsed and keyboard controls reserve edge space', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(852, 393));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    var taps = 0;
+    await tester.pumpWidget(MaterialApp(home: Scaffold(body: RemoteSessionLayout(
+      child: const SizedBox.expand(key: ValueKey('desktop')),
+      rail: RemoteEdgeControl(label: 'Hide keyboard', icon: Icons.keyboard_hide,
+        onPressed: () { taps++; }),
+    ))));
+    expect(tester.getRect(find.byKey(const ValueKey('desktop'))).right, 804);
+    expect(tester.getRect(find.byType(RemoteEdgeControl)).left, 804);
+    await tester.tap(find.byTooltip('Hide keyboard'));
+    expect(taps, 1);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('right rail preserves body height across sizes and themes', (
     tester,
   ) async {

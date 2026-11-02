@@ -66,6 +66,7 @@ class _RemotePageState extends State<RemotePage> with WidgetsBindingObserver {
   String _value = '';
   Orientation? _currentOrientation;
   final _uniqueKey = UniqueKey();
+  final _virtualKeysKey = GlobalKey<CustomKeyOverlayState>();
   Timer? _iosKeyboardWorkaroundTimer;
 
   final _blockableOverlayState = BlockableOverlayState();
@@ -427,7 +428,6 @@ class _RemotePageState extends State<RemotePage> with WidgetsBindingObserver {
   Widget build(BuildContext context) {
     final keyboardIsVisible =
         keyboardVisibilityController.isVisible && _showEdit;
-    final showActionButton = !_showBar || keyboardIsVisible;
 
     return WillPopScope(
       onWillPop: () async {
@@ -435,44 +435,28 @@ class _RemotePageState extends State<RemotePage> with WidgetsBindingObserver {
         return false;
       },
       child: Scaffold(
-          // workaround for https://github.com/rustdesk/rustdesk/issues/3131
-          floatingActionButtonLocation: keyboardIsVisible
-              ? FABLocation(FloatingActionButtonLocation.endFloat, 0, -35)
-              : null,
-          floatingActionButton: !showActionButton
-              ? null
-              : FloatingActionButton(
-                  mini: !keyboardIsVisible,
-                  child: Icon(
-                    (keyboardIsVisible || _showGestureHelp)
-                        ? Icons.expand_more
-                        : Icons.chevron_left,
-                    color: Theme.of(context).colorScheme.onPrimary,
-                  ),
-                  backgroundColor: Theme.of(context).colorScheme.primary,
-                  onPressed: () {
-                    setState(() {
-                      if (keyboardIsVisible) {
-                        _showEdit = false;
-                        gFFI.invokeMethod("enable_soft_keyboard", false);
-                        _mobileFocusNode.unfocus();
-                        _physicalFocusNode.requestFocus();
-                      } else if (_showGestureHelp) {
-                        _showGestureHelp = false;
-                      } else {
-                        _showBar = !_showBar;
-                      }
-                    });
-                  }),
           body: Obx(() {
             final ready = gFFI.ffiModel.pi.isSet.isTrue &&
                 gFFI.ffiModel.waitForFirstImage.isFalse &&
                 gFFI.ffiModel.pi.displays.isNotEmpty;
             if (ready) gFFI.ffiModel.tryShowAndroidActionsOverlay();
             return RemoteSessionLayout(
-              rail: ready && _showBar && !keyboardIsVisible
+              rail: !ready ? null : (_showBar && !keyboardIsVisible
                   ? getSideAppBar()
-                  : null,
+                  : RemoteEdgeControl(
+                      label: translate(keyboardIsVisible ? 'Hide' : 'Control Actions'),
+                      icon: keyboardIsVisible ? Icons.keyboard_hide_outlined : Icons.chevron_left,
+                      onPressed: () {
+                        if (keyboardIsVisible) {
+                          setState(() => _showEdit = false);
+                          gFFI.invokeMethod('enable_soft_keyboard', false);
+                          _mobileFocusNode.unfocus();
+                          _physicalFocusNode.requestFocus();
+                        } else {
+                          setState(() => _showBar = true);
+                        }
+                      },
+                    )),
               panel: ready && !keyboardIsVisible && _showBar
                   ? (_showGestureHelp
                       ? RemoteSessionPanel(
@@ -492,6 +476,8 @@ class _RemotePageState extends State<RemotePage> with WidgetsBindingObserver {
                     child: isWebDesktop
                         ? getBodyForDesktopWithListener()
                         : SafeArea(
+                            left: false,
+                            right: false,
                             child:
                                 OrientationBuilder(builder: (ctx, orientation) {
                               if (_currentOrientation != orientation) {
@@ -552,10 +538,13 @@ class _RemotePageState extends State<RemotePage> with WidgetsBindingObserver {
     final isMac = gFFI.ffiModel.pi.platform == kPeerPlatformMacOS;
     return RemoteInputStack(
       child: child,
-      controls: hideVirtualKeys ? null : SafeArea(
-          minimum: const EdgeInsets.all(12),
+      controls: Offstage(
+        offstage: hideVirtualKeys,
+        child: SafeArea(
+          right: false,
           child: CustomKeyOverlay(
-        key: ValueKey('virtual-keys-${widget.id}-$isMac'),
+        key: _virtualKeysKey,
+        active: !hideVirtualKeys,
         isMac: isMac,
         profileId: widget.id,
         mouseScroll: (steps) async {
@@ -573,7 +562,7 @@ class _RemotePageState extends State<RemotePage> with WidgetsBindingObserver {
             down: down, press: false, ctrl: ctrl, alt: alt, shift: shift, command: command);
         },
         send: _sendShortcut,
-      )),
+      ))),
     );
   }
 
@@ -700,6 +689,25 @@ class _RemotePageState extends State<RemotePage> with WidgetsBindingObserver {
               }
             },
           ),
+        SwitchListTile(
+          secondary: const Icon(Icons.keyboard_alt_outlined),
+          title: Text(Localizations.localeOf(context).languageCode == 'zh'
+              ? '显示虚拟按键' : 'Show virtual keys'),
+          value: _virtualKeysKey.currentState?.visible ?? true,
+          onChanged: (value) {
+            _virtualKeysKey.currentState?.setVisible(value);
+            setState(() {});
+          },
+        ),
+        ListTile(
+          leading: const Icon(Icons.edit_outlined),
+          title: Text(Localizations.localeOf(context).languageCode == 'zh'
+              ? '编辑虚拟按键' : 'Edit virtual keys'),
+          onTap: () {
+            _virtualKeysKey.currentState?.editLayout();
+            setState(() => _showOperations = false);
+          },
+        ),
         if (!isWeb)
           futureBuilder(
             future: gFFI.invokeMethod("get_value", "KEY_IS_SUPPORT_VOICE_CALL"),

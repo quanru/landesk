@@ -89,7 +89,8 @@ void main() {
     await tester.pumpAndSettle();
     expect(tester.getTopLeft(escape), moved);
     await tester.runAsync(() async {
-      await tester.tap(find.bySemanticsLabel('Toggle virtual keys'));
+      expect(find.bySemanticsLabel('Toggle virtual keys'), findsNothing);
+      tester.state<CustomKeyOverlayState>(find.byType(CustomKeyOverlay)).setVisible(false);
       await Future<void>.delayed(const Duration(milliseconds: 150));
     });
     await tester.pumpAndSettle();
@@ -240,6 +241,40 @@ void main() {
     await tester.pumpAndSettle();
     expect(events.last, 'Meta:false');
     await finger.cancel();
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('opening operations releases modifiers and preserves overlay state', (tester) async {
+    final key = GlobalKey<CustomKeyOverlayState>();
+    final events = <String>[];
+    Widget app(bool active) => MaterialApp(home: Scaffold(body: Offstage(
+      offstage: !active,
+      child: CustomKeyOverlay(key: key, active: active, send: (_) async {},
+        write: (name, down, {required ctrl, required alt, required shift, required command}) async {
+          events.add('$name:$down');
+        }),
+    )));
+    await tester.runAsync(() async {
+      await tester.pumpWidget(app(true));
+      await Future<void>.delayed(const Duration(milliseconds: 200));
+    });
+    await tester.pumpAndSettle();
+    final state = key.currentState;
+    final finger = await tester.startGesture(tester.getCenter(find.text('Cmd')));
+    await tester.runAsync(() async { await Future<void>.delayed(const Duration(milliseconds: 10)); });
+    expect(events.last, 'Meta:true');
+    await tester.pumpWidget(app(false));
+    await tester.runAsync(() async { await Future<void>.delayed(const Duration(milliseconds: 10)); });
+    expect(events.last, 'Meta:false');
+    expect(key.currentState, same(state));
+    key.currentState!.setVisible(false);
+    await tester.pumpWidget(app(true));
+    expect(find.text('Cmd'), findsNothing);
+    key.currentState!.setVisible(true);
+    await tester.pump();
+    expect(find.text('Cmd'), findsOneWidget);
+    await finger.cancel();
+    await tester.runAsync(() async { await Future<void>.delayed(const Duration(milliseconds: 200)); });
     await tester.pumpWidget(const SizedBox.shrink());
   });
 

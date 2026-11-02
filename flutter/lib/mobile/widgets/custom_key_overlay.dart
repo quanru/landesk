@@ -24,12 +24,13 @@ class _KeySpot {
 }
 
 /// Place outside the remote pointer/gesture listeners so key touches stay local.
-/// Keys stay down while touched. Long press the toggle to edit the layout.
+/// Keys stay down while touched. Visibility and editing are controlled by Operations.
 /// Layout is local to the iPad and persists across sessions.
 class CustomKeyOverlay extends StatefulWidget {
   const CustomKeyOverlay({
     super.key,
     required this.send,
+    this.active = true,
     this.write,
     this.mouseScroll,
     this.isMac = true,
@@ -39,16 +40,57 @@ class CustomKeyOverlay extends StatefulWidget {
   final Future<void> Function(RemoteShortcut) send;
   final RemoteKeyWriter? write;
   final Future<void> Function(int)? mouseScroll;
+  final bool active;
   final bool isMac;
   final String profileId;
   final String Function(String) translate;
 
   @override
-  State<CustomKeyOverlay> createState() => _CustomKeyOverlayState();
+  State<CustomKeyOverlay> createState() => CustomKeyOverlayState();
 }
 
-class _CustomKeyOverlayState extends State<CustomKeyOverlay>
+class CustomKeyOverlayState extends State<CustomKeyOverlay>
     with WidgetsBindingObserver {
+  bool get visible => _visible;
+  int _loadGeneration = 0;
+
+  void setVisible(bool value) {
+    if (!_loaded) return;
+    _cancelled = true;
+    _releaseKeys();
+    setState(() {
+      _visible = value;
+      _edit = false;
+    });
+    _save();
+  }
+
+  void editLayout() {
+    if (!_loaded) return;
+    _releaseKeys();
+    setState(() {
+      _visible = true;
+      _edit = true;
+    });
+  }
+
+  @override
+  void didUpdateWidget(covariant CustomKeyOverlay oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!widget.active && oldWidget.active) {
+      _cancelled = true;
+      _releaseKeys();
+    }
+    if (oldWidget.isMac != widget.isMac || oldWidget.profileId != widget.profileId) {
+      _releaseKeys();
+      _spots = _defaults();
+      _mousePositions.clear();
+      _visible = true;
+      _loaded = false;
+      _load();
+    }
+  }
+
   bool _cancelled = false;
   RemoteHeldKeys? _heldKeys;
   final Map<int, String> _touches = {};
@@ -166,10 +208,13 @@ class _CustomKeyOverlayState extends State<CustomKeyOverlay>
     super.dispose();
   }
 
-  Future<File> _file() async =>
-      File('${(await getApplicationSupportDirectory()).path}/$_filename');
+  Future<File> _file() async {
+    final filename = _filename;
+    return File('${(await getApplicationSupportDirectory()).path}/$filename');
+  }
 
   Future<void> _load() async {
+    final generation = ++_loadGeneration;
     try {
       var file = await _file();
       if (!await file.exists()) {
@@ -181,7 +226,7 @@ class _CustomKeyOverlayState extends State<CustomKeyOverlay>
       final data =
           jsonDecode(await file.readAsString()) as Map<String, dynamic>;
       final rows = (data['spots'] as List).cast<Map<String, dynamic>>();
-      if (!mounted || rows.length > 40) return;
+      if (!mounted || generation != _loadGeneration || rows.length > 40) return;
       setState(() {
         _spots = rows.map(_KeySpot.fromJson).toList();
         // Retire the old built-in chords while retaining user-created macros,
@@ -234,7 +279,7 @@ class _CustomKeyOverlayState extends State<CustomKeyOverlay>
     } catch (e) {
       debugPrint('CustomKeyOverlay using default layout: $e');
     } finally {
-      if (mounted) setState(() => _loaded = true);
+      if (mounted && generation == _loadGeneration) setState(() => _loaded = true);
     }
   }
 
@@ -347,8 +392,8 @@ class _CustomKeyOverlayState extends State<CustomKeyOverlay>
                 },
               ),
             ),
-          // Always available, including when the keys are hidden.
-          Positioned(
+          // Editing retains a Done control; visibility lives in Operations.
+          if (_edit) Positioned(
             top: bottomRowTop,
             left: 12,
             child: Material(
