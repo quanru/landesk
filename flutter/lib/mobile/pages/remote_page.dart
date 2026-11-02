@@ -692,7 +692,7 @@ class _RemotePageState extends State<RemotePage> with WidgetsBindingObserver {
         SwitchListTile(
           secondary: const Icon(Icons.keyboard_alt_outlined),
           title: Text(Localizations.localeOf(context).languageCode == 'zh'
-              ? '显示虚拟按键' : 'Show virtual keys'),
+              ? '虚拟按键' : 'Virtual keys'),
           value: _virtualKeysKey.currentState?.visible ?? true,
           onChanged: (value) {
             _virtualKeysKey.currentState?.setVisible(value);
