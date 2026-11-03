@@ -71,3 +71,7 @@ res/pkg/
 
 # Locally packaged release artifacts
 /dist/releases/
+
+# Current product artwork and documentation captures.
+!assets/brand/landesk.png
+!assets/screenshots/connection.png

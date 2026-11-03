@@ -5,6 +5,7 @@
 
 | 已提供的二进制 | 构建源码提交 | 源码快照 |
 | --- | --- | --- |
+| macOS 1.3.0（99）、iOS TestFlight 1.3.0（99），公开预览 `v1.3.0-preview.20261030` | `03e92c382b5f484a978039a95b8f96b52371217e`（按该 Release 发布记录） | [构建 99 源码及固定子模块](https://github.com/quanru/landesk/releases/download/v1.3.0-preview.20261030/landesk-99-source.tar.gz)，SHA-256 见同一 Release 的 SHA256SUMS.txt |
 | 本机 macOS 1.3.0 (78)，新增许可入口 | `638463eef` | [构建 78 源码及子模块](https://github.com/quanru/landesk/releases/download/v1.3.0-preview.20261028/landesk-78-source.tar.gz)（校验见 landesk-78-source.sha256） |
 | macOS 1.3.0 (75)，GitHub `v1.3.0-preview.20261028` | `88d5d5c18` | [Mac 源码及子模块](https://github.com/quanru/landesk/releases/download/v1.3.0-preview.20261028/landesk-macos-75-source.tar.gz) |
 | iOS TestFlight 1.3.0 (76) | `44dd99b6b` | [iOS 76 源码及子模块](https://github.com/quanru/landesk/releases/download/v1.3.0-preview.20261028/landesk-ios-76-source.tar.gz) |
@@ -23,5 +24,5 @@ Mac 构建号 75 被本机更新复用：公开 ZIP 对应第一行，本机更�
 Corresponding Source。** Cargo/pub/native 第三方依赖尚未全部随归档打包；
 获取方式、构建环境和未完成项见 [构建与许可说明](README.md)。
 
-[最新开发源码](https://github.com/quanru/landesk/tree/localdesk/main)
+[最新开发源码](https://github.com/quanru/landesk/tree/main)
 不代替上面特定构建的源码。
