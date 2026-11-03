@@ -33,7 +33,7 @@ ZIP 的 SHA-256 为 `b73e8d74aab537ec26fde08b3ddda5b1ff1c95f8313a6a64697efd2446a
 
 ## 官网、下载与上游署名修订
 
-正式官网为 https://landesk.lifeos.md/ ，中文入口 /zh/。中英文 README 增加各平台实际安装包的公开下载表，飞书固定文件为主、GitHub 为备；固定包均完成全字节 SHA-256 回读。TestFlight 公开组与链接已建立并关联 1.3.0（99），但尚未通过 Apple 外部审核，文案明确标记审核中。
+正式官网为 https://landesk.lifeos.md/ ，中文入口 /zh/。中英文 README 增加各平台实际安装包的公开下载表，飞书固定文件为主、GitHub 为备；固定包均完成全字节 SHA-256 回读。TestFlight 公开组与链接已建立并关联 1.3.0（99），但尚未通过 Apple 外部审核，文案明确标记尚未开放、待外部审核。
 
 Credits 明确 Fork 自 zibo-chen/SubnetDesk、基于 RustDesk，保留两级上游及贡献者署名、NOTICE 和 AGPL；不保留原作者联系方式或 Discord 邀请。`docs/landesk-common.md` 说明当前共享依赖 fork 的 5 个产品行为提交。
 
