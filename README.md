@@ -4,7 +4,7 @@
 
 # landesk
 
-Derived from [SubnetDesk](https://github.com/zibo-chen/SubnetDesk) and [RustDesk](https://github.com/rustdesk/rustdesk), under AGPL-3.0.
+Based on [RustDesk](https://github.com/rustdesk/rustdesk), using [SubnetDesk](https://github.com/zibo-chen/SubnetDesk)'s LAN-only implementation, under AGPL-3.0.
 This development branch includes iPad virtual keys. See [migration and validation](docs/localdesk-migration.md).
 
 Only private IP endpoints are accepted. Both ends must use the LAN protocol; stock RustDesk peers are not compatible. Online update and plugin features are excluded from landesk builds.
@@ -14,7 +14,7 @@ Only private IP endpoints are accepted. Both ends must use the LAN protocol; sto
 </p>
 
 <p align="center">
-  A fork of <a href="https://github.com/zibo-chen/SubnetDesk">SubnetDesk</a>, built on <a href="https://github.com/rustdesk/rustdesk">RustDesk</a>, independently maintained built for LANs, routed private networks, and VPNs.
+  Built on <a href="https://github.com/rustdesk/rustdesk">RustDesk</a> and <a href="https://github.com/zibo-chen/SubnetDesk">SubnetDesk</a>'s LAN-only implementation, independently maintained for LANs, routed private networks, and VPNs.
 </p>
 
 <p align="center">
@@ -180,7 +180,7 @@ Report bugs and request features in [GitHub Issues](https://github.com/quanru/la
 
 ## 🙏 Credits and license
 
-LanDesk is a fork of [SubnetDesk](https://github.com/zibo-chen/SubnetDesk) by [zibo-chen](https://github.com/zibo-chen), which is based on [RustDesk](https://github.com/rustdesk/rustdesk). Thank you to both upstream projects and all their contributors for the remote desktop foundations and LAN-first work.
+LanDesk is a direct GitHub fork of [RustDesk](https://github.com/rustdesk/rustdesk). Thank you to RustDesk and its contributors for the remote desktop foundation. LanDesk later adopted the LAN-only implementation from [SubnetDesk](https://github.com/zibo-chen/SubnetDesk), based on commit `cdde2030deb18dcc148c13063b52c747dd3b448e`. Thank you to [zibo-chen](https://github.com/zibo-chen) and the SubnetDesk contributors for that work.
 
 LanDesk is independently maintained by [quanru](https://github.com/quanru) and contributors. It is not an official release of either upstream project. Existing copyright notices, [NOTICE](NOTICE), and dependency licenses remain applicable; AGPL-3.0 attribution is retained.
 

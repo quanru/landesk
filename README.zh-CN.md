@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  Fork 自 <a href="https://github.com/zibo-chen/SubnetDesk">SubnetDesk</a>，基于 <a href="https://github.com/rustdesk/rustdesk">RustDesk</a> 独立维护，适用于局域网、可路由私网与 VPN。
+  基于 <a href="https://github.com/rustdesk/rustdesk">RustDesk</a>，采用 <a href="https://github.com/zibo-chen/SubnetDesk">SubnetDesk</a> 的局域网连接实现，独立维护，适用于局域网、可路由私网与 VPN。
 </p>
 
 <p align="center">
@@ -175,7 +175,7 @@ cd landesk
 
 ## 🙏 致谢与许可
 
-LanDesk Fork 自 [zibo-chen](https://github.com/zibo-chen) 维护的 [SubnetDesk](https://github.com/zibo-chen/SubnetDesk)，后者基于 [RustDesk](https://github.com/rustdesk/rustdesk)。感谢这两个上游项目及其贡献者提供的远程桌面基础与局域网适配工作。
+LanDesk 在 GitHub 上直接 Fork 自 [RustDesk](https://github.com/rustdesk/rustdesk)，感谢 RustDesk 及其贡献者提供的远程桌面基础。后续接入了 [SubnetDesk](https://github.com/zibo-chen/SubnetDesk) 的局域网实现，基线提交为 `cdde2030deb18dcc148c13063b52c747dd3b448e`；感谢 [zibo-chen](https://github.com/zibo-chen) 及 SubnetDesk 贡献者的工作。
 
 本项目由 [quanru](https://github.com/quanru) 和贡献者独立维护，并非任一上游的官方发行版。保留原有版权声明、[NOTICE](NOTICE)、AGPL-3.0 许可与第三方依赖许可证。
 

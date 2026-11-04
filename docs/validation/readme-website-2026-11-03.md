@@ -43,3 +43,20 @@ Credits 明确 Fork 自 zibo-chen/SubnetDesk、基于 RustDesk，保留两级上
 ## 2026-11-04 实连素材补齐
 
 已使用 Android 35 备用模拟器上的 LanDesk 连接真实 Mac（`/Applications/LanDesk.app`，1.3.0 build 99），在空工作区中远程输入新建文本、向计算器发送 12 + 30，实际得到 42。中英文 README 首图替换为该会话截图；没有展示认证凭据、账号页面、聊天或私人文件。源视频和过程证据在 Studio `.verify/landesk-connected/`；公开截图与官网素材一致。保留现有 RustDesk、SubnetDesk 及贡献者 credit。
+
+
+## 2026-11-04 Fork 来源纠正
+
+GitHub API 返回 `quanru/landesk` 的 `fork=true`，`parent.full_name=rustdesk/rustdesk`、`source.full_name=rustdesk/rustdesk`。此前将 README 的 SubnetDesk 描述直接解释为 GitHub fork 链路，结论错误。中英文 README 与宣传文案已改为直接 fork 自 RustDesk；保留 SubnetDesk / zibo-chen 的既有致谢及全部 NOTICE、许可证，不据此推断代码引入历史。上方旧的“两级上游”判断以本节纠正为准。
+
+
+## 2026-11-04 代码来源复核
+
+补全原本只有 4 个提交的浅克隆历史后确认，SubnetDesk 的代码确实在当前应用中使用，因此保留相关致谢和 NOTICE。
+
+- SubnetDesk 基线 `cdde2030deb18dcc148c13063b52c747dd3b448e` 是当前 HEAD `8225c97c4` 的祖先。
+- LanDesk 提交 `0a4bc857028cb2c28fa5c9b79f7fc3cb101b4ef7` 的唯一父提交就是上述基线，提交说明明确为 “Base on SubnetDesk cdde2030”。
+- `src/lan_server.rs` 由 SubnetDesk 的 `de81051cd4` 引入，当前文件相对上述基线仅新增 4 行，包括私有 IP 校验和测试断言；其余局域网服务实现仍在使用。
+- mDNS 发现提交 `f5ac1ec575cc6d85fba6bf098f980b1358f62db2` 同样包含在当前历史中。
+
+GitHub parent/source 为 RustDesk 只说明平台上的 fork 关系，不能排除后续接入其他项目代码。README 现明确区分这两件事；此前仅说“保留既有致谢”的表述不足以解释实际来源，以本节为准。本次未推送或发布。
