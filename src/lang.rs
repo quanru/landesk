@@ -135,6 +135,10 @@ fn resolve_lang(saved_lang: &str, locale: &str, cjk_fallback: bool) -> String {
                 "zh-cn"
             })
             .to_owned();
+            // Hong Kong, Macao and the Hant script use Traditional Chinese.
+            if !locale.contains("hans") && ["hk", "mo", "hant"].iter().any(|x| locale.contains(x)) {
+                lang = "zh-tw".to_owned();
+            }
         }
     }
     if lang.is_empty() {
@@ -144,6 +148,12 @@ fn resolve_lang(saved_lang: &str, locale: &str, cjk_fallback: bool) -> String {
             .map(|x| x.split("_").next().unwrap_or_default())
             .unwrap_or_default()
             .to_owned();
+        // Translation table names differ from the system language codes.
+        if lang == "kk" {
+            lang = "kz".to_owned();
+        } else if lang == "ka" {
+            lang = "ge".to_owned();
+        }
     }
     if cjk_fallback && is_cjk_lang(&lang) {
         "en".to_owned()
@@ -334,5 +344,21 @@ mod test {
         assert_eq!(f("zh-cn", "en-US", false), "zh-cn");
         assert_eq!(f("", "zh_TW", false), "zh-tw");
         assert_eq!(f("", "ja-JP", false), "ja");
+    }
+
+    #[test]
+    fn system_locales_select_existing_translation_tables() {
+        for locale in ["zh_HK.UTF-8", "zh-Hant-HK", "zh-Hant", "zh_MO"] {
+            assert_eq!(super::resolve_lang("", locale, false), "zh-tw");
+        }
+        assert_eq!(super::resolve_lang("", "zh-Hans-HK", false), "zh-cn");
+        assert_eq!(super::resolve_lang("zh-cn", "zh-Hant-HK", false), "zh-cn");
+        for locale in ["kk_KZ.UTF-8", "kk-KZ"] {
+            assert_eq!(super::resolve_lang("", locale, false), "kz");
+        }
+        for locale in ["ka_GE.UTF-8", "ka-GE"] {
+            assert_eq!(super::resolve_lang("", locale, false), "ge");
+        }
+        assert_eq!(super::resolve_lang("", "zh_HK", true), "en");
     }
 }

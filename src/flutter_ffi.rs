@@ -1342,6 +1342,16 @@ fn recent_lan_endpoint_to_map(
     })
 }
 
+// Only mobile resolves peer configuration through APP_DIR. Desktop configuration
+// must remain readable when the documents-directory lookup is unavailable.
+fn peer_config_path_ready() -> bool {
+    if cfg!(any(target_os = "android", target_os = "ios")) {
+        !config::APP_DIR.read().unwrap().is_empty()
+    } else {
+        true
+    }
+}
+
 pub fn main_load_recent_peers() {
     let push_to_flutter = |peers| {
         let data = HashMap::from([("name", "load_recent_peers".to_owned()), ("peers", peers)]);
@@ -1351,7 +1361,7 @@ pub fn main_load_recent_peers() {
         );
     };
 
-    if !config::APP_DIR.read().unwrap().is_empty() {
+    if peer_config_path_ready() {
         let discovered = config::LanPeers::load().peers;
         let now = hbb_common::get_time();
         let peers: Vec<_> = LocalConfig::get_recent_lan_endpoints()
@@ -1372,7 +1382,7 @@ pub fn main_load_fav_peers() {
             serde_json::ser::to_string(&data).unwrap_or("".to_owned()),
         );
     };
-    if !config::APP_DIR.read().unwrap().is_empty() {
+    if peer_config_path_ready() {
         let favs = get_fav();
         let discovered = config::LanPeers::load().peers;
         let now = hbb_common::get_time();

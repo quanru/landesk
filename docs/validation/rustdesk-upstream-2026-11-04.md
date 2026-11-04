@@ -55,3 +55,52 @@
 这些是组件回归测试。X11 FFI、Android Parcel／Binder 和协议类型使用测试替身；文件传输测试编译的是实际请求分类函数和权限条件，未启动远程会话。当前没有完整 Flutter SDK／原生依赖构建环境，本轮未完成全端应用构建、Android 真机采集、真实 Binder 事务、Linux X11 会话或跨端文件剪贴板验证。没有对虚拟键盘、旋转、现有安装包或 TestFlight 状态作新的成功声明。
 
 本轮仅本地源码接入，不推送、不发版。后续发布前应完成受影响平台的原生构建与真实会话验证。
+
+
+## 第二批：扩大核对与接入范围
+
+用户指出首批 5 项不足后，继续核对全部 377 个上游提交，并追加 20 项接入。首批只解决了一组优先问题，不代表剩余差异已全部处理。完整列表见 [逐提交清单](rustdesk-upstream-audit-2026-11-04.md)。其中的“已有移植记录”只说明可追溯到对应实现，不等同于整份补丁逐行一致；“暂缓”和“优先待移植”均不是完成状态。
+
+第二批源码从 `d69ea4261` 准备，受影响的 12 个生产文件按路径排序、逐文件 SHA-256 生成 JSON 后的总指纹为 `49efd7e81446b7aa00f6e51b7f04b4ebe51a8f5619f3e53e8087d7e608e942cd`。文件集合为 Cargo.lock、PipeWire 实现及 src 下 client、io_loop、flutter、flutter_ffi、ipc、lang、gtk_sudo、linux、audio_service、wayland；不包含此前 README 的未提交来源说明。
+
+| RustDesk 提交 | 原作者 | 接入内容 |
+| --- | --- | --- |
+| [`0cbeb0473`](https://github.com/rustdesk/rustdesk/commit/0cbeb0473099f813c32077d446fef513061b3973) | Chris21x | 向 Linux 用户态服务透传已有 PulseAudio／PipeWire 延迟环境变量，不制造默认值。 |
+| [`bd9262397`](https://github.com/rustdesk/rustdesk/commit/bd9262397208c509ea97af61f0d44621ef25611c) | Leo Camus | 从行首匹配 xrandr 输出名，避免 DP-1 误匹配 eDP-1。 |
+| [`106f700be`](https://github.com/rustdesk/rustdesk/commit/106f700be4a9a924a60e29783520cd43a7811239) | Lukas | 识别 Debian 的 gdm3/daemon.conf。 |
+| [`01e1323e5`](https://github.com/rustdesk/rustdesk/commit/01e1323e51d998084698a1b1e09b42040bda157d) | Lukas | 分辨率列表遇到隔行模式后继续解析后续逐行模式。 |
+| [`21c488b6c`](https://github.com/rustdesk/rustdesk/commit/21c488b6ce80159484015dfd0f58ef7748a24f6c) | Lukas | 按 passwd 的 shell 字段识别常见 greeter shell 路径，避免匹配用户主目录。 |
+| [`3ec041644`](https://github.com/rustdesk/rustdesk/commit/3ec041644d6c18a6fbf8b8291bf60ef71614e513) | RustDesk | 修正 GTK sudo 的错误提示和 sudo-rs 重试状态。 |
+| [`68a35e65f`](https://github.com/rustdesk/rustdesk/commit/68a35e65f228244ebdb5d4ce3ad386eca8292672) | RustDesk | Unix 原生 Flutter 入口忽略 SIGPIPE，避免断管导致进程退出。 |
+| [`c8a4e0680`](https://github.com/rustdesk/rustdesk/commit/c8a4e0680cb553b5547cfccfb859316688078cd6) | Lukas | 远程系统音频优先采集默认输出设备的 monitor；失败时保留原回退。 |
+| [`8814503e0`](https://github.com/rustdesk/rustdesk/commit/8814503e06a63431ea6d16b1c24ec40ee1a84a21) | Lukas | 固定 pulsectl 的默认音源修复提交。 |
+| [`851d2df88`](https://github.com/rustdesk/rustdesk/commit/851d2df88cc8ef7a8368f74e8b2e7254861ee00a) | RustDesk | 修复音频 IPC 断开／读取失败后的忙循环及语音通话转发空转。 |
+| [`e4b9594c5`](https://github.com/rustdesk/rustdesk/commit/e4b9594c5ee688f63a607f1742816def0b634e46) | Vojtěch Lapuník | Android 与 iOS 均不强制固定 64 帧音频缓冲区。 |
+| [`e5bc204fe`](https://github.com/rustdesk/rustdesk/commit/e5bc204fe4dacc4db9c3cdb1f1338813986c89e7) | Zixun LI | PipeWire 捕获不使用时钟等待陈旧时间戳，避免耗尽合成器缓冲。 |
+| [`4411d10f4`](https://github.com/rustdesk/rustdesk/commit/4411d10f450a514c01c83e4f8af7151836300abb) | RustDesk | Flatpak 以当前进程用户作为活动用户，避免依赖容器外 loginctl。 |
+| [`beeeef14f`](https://github.com/rustdesk/rustdesk/commit/beeeef14f0a61bd622aacf042b4396bdeaed9b61) | rustdesk | 适配现有 Wayland 阶段错误逻辑，透传无法分类的实际错误。 |
+| [`182356ee8`](https://github.com/rustdesk/rustdesk/commit/182356ee8bbcb3a3c19754687660eb0d0404b0b6) | Minh Nguyen | 适配 LanDesk 的本地最近设备与收藏读取：桌面不受 APP_DIR 未设置影响，移动端仍保留保护；不恢复云地址簿。 |
+| [`25d274227`](https://github.com/rustdesk/rustdesk/commit/25d27422733920926cff0c27f8e37f8fdbd26288) | Lukas | 系统 kk／ka locale 映射到现有 kz／ge 翻译表。 |
+| [`f7b0af78c`](https://github.com/rustdesk/rustdesk/commit/f7b0af78cbbfc90aa5403fbace93b4fa99c1abbb) | Lukas | 香港、澳门和 Hant locale 选择繁体；保留用户明确选择及现有 CJK 回退。 |
+| [`91c9fccbb`](https://github.com/rustdesk/rustdesk/commit/91c9fccbb0f7bfe5f11644d5fbdec9b23fa10540) | changshenhan | 仅接入 bytes 1.11.1、crossbeam-epoch 0.9.20；quinn 已被移除，不恢复它。 |
+| [`3202d1764`](https://github.com/rustdesk/rustdesk/commit/3202d1764c58902db8c97d803f1f63fa7cbf9e45) | Shaan Majid | 升级 rustls-pki-types 1.15.1、rustls-webpki 0.103.16 和 webpki-root-certs 1.0.10。 |
+| [`f96a44a01`](https://github.com/rustdesk/rustdesk/commit/f96a44a0190e5e5ad79ceed298efbbc7a58a03db) | github-actions[bot] | 将 webpki-roots 更新到上游固定的 1.0.11。 |
+
+### 第二批验证与限制
+
+- `test-upstream-platform.py`：14 个用例通过，包括生产 xrandr 解析、greeter shell 判断、Flatpak 用户选择、桌面配置路径、语言选择和音频延迟变量。系统边界使用测试替身，不操作真实用户配置。
+- 6 个升级后的 registry 依赖在 Rust 1.82.0 下编译并运行基础调用；其版本、registry 来源和 SHA-256 与应用 Cargo.lock 一致。没有使用比应用锁定版本更新的 zeroize，以免引入 Rust 2024 edition 要求。
+- 用 syn 解析全部 11 个修改的 Rust 生产文件，语法检查通过；这不代替各平台条件编译和链接。
+- `check_lan_only_residuals.sh`、`check_flutter_toolchain.sh`、Python 脚本语法及 `git diff --check` 通过。
+- 本轮没有修改 Flutter 皮肤、虚拟键盘、旋转、连接认证协议或固定的 landesk-common 子模块提交。未构建安装包、未推送、未部署、未更改 TestFlight。
+- 尚未验证：真实 PulseAudio／PipeWire、GTK sudo、Linux 登录屏幕／Flatpak、完整 Rust／Flutter 应用及跨平台运行。这些接入不能冒充已经进入用户安装包。
+
+同时只读拉取 SubnetDesk `bb97b0e5f7c383141dd3bf86ca9c673aac7b5df0`（2026-11-02），确认其在原基线之后进入 2.0，包括新 UI、用户会话运行时及 Windows 适配；未把整条分支合入 LanDesk。维护时应分别跟踪 RustDesk 通用修复和 SubnetDesk 局域网底座，保留 LanDesk 的移动端与品牌差异。
+
+
+第二批清单统计：25 项为本次两批接入，14 项存在等价补丁，23 项有移植记录，3 项已有对应实现；106 项是本轮不接入的上游文档、翻译或 CI 内容，36 项涉及已移除流程，6 项被上游撤回／替代。其余 **164 项仍暂缓，其中 10 项是安全优先队列**。这些是提交分类数量，不是独立缺陷数量；不能宣称 LanDesk 已完整追平 RustDesk。
+
+当前本地注册了 `rustdesk` 和 `subnetdesk` 两个只用于拉取的上游 remote，`origin` 仍为 quanru/landesk；新克隆需自行添加这些本地 remote。后续核对流程为：拉取官方上游、运行 `tools/localdesk/audit-upstream.py`、按依赖移植、运行相应组件和目标平台检查，再更新清单。脚本不自动修改源代码或触发远程 CI。
+
+
+第二批锁文件核对补充：最初从 RustDesk 拷入的 rustls-pki-types 条目包含本工程没有启用的 `web-time` 依赖边，完整 `cargo metadata --locked` 检查识别出锁文件需要更新。已让 Cargo 重新解析该条目并移除不适用的边，保留原有 cfg-if 和宏工具依赖版本，避免无关升级。随后 `cargo metadata --offline --locked` 到达依赖包读取阶段，但因本机缺少 `ab_glyph 0.2.31` 等原有缓存而退出，**完整 metadata 检查未标为通过**。6 个实际升级依赖的组件编译、来源及哈希核对已通过；完整应用构建仍待后续目标平台验证。
