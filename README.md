@@ -46,12 +46,12 @@ Only private IP endpoints are accepted. Both ends must use the LAN protocol; sto
 </p>
 
 <p align="center">
-  <img src="assets/screenshots/device-discovery.png" alt="Current LanDesk 1.3.0 macOS device discovery, showing the initial empty state" width="880">
+  <img src="assets/screenshots/connected-desktop.png" alt="LanDesk 1.3.0: Android connected to a real macOS desktop, with live text input and calculator" width="880">
 </p>
 
 <a id="why-localdesk"></a>
 
-The screenshots below show the real macOS 1.3.0 (99) preview in Chinese. The initial discovery list is empty until a nearby compatible peer is found.
+The lead screenshot shows an Android emulator connected to a real macOS desktop using LanDesk 1.3.0 (99), with remote text input and a calculator. The settings and connection screenshots below show the macOS preview in Chinese.
 
 ## 💡 Why landesk
 

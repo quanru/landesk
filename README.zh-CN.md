@@ -41,12 +41,12 @@
 </p>
 
 <p align="center">
-  <img src="assets/screenshots/device-discovery.png" alt="当前 LanDesk 1.3.0 macOS 设备发现，展示初始空状态" width="880">
+  <img src="assets/screenshots/connected-desktop.png" alt="LanDesk 1.3.0：Android 实际连接 macOS 桌面，远程输入文字并操作计算器" width="880">
 </p>
 
 <a id="why-localdesk"></a>
 
-以下截图取自真实 macOS 1.3.0（99）预览版，界面为简体中文。初始发现列表为空，发现附近兼容设备后才会显示设备卡片。
+首图为 Android 模拟器通过 LanDesk 1.3.0（99）实际连接 macOS 桌面，展示远程文字输入与计算器。下方设置和连接截图来自简体中文 macOS 预览版。
 
 ## 💡 为什么选择 landesk
 

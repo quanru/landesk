@@ -38,3 +38,8 @@ ZIP 的 SHA-256 为 `b73e8d74aab537ec26fde08b3ddda5b1ff1c95f8313a6a64697efd2446a
 Credits 明确 Fork 自 zibo-chen/SubnetDesk、基于 RustDesk，保留两级上游及贡献者署名、NOTICE 和 AGPL；不保留原作者联系方式或 Discord 邀请。`docs/landesk-common.md` 说明当前共享依赖 fork 的 5 个产品行为提交。
 
 当前没有新增成功连接素材：手机 USB 安装尚未成功，已请用户完成一次安装；不把设置弹窗当成已连接画面。
+
+
+## 2026-11-04 实连素材补齐
+
+已使用 Android 35 备用模拟器上的 LanDesk 连接真实 Mac（`/Applications/LanDesk.app`，1.3.0 build 99），在空工作区中远程输入新建文本、向计算器发送 12 + 30，实际得到 42。中英文 README 首图替换为该会话截图；没有展示认证凭据、账号页面、聊天或私人文件。源视频和过程证据在 Studio `.verify/landesk-connected/`；公开截图与官网素材一致。保留现有 RustDesk、SubnetDesk 及贡献者 credit。
