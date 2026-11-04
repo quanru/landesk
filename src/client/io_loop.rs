@@ -1,3 +1,8 @@
+use super::cursor::{decode_cursor_data, CursorDedupe};
+#[cfg(any(feature = "flutter", test))]
+use super::cursor::cursor_shape;
+#[cfg(any(feature = "flutter", test))]
+pub(crate) use super::cursor::kept_cursor_rgba;
 #[cfg(not(any(target_os = "android", target_os = "ios")))]
 use crate::clipboard::{update_clipboard, ClipboardSide};
 #[cfg(not(any(target_os = "ios")))]
@@ -85,6 +90,7 @@ pub struct Remote<T: InvokeUiSession> {
     chroma: Arc<RwLock<Option<Chroma>>>,
     last_record_state: bool,
     sent_close_reason: bool,
+    cursor_dedupe: CursorDedupe,
 }
 
 #[derive(Default)]
@@ -134,6 +140,7 @@ impl<T: InvokeUiSession> Remote<T> {
             chroma: Default::default(),
             last_record_state: false,
             sent_close_reason: false,
+            cursor_dedupe: Default::default(),
         }
     }
 
@@ -1444,8 +1451,30 @@ impl<T: InvokeUiSession> Remote<T> {
                         _ => {}
                     }
                 }
+                Some(message::Union::CursorData(cd)) if self.dedupes_cursors() => {
+                    self.set_cursor_data_by_content(cd);
+                }
+                Some(message::Union::CursorId(id)) if self.dedupes_cursors() => {
+                    self.handler
+                        .set_cursor_id(self.cursor_dedupe.id(id).to_string());
+                }
                 Some(message::Union::CursorData(cd)) => {
-                    self.handler.set_cursor_data(cd);
+                    let id = cd.id;
+                    #[cfg(feature = "flutter")]
+                    let compressed = cd.colors.clone();
+                    match decode_cursor_data(cd) {
+                        Ok(cd) => {
+                            #[cfg(feature = "flutter")]
+                            self.keep_cursor_shape(cursor_shape(id, &cd, &compressed));
+                            self.handler.set_cursor_data(cd)
+                        }
+                        Err(err) => {
+                            log::warn!("Rejected cursor {id}: {err}");
+                            // The peer shows it now: selected, the UI treats it as a shape it
+                            // lacks, as it will when the peer selects it again.
+                            self.handler.set_cursor_id(id.to_string());
+                        }
+                    }
                 }
                 Some(message::Union::CursorId(id)) => {
                     self.handler.set_cursor_id(id.to_string());
@@ -2332,6 +2361,47 @@ impl<T: InvokeUiSession> Remote<T> {
         msg.set_misc(misc);
         self.sender.send(Data::Message(msg)).ok();
     }
+
+    /// A shape that decoded, for the UI to ask for again; see `Session::cursor_shapes`.
+    #[cfg(feature = "flutter")]
+    fn keep_cursor_shape(&self, shape: CursorData) {
+        self.handler
+            .cursor_shapes
+            .write()
+            .unwrap()
+            .insert(shape.id, shape);
+    }
+
+    fn dedupes_cursors(&self) -> bool {
+        !crate::is_peer_naming_cursors_by_content(self.handler.lc.read().unwrap().version)
+    }
+
+    /// A shape the UI already has, under whatever handle, is only selected.
+    fn set_cursor_data_by_content(&mut self, cd: CursorData) {
+        let peer_id = cd.id;
+        let id = CursorDedupe::name(&cd);
+        if self.cursor_dedupe.has_decoded(id) {
+            self.cursor_dedupe.record(peer_id, id);
+            self.handler.set_cursor_id(id.to_string());
+            return;
+        }
+        #[cfg(feature = "flutter")]
+        let compressed = cd.colors.clone();
+        match decode_cursor_data(cd) {
+            Ok(mut cd) => {
+                cd.id = id;
+                self.cursor_dedupe.record(peer_id, id);
+                #[cfg(feature = "flutter")]
+                self.keep_cursor_shape(cursor_shape(id, &cd, &compressed));
+                self.handler.set_cursor_data(cd);
+            }
+            Err(err) => {
+                log::warn!("Rejected cursor {peer_id}: {err}");
+                self.handler
+                    .set_cursor_id(self.cursor_dedupe.rejected(peer_id, id).to_string());
+            }
+        }
+    }
 }
 
 struct RemoveJob {
@@ -2385,5 +2455,73 @@ impl Drop for VideoThread {
     fn drop(&mut self) {
         // since channels are buffered, messages sent before the disconnect will still be properly received.
         *self.discard_queue.write().unwrap() = true;
+    }
+}
+
+#[cfg(test)]
+#[cfg(feature = "flutter")]
+mod tests {
+    use super::*;
+    use crate::flutter::FlutterHandler;
+
+    /// A round's `Remote` over a loopback pair, before any login: what it sends to `peer`
+    /// arrives at `far`.
+    async fn remote_and_peer() -> (Remote<FlutterHandler>, Stream, Stream) {
+        let listener = hbb_common::tcp::new_listener("127.0.0.1:0", false)
+            .await
+            .unwrap();
+        let addr = listener.local_addr().unwrap();
+        let socket = tokio::net::TcpStream::connect(addr).await.unwrap();
+        let local_addr = socket.local_addr().unwrap();
+        let peer = Stream::from(socket, local_addr);
+        let (accepted, far_addr) = listener.accept().await.unwrap();
+        let far = Stream::from(accepted, far_addr);
+        let (sender, receiver) = mpsc::unbounded_channel::<Data>();
+        let remote = Remote::new(Session::<FlutterHandler>::default(), receiver, sender);
+        (remote, peer, far)
+    }
+
+    async fn arrives(far: &mut Stream) -> bool {
+        matches!(hbb_common::timeout(300, far.next()).await, Ok(Some(Ok(_))))
+    }
+
+    fn clipboard() -> Data {
+        let mut msg = Message::new();
+        msg.set_clipboard(Clipboard {
+            content: b"copied while this login was pending".to_vec().into(),
+            ..Default::default()
+        });
+        Data::Message(msg)
+    }
+
+    fn auth_2fa() -> Data {
+        let mut msg = Message::new();
+        msg.set_auth_2fa(Auth2FA {
+            code: "123456".to_owned(),
+            ..Default::default()
+        });
+        Data::Message(msg)
+    }
+
+    // A clipboard queued before this round's login stays here; what the login itself sends
+    // through the same queue does not.
+    #[tokio::test]
+    async fn a_clipboard_queued_before_this_rounds_login_is_dropped() {
+        let (mut remote, mut peer, mut far) = remote_and_peer().await;
+        assert!(!remote.is_connected);
+        assert!(remote.handle_msg_from_ui(clipboard(), &mut peer).await);
+        assert!(
+            !arrives(&mut far).await,
+            "a clipboard went out before the login"
+        );
+        assert!(remote.handle_msg_from_ui(auth_2fa(), &mut peer).await);
+        assert!(arrives(&mut far).await, "the 2FA code was held back");
+
+        remote.is_connected = true;
+        assert!(remote.handle_msg_from_ui(clipboard(), &mut peer).await);
+        assert!(
+            arrives(&mut far).await,
+            "a clipboard after the login was held back"
+        );
     }
 }

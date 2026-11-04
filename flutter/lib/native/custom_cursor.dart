@@ -38,22 +38,21 @@ MouseCursor buildCursorOfCache(
     CursorModel cursor, double scale, CursorData? cache,
     {ViewRotation rotation = ViewRotation.none}) {
   if (cache == null) {
-    return MouseCursor.defer;
+    return _shownCursor(cursor);
   } else {
-    var key = cache.updateGetKey(scale);
-    if (rotation != ViewRotation.none) {
-      key = '${key}_rot${rotation.quarterTurns}';
-    }
+    final key = cursor.nativeKey(cache, scale, rotation: rotation);
     if (cursor.cachedKeys.contains(key)) {
+      cursor.shown(cache, key);
       return FlutterCustomMemoryImageCursor(key: key);
     }
     // data should be checked here, because it may be changed after `updateGetKey()`
     var data = cache.data;
     if (data == null) {
-      return MouseCursor.defer;
+      cursor.restorePixels(cache.id);
+      return _shownCursor(cursor);
     }
-    var width = (cache.width * cache.scale).toInt();
-    var height = (cache.height * cache.scale).toInt();
+    var width = cache.rasterWidth;
+    var height = cache.rasterHeight;
     var hotX = cache.hotx;
     var hotY = cache.hoty;
     // With client-side view rotation the remote view is rotated, so the
@@ -80,6 +79,13 @@ MouseCursor buildCursorOfCache(
         }
       }
     }
+    // Pad after rotation so both orientations keep their mapped hotspot.
+    if (isLinux_ && width != height) {
+      final size = width > height ? width : height;
+      data = _padCursor(data, size);
+      width = size;
+      height = size;
+    }
     debugPrint(
         "Register custom cursor with key $key ($hotX,$hotY)");
     // [Safety]
@@ -95,6 +101,8 @@ MouseCursor buildCursorOfCache(
           ..hotX = hotX
           ..hotY = hotY);
     cursor.addKey(key);
+    cursor.registered(cache, key);
+    cursor.shown(cache, key);
     return FlutterCustomMemoryImageCursor(key: key);
   }
 }
@@ -113,4 +121,25 @@ img2.Image? _decodeCursorImage(Uint8List data, int width, int height) {
     debugPrint("Failed to decode cursor image: $e");
     return null;
   }
+}
+
+// The last shape's cursor stays while the one in use is made, rather than the system one.
+MouseCursor _shownCursor(CursorModel cursor) {
+  final key = cursor.shownKey;
+  return key == null
+      ? MouseCursor.defer
+      : FlutterCustomMemoryImageCursor(key: key);
+}
+
+Uint8List _padCursor(Uint8List data, int size) {
+  final bitmap = img2.decodePng(data);
+  if (bitmap == null) {
+    throw const FormatException('Invalid native cursor PNG');
+  }
+  final padded = img2.copyExpandCanvas(bitmap,
+      newWidth: size,
+      newHeight: size,
+      position: img2.ExpandCanvasPosition.topLeft,
+      toImage: img2.Image(width: size, height: size, numChannels: 4));
+  return Uint8List.fromList(img2.encodePng(padded));
 }

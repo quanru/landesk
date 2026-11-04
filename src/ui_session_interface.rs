@@ -77,6 +77,10 @@ pub struct Session<T: InvokeUiSession> {
     // Indicate whether the session is reconnected.
     // Used to auto start file transfer after reconnection.
     pub reconnect_count: Arc<AtomicUsize>,
+    // Every cursor shape as the peer sent it, compressed, by the id the UI knows it by. The
+    // peer sends a shape once, and a window asks for it whenever it has to draw it again.
+    #[cfg(feature = "flutter")]
+    pub cursor_shapes: Arc<RwLock<HashMap<u64, CursorData>>>,
 }
 
 #[derive(Clone)]
@@ -1730,7 +1734,7 @@ impl<T: InvokeUiSession> Interface for Session<T> {
                 }
                 let p = self.lc.read().unwrap().should_auto_login();
                 if !p.is_empty() {
-                    input_os_password(p, true, self.clone());
+                    crate::client::auto_login(p, &pi, self.clone());
                 }
             }
             let current = &pi.displays[pi.current_display as usize];

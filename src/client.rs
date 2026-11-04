@@ -85,6 +85,8 @@ pub mod file_trait;
 pub mod helper;
 pub mod io_loop;
 mod prelogin;
+mod cursor;
+mod auto_login;
 pub mod screenshot;
 
 pub const MILLI1: Duration = Duration::from_millis(1);
@@ -2631,6 +2633,31 @@ fn _input_os_password(p: String, activate: bool, interface: impl Interface) {
     key_event.set_control_key(ControlKey::Return);
     msg_out.set_key_event(key_event);
     interface.send(Data::Message(msg_out));
+}
+
+/// Auto Login. A peer that can check for its logon or lock screen gets the password and types it
+/// itself, only if it is there right then. Keys typed from here land in whatever has focus if the
+/// screen is not locked by the time they arrive.
+pub fn auto_login(p: String, pi: &PeerInfo, interface: impl Interface) {
+    if !is_peer_handling_os_login(pi) {
+        log::info!("Auto login skipped: peer does not advertise guarded OS login");
+        return;
+    }
+    std::thread::spawn(move || {
+        activate_os(&interface, true);
+        std::thread::sleep(Duration::from_millis(1200));
+        let mut msg_out = Message::new();
+        msg_out.set_os_login(OSLogin {
+            password: p,
+            ..Default::default()
+        });
+        interface.send(Data::Message(msg_out));
+    });
+}
+
+/// LanDesk uses its own version and protobuf numbers; negotiate explicitly.
+fn is_peer_handling_os_login(pi: &PeerInfo) -> bool {
+    auto_login::supports_guarded_login(pi)
 }
 
 #[derive(Copy, Clone)]

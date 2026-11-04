@@ -17,6 +17,7 @@ SECOND = """0cbeb0473 bd9262397 106f700be 01e1323e5 21c488b6c
 3ec041644 68a35e65f c8a4e0680 8814503e0 851d2df88 e4b9594c5 e5bc204fe
 4411d10f4 beeeef14f 182356ee8 25d274227 f7b0af78c 91c9fccbb 3202d1764 f96a44a01""".split()
 THIRD = "b44b71cfa 092a961b6 dd9b21cf8".split()
+FOURTH = "08affc69c 13e1278b4 5278fcab6 e9ddbd8f4".split()
 SUPERSEDED = {"61f094499", "082a5a2a4", "291507664", "7c23fd307", "63822048d", "10bcf976f"}
 RETIRED = {"c01300be2", "20ab5ab0a", "5b4d6baf4", "d6ea17006", "dabdbf73b",
            "4dd8e2039", "7eb915011", "594e63805", "9f9585ce1", "d4ac2c07b",
@@ -49,10 +50,17 @@ def main():
         short = sha[:9]
         paths = git("diff-tree", "--no-commit-id", "--name-only", "-r", sha).splitlines()
         ports = [h for h, subject in own if subject == title and len(title) > 20]
-        if (short in FIRST or short in SECOND or short in THIRD) and (short in bodies or args.pending_current_batch):
+        if (short in FIRST or short in SECOND or short in THIRD or short in FOURTH) and (short in bodies or args.pending_current_batch):
             status = "本次接入"
-            reason = "首批 5 项" if short in FIRST else "第二批 20 项" if short in SECOND else "第三批 3 项"
-            if short == "91c9fccbb":
+            reason = "首批 5 项" if short in FIRST else "第二批 20 项" if short in SECOND else "第三批 3 项" if short in THIRD else "第四批 4 项"
+            if short in FOURTH:
+                reason += {
+                    "08affc69c": "；文件剪贴板范围／列表绑定与 Windows 坐标溢出；Mac 组件通过，Windows 原生待验",
+                    "13e1278b4": "；适配 LAN 能力协商及空闲字段 36；无能力或查询失败时不自动输入密码",
+                    "5278fcab6": "；有界解压与游标尺寸／热点校验，保留 LanDesk 旋转；Mac 测试通过，其他宿主待验",
+                    "e9ddbd8f4": "；内容去重、字节事件与 Flutter 解码缓存回收／重放；不宣称所有会话存储均有界",
+                }[short]
+            elif short == "91c9fccbb":
                 reason += "；仅 bytes/crossbeam-epoch，未恢复已移除的 quinn"
             elif short == "182356ee8":
                 reason += "；适配 LAN 最近设备／收藏，未恢复云地址簿"
@@ -82,7 +90,9 @@ def main():
             status, reason = "不适用于现有流程", "涉及已移除的公网／云账号／更新／旧 UI 或原版 ID 认证路径；不机械恢复"
         else:
             status = "优先待移植" if short in PRIORITY else "暂缓，未宣称同步"
-            if short in PRIORITY:
+            if short in {"402ed07b0", "f705902ec", "2b6fedfc8"}:
+                reason = "Windows 安装器脚本／提权交接／服务控制加固；需保留 LanDesk 品牌并验证标准用户、管理员和特殊字符路径，Mac 检查不能替代"
+            elif short in PRIORITY:
                 reason = "安全相关；需适配现有 LAN 协议／文件传输／输入实现并完成目标平台验证"
             elif any(p.startswith("flutter/") for p in paths):
                 reason = "涉及 Flutter／原生宿主／输入与界面；需保留当前皮肤、虚拟键盘和会话改造后验证"
@@ -101,8 +111,8 @@ def main():
              "", "| 状态 | 提交数 |", "| --- | ---: |"]
     lines += [f"| {status} | {count} |" for status, count in sorted(counts.items())]
     lines += [f"| 合计 | {len(entries)} |", "", "## 优先队列", "",
-              "优先处理文件下载目标／链接验证、剪贴板范围溢出、未认证连接资源限制、自动登录密码保护、游标输入校验和 Windows 安装器安全。",
-              "这些事项尚未标为接入完成，发布前须继续逐项处理并验证，不能只凭本清单声称风险已消除。",
+              "以下只列尚未接入的安全优先项；已接入项的平台验证边界见第四批验证记录。不能只凭本清单声称风险已消除。",
+              *[f"- [`{sha[:9]}`](https://github.com/rustdesk/rustdesk/commit/{sha})：{title}" for sha, title, status, reason in entries if status == "优先待移植"],
               "", "## 全部提交", "", "| RustDesk 提交 | 标题 | 状态 | 依据／处理范围 |", "| --- | --- | --- | --- |"]
     for sha, title, status, reason in entries:
         lines.append(f"| [`{sha[:9]}`](https://github.com/rustdesk/rustdesk/commit/{sha}) | {title.replace('|', '/')} | {status} | {reason} |")

@@ -21,6 +21,13 @@ def main():
     common = (ROOT / "src/common.rs").read_text()
     helper = "pub fn create_symmetric_key_msg(" + common.split(
         "pub fn create_symmetric_key_msg(", 1)[1].split("\npub struct ThrottledInterval", 1)[0]
+    connection = (ROOT / "src/server/connection.rs").read_text()
+    guarded = "    async fn type_auto_login_password" + connection.split(
+        "    async fn type_auto_login_password", 1)[1].split("\n    #[inline]", 1)[0]
+    win_input = (ROOT / "libs/enigo/src/win/win_impl.rs").read_text()
+    win_input = "fn to_absolute(" + win_input.split("fn to_absolute(", 1)[1].split("\nfn keybd_event", 1)[0]
+    input_fixture = (ROOT / "tools/localdesk/upstream-tests/windows-input.rs").read_text()
+    fixture = (ROOT / "tools/localdesk/upstream-tests/auto-login.rs").read_text()
     with tempfile.TemporaryDirectory(prefix="landesk-security-") as tmp:
         tmp = Path(tmp)
         (tmp / "src").mkdir()
@@ -31,6 +38,7 @@ edition = "2021"
 [dependencies]
 hbb_common = {{ path = "{ROOT / 'libs/hbb_common'}" }}
 base = {{ path = "{ROOT / 'libs/base'}" }}
+serde_json = "1.0"
 bytes = {{ version = "1.10", features = ["serde"] }}
 lazy_static = "1.5"
 tokio = {{ version = "1.44", features = ["full"] }}
@@ -45,6 +53,12 @@ use hbb_common::sodiumoxide::crypto::{{box_, secretbox}};
 mod admission;
 #[path = "{ROOT / 'src/client/prelogin.rs'}"]
 mod prelogin;
+#[path = "{ROOT / 'src/client/auto_login.rs'}"]
+mod auto_login;
+#[path = "{ROOT / 'src/platform/windows/login_state.rs'}"]
+mod windows_login_state;
+{input_fixture.replace("// PRODUCTION_ABSOLUTE_COORDINATES", win_input)}
+{fixture.replace("// GUARDED_PRODUCTION_METHOD", guarded)}
 #[path = "{ROOT / 'src/lan_protocol.rs'}"]
 mod lan_protocol;
 ''')

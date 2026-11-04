@@ -1268,6 +1268,8 @@ impl Connection {
             all(target_os = "macos", feature = "unix-file-copy-paste")
         ))]
         let mut platform_additions = serde_json::Map::new();
+        #[cfg(any(target_os = "macos", target_os = "windows"))]
+        platform_additions.insert("landesk-os-login-v1".into(), json!(true));
         #[cfg(target_os = "linux")]
         {
             if crate::platform::current_is_wayland() {
@@ -1739,6 +1741,41 @@ impl Connection {
         self.tx_input
             .send(MessageInput::Pointer((msg, conn_id)))
             .ok();
+    }
+
+    // Auto Login: the password and Return the client would otherwise type itself, typed only if a
+    // check right before finds the logon or lock screen.
+    #[cfg(any(target_os = "windows", target_os = "macos"))]
+    async fn type_auto_login_password(&self, password: String) {
+        // A peer can send this at any rate, hence the throttled logs.
+        let at_logon_screen = tokio::task::spawn_blocking(crate::platform::is_logon_screen)
+            .await
+            .unwrap_or_else(|e| {
+                hbb_common::throttled_log!(
+                    Duration::from_secs(60),
+                    error,
+                    "Failed to check the logon screen: {}",
+                    e
+                );
+                false
+            });
+        if !at_logon_screen {
+            hbb_common::throttled_log!(
+                Duration::from_secs(60),
+                info,
+                "Auto login dropped, not at the logon or lock screen"
+            );
+            return;
+        }
+        let mut key_event = KeyEvent::new();
+        key_event.mode = KeyboardMode::Legacy.into();
+        key_event.press = true;
+        key_event.set_seq(password);
+        self.input_key(key_event.clone(), false);
+        key_event.set_control_key(ControlKey::Return);
+        CLICK_TIME.store(get_time(), Ordering::SeqCst);
+        MOUSE_MOVE_TIME.store(get_time(), Ordering::SeqCst);
+        self.input_key(key_event, true);
     }
 
     #[inline]
@@ -2301,6 +2338,13 @@ impl Connection {
                     }
                     self.update_auto_disconnect_timer();
                 }
+                #[cfg(any(target_os = "windows", target_os = "macos"))]
+                Some(message::Union::OsLogin(login)) => {
+                    if self.peer_keyboard_enabled() {
+                        self.type_auto_login_password(login.password).await;
+                    }
+                    self.update_auto_disconnect_timer();
+                }
                 Some(message::Union::Clipboard(cb)) => {
                     if self.should_handle_text_clipboard_message() && self.clipboard_enabled() {
                         #[cfg(not(any(target_os = "android", target_os = "ios")))]
@@ -2833,6 +2877,17 @@ impl Connection {
                             self.video_source(),
                         ) {
                             self.send(msg_out).await;
+                        }
+                    }
+                    // Only to a connection the cursor service would send the shape to.
+                    #[cfg(not(any(target_os = "android", target_os = "ios")))]
+                    Some(misc::Union::RequestCursorData(id)) => {
+                        if self.is_remote()
+                            && (self.peer_keyboard_enabled() || self.show_remote_cursor)
+                        {
+                            if let Some(msg) = input_service::cursor_data_message(id) {
+                                self.send((*msg).clone()).await;
+                            }
                         }
                     }
                     _ => {}
@@ -4909,6 +4964,7 @@ impl Connection {
             Some(message::Union::ScreenshotResponse(_)) => "screenshot_response",
             Some(message::Union::TerminalAction(_)) => "terminal_action",
             Some(message::Union::TerminalResponse(_)) => "terminal_response",
+            Some(message::Union::OsLogin(_)) => "os_login",
             Some(message::Union::Misc(misc)) => Self::misc_message_family(misc),
             Some(_) => "message.other",
             None => "empty",
@@ -5981,6 +6037,15 @@ mod test {
                 Connection::authorized_message_scope_violation(conn_type, &msg),
                 expected
             );
+        }
+    }
+
+    #[test]
+    fn os_login_is_scoped_to_authenticated_remote_control() {
+        let message = msg(|m| m.set_os_login(OSLogin::new()));
+        assert_eq!(Connection::authorized_message_scope_violation(AuthConnType::Remote, &message), None);
+        for scope in [AuthConnType::FileTransfer, AuthConnType::Terminal, AuthConnType::ViewCamera, AuthConnType::PortForward] {
+            assert_eq!(Connection::authorized_message_scope_violation(scope, &message), Some("os_login"));
         }
     }
 
