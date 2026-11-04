@@ -1,6 +1,6 @@
 # RustDesk 上游逐提交清单
 
-核对版本：`55786aaa5709ac0a450aabcf06f9d1fee3119908`；LanDesk 对照 HEAD：`8fbf8cd9bf810e3367f93c0da8c342d0e203534f`；共同祖先：`5abf4e9724dc9a8c9b45dfe13e71af11616eb2c8`。
+核对版本：`55786aaa5709ac0a450aabcf06f9d1fee3119908`；LanDesk 对照 HEAD：`a3100992a98b399494c682c5528fd0b3353b9ece`；共同祖先：`5abf4e9724dc9a8c9b45dfe13e71af11616eb2c8`。
 
 本清单覆盖共同祖先之后 RustDesk 的全部提交。分组是接入决策和后续队列，不能把‘暂缓’理解为已合入，也不能把 SHA 不同都算成功能缺失。
 已有移植记录按提交标题或原 SHA 引用追溯，证据强度低于补丁等价；不代表完整安全审计或全端运行验收。
@@ -9,19 +9,22 @@
 | --- | ---: |
 | 上游撤回／替代 | 6 |
 | 不适用于现有流程 | 36 |
-| 优先待移植 | 7 |
+| 优先待移植 | 3 |
 | 已有对应实现 | 3 |
 | 已有移植记录 | 23 |
 | 已有等价补丁 | 14 |
 | 暂缓，未宣称同步 | 154 |
-| 本次接入 | 28 |
+| 本次接入 | 32 |
 | 本轮不接入 | 106 |
 | 合计 | 377 |
 
 ## 优先队列
 
-优先处理文件下载目标／链接验证、剪贴板范围溢出、未认证连接资源限制、自动登录密码保护、游标输入校验和 Windows 安装器安全。
-这些事项尚未标为接入完成，发布前须继续逐项处理并验证，不能只凭本清单声称风险已消除。
+以下只列尚未接入的安全优先项；已接入项的平台验证边界见第四批验证记录。不能只凭本清单声称风险已消除。
+
+- [`402ed07b0`](https://github.com/rustdesk/rustdesk/commit/402ed07b0ce6b815ed9818d4c9701599e8976e30)：fix: Harden Windows installer temp command scripts (#15634)
+- [`f705902ec`](https://github.com/rustdesk/rustdesk/commit/f705902ec3dc2a4fc65d5d8a65cf99c026b8a135)：fix(windows): move installer scripts into protected temp directories (#16554)
+- [`2b6fedfc8`](https://github.com/rustdesk/rustdesk/commit/2b6fedfc8e8e8ba35ec764dbcc81210cb5343333)：fix(windows): protect installer handoff and use native service control (#16562)
 
 ## 全部提交
 
@@ -73,7 +76,7 @@
 | [`4389687d9`](https://github.com/rustdesk/rustdesk/commit/4389687d9d08b8957675b923b8a1564fc57e32e4) | fix(wayland): subscribe to portal Response before making the request (#15726) | 暂缓，未宣称同步 | 相关源码尚有结构分歧；须适配并补目标平台验证，当前不是已同步状态 |
 | [`6f1eb164d`](https://github.com/rustdesk/rustdesk/commit/6f1eb164d616e0e2bfbcf8c6b7c8083b09d7ed06) | fix(clipboard): validate files (#15693) | 已有等价补丁 | git cherry / stable patch ID 匹配；不是缺失提交 |
 | [`3cf32e706`](https://github.com/rustdesk/rustdesk/commit/3cf32e70666006e0273938bf64c6e6e67d3bb82f) | fix(wayland): scale portal pointer coordinates on niri (#15683) | 暂缓，未宣称同步 | 相关源码尚有结构分歧；须适配并补目标平台验证，当前不是已同步状态 |
-| [`402ed07b0`](https://github.com/rustdesk/rustdesk/commit/402ed07b0ce6b815ed9818d4c9701599e8976e30) | fix: Harden Windows installer temp command scripts (#15634) | 优先待移植 | 安全相关；需适配现有 LAN 协议／文件传输／输入实现并完成目标平台验证 |
+| [`402ed07b0`](https://github.com/rustdesk/rustdesk/commit/402ed07b0ce6b815ed9818d4c9701599e8976e30) | fix: Harden Windows installer temp command scripts (#15634) | 优先待移植 | Windows 安装器脚本／提权交接／服务控制加固；需保留 LanDesk 品牌并验证标准用户、管理员和特殊字符路径，Mac 检查不能替代 |
 | [`ef3a57580`](https://github.com/rustdesk/rustdesk/commit/ef3a57580faabe033edcdfbb915f8953c431034e) | Update Dutch translation (#15767) | 本轮不接入 | 上游文档、翻译或 CI 元数据；保留 LanDesk 品牌、已有非空翻译及本机发布流程 |
 | [`7eb915011`](https://github.com/rustdesk/rustdesk/commit/7eb915011626f99fa48b35a6fd45aab6f9e2fa82) | Audit retry nonce (#15759) | 不适用于现有流程 | 涉及已移除的公网／云账号／更新／旧 UI 或原版 ID 认证路径；不机械恢复 |
 | [`cc85685b9`](https://github.com/rustdesk/rustdesk/commit/cc85685b96af6f51df2ac7a1d36a996dddc90bb2) | fix(linux): stop losing every inhibitor when the ScreenSaver name is absent (#15772) | 已有等价补丁 | git cherry / stable patch ID 匹配；不是缺失提交 |
@@ -239,7 +242,7 @@
 | [`4da167517`](https://github.com/rustdesk/rustdesk/commit/4da167517e27c50fc615485154f6531a737c73ee) | Turkish: translate the three empty entries (#16261) | 本轮不接入 | 上游文档、翻译或 CI 元数据；保留 LanDesk 品牌、已有非空翻译及本机发布流程 |
 | [`04974591b`](https://github.com/rustdesk/rustdesk/commit/04974591b85404b2c6f66ccfaae907b0a60b3b7b) | Refine Portuguese translations for user options (#16264) | 本轮不接入 | 上游文档、翻译或 CI 元数据；保留 LanDesk 品牌、已有非空翻译及本机发布流程 |
 | [`53ec874c3`](https://github.com/rustdesk/rustdesk/commit/53ec874c39e8564a2fb72f4475d19079cec617c1) | Translate terminal clipboard tips to Chinese (#16266) | 本轮不接入 | 上游文档、翻译或 CI 元数据；保留 LanDesk 品牌、已有非空翻译及本机发布流程 |
-| [`5278fcab6`](https://github.com/rustdesk/rustdesk/commit/5278fcab685723099e9950d56cb605807db5aa2a) | fix(cursor): correct native cursor sizing and validate received images (#16213) | 优先待移植 | 安全相关；需适配现有 LAN 协议／文件传输／输入实现并完成目标平台验证 |
+| [`5278fcab6`](https://github.com/rustdesk/rustdesk/commit/5278fcab685723099e9950d56cb605807db5aa2a) | fix(cursor): correct native cursor sizing and validate received images (#16213) | 本次接入 | 第四批 4 项；有界解压与游标尺寸／热点校验，保留 LanDesk 旋转；Mac 测试通过，其他宿主待验 |
 | [`ef00ed78a`](https://github.com/rustdesk/rustdesk/commit/ef00ed78a750c0dc7527cb7bb9485f7d0e4cc2cb) | Update missing Ukrainian UI translations (#16272) | 本轮不接入 | 上游文档、翻译或 CI 元数据；保留 LanDesk 品牌、已有非空翻译及本机发布流程 |
 | [`ea04f04f9`](https://github.com/rustdesk/rustdesk/commit/ea04f04f9df2096fccba81a133c711166fe93b28) | add hide-elevate-button-in-accept-window (#16271) | 暂缓，未宣称同步 | 涉及 Flutter／原生宿主／输入与界面；需保留当前皮肤、虚拟键盘和会话改造后验证 |
 | [`7a367f7cc`](https://github.com/rustdesk/rustdesk/commit/7a367f7cc681dfd96b3621c551d37d5f50ce9118) | bump webrtc fork: one IPv6 host candidate per interface and prefix (#16263) | 不适用于现有流程 | 涉及已移除的公网／云账号／更新／旧 UI 或原版 ID 认证路径；不机械恢复 |
@@ -266,8 +269,8 @@
 | [`417e3bdd2`](https://github.com/rustdesk/rustdesk/commit/417e3bdd2c76f26443ed601b2dcd76d81cfe76d4) | Rename ptbr.rs to pt_BR.rs (#16343) | 本轮不接入 | 上游文档、翻译或 CI 元数据；保留 LanDesk 品牌、已有非空翻译及本机发布流程 |
 | [`134af545a`](https://github.com/rustdesk/rustdesk/commit/134af545ae915c3f5604c16fc8af43eb9a39fa42) | Rename Portuguese module from ptbr to pt_BR (#16342) | 暂缓，未宣称同步 | 相关源码尚有结构分歧；须适配并补目标平台验证，当前不是已同步状态 |
 | [`bb924d293`](https://github.com/rustdesk/rustdesk/commit/bb924d2939aa7316fc5612e9d067720484289740) | fix: avoid unnecessary clipboard reads and stale initial sync (#16293) | 暂缓，未宣称同步 | 依赖／特性或子模块关联；保留固定 LAN fork，需另做依赖闭包与平台构建验证 |
-| [`e9ddbd8f4`](https://github.com/rustdesk/rustdesk/commit/e9ddbd8f460dac1b30b9815ba324a5dadc8d97b0) | cursor: bound the decoded cursor caches on the Flutter client (#16304) | 优先待移植 | 安全相关；需适配现有 LAN 协议／文件传输／输入实现并完成目标平台验证 |
-| [`08affc69c`](https://github.com/rustdesk/rustdesk/commit/08affc69c426396557665eef0e2fb0a8831debd7) | Fix clipboard range overflow (#16329) | 优先待移植 | 安全相关；需适配现有 LAN 协议／文件传输／输入实现并完成目标平台验证 |
+| [`e9ddbd8f4`](https://github.com/rustdesk/rustdesk/commit/e9ddbd8f460dac1b30b9815ba324a5dadc8d97b0) | cursor: bound the decoded cursor caches on the Flutter client (#16304) | 本次接入 | 第四批 4 项；内容去重、字节事件与 Flutter 解码缓存回收／重放；不宣称所有会话存储均有界 |
+| [`08affc69c`](https://github.com/rustdesk/rustdesk/commit/08affc69c426396557665eef0e2fb0a8831debd7) | Fix clipboard range overflow (#16329) | 本次接入 | 第四批 4 项；文件剪贴板范围／列表绑定与 Windows 坐标溢出；Mac 组件通过，Windows 原生待验 |
 | [`17feabbca`](https://github.com/rustdesk/rustdesk/commit/17feabbcabe84869f7236ecf0db5d4b9904ad54f) | fix(windows): allow existing session to foreground (#16349) | 暂缓，未宣称同步 | 涉及 Flutter／原生宿主／输入与界面；需保留当前皮肤、虚拟键盘和会话改造后验证 |
 | [`47a2a3c83`](https://github.com/rustdesk/rustdesk/commit/47a2a3c83db1ef03207ec9df5e356cce73b09fa2) | i18n(tw): fill missing Traditional Chinese translations (#16353) | 本轮不接入 | 上游文档、翻译或 CI 元数据；保留 LanDesk 品牌、已有非空翻译及本机发布流程 |
 | [`50258e21e`](https://github.com/rustdesk/rustdesk/commit/50258e21e9222b22664a093c47a2daa093eb444b) | fix(drm): measure the cursor hotspot on drivers without HOTSPOT_X/Y, confirm before publishing (#16122) | 暂缓，未宣称同步 | 相关源码尚有结构分歧；须适配并补目标平台验证，当前不是已同步状态 |
@@ -307,7 +310,7 @@
 | [`ccfa714d2`](https://github.com/rustdesk/rustdesk/commit/ccfa714d2e8b982567b5e0f86779c6972e9c7b5e) | Fix Swedish translation typo (#16529) | 本轮不接入 | 上游文档、翻译或 CI 元数据；保留 LanDesk 品牌、已有非空翻译及本机发布流程 |
 | [`109c39bcc`](https://github.com/rustdesk/rustdesk/commit/109c39bccb478170b035ab6821bd5996bf87ddd7) | fix(drm): drop a frame equal to the previous one, as the other capturers do (#16450) | 暂缓，未宣称同步 | 相关源码尚有结构分歧；须适配并补目标平台验证，当前不是已同步状态 |
 | [`0b5a3d74d`](https://github.com/rustdesk/rustdesk/commit/0b5a3d74de8e9694f2457db6eb9ab25f30377a3b) | 1.5.1 | 暂缓，未宣称同步 | 涉及 Flutter／原生宿主／输入与界面；需保留当前皮肤、虚拟键盘和会话改造后验证 |
-| [`13e1278b4`](https://github.com/rustdesk/rustdesk/commit/13e1278b4c46eadede9546d3ada1ff9d94b593dd) | fix: auto-login types the OS password only at the logon or lock screen (#16520) | 优先待移植 | 安全相关；需适配现有 LAN 协议／文件传输／输入实现并完成目标平台验证 |
+| [`13e1278b4`](https://github.com/rustdesk/rustdesk/commit/13e1278b4c46eadede9546d3ada1ff9d94b593dd) | fix: auto-login types the OS password only at the logon or lock screen (#16520) | 本次接入 | 第四批 4 项；适配 LAN 能力协商及空闲字段 36；无能力或查询失败时不自动输入密码 |
 | [`074006386`](https://github.com/rustdesk/rustdesk/commit/074006386337c1c695f432be99e751a90d4e737f) | Keyboard shortcuts (#14933) | 暂缓，未宣称同步 | 涉及 Flutter／原生宿主／输入与界面；需保留当前皮肤、虚拟键盘和会话改造后验证 |
 | [`49a9574f9`](https://github.com/rustdesk/rustdesk/commit/49a9574f97abcfbb967e32273b015a2c0798e16f) | fix(drm): pace the producer to the rate the encoder takes, with the panel refresh as floor (#16423) | 暂缓，未宣称同步 | 相关源码尚有结构分歧；须适配并补目标平台验证，当前不是已同步状态 |
 | [`29a160fc7`](https://github.com/rustdesk/rustdesk/commit/29a160fc7e204958cf29ec4b25666991629881e0) | fix(mobile): prevent late mouse-down after floating button release (#16541) | 暂缓，未宣称同步 | 涉及 Flutter／原生宿主／输入与界面；需保留当前皮肤、虚拟键盘和会话改造后验证 |
@@ -323,7 +326,7 @@
 | [`538126d42`](https://github.com/rustdesk/rustdesk/commit/538126d42c6bb7eb5a86dfcad29fc2fef215e596) | Update Portuguese translations for keyboard shortcuts (#16555) | 本轮不接入 | 上游文档、翻译或 CI 元数据；保留 LanDesk 品牌、已有非空翻译及本机发布流程 |
 | [`f1fa432bc`](https://github.com/rustdesk/rustdesk/commit/f1fa432bc80030b887757915f35da051d148a850) | Fix fdroid bridge version (#16560) | 暂缓，未宣称同步 | 涉及 Flutter／原生宿主／输入与界面；需保留当前皮肤、虚拟键盘和会话改造后验证 |
 | [`0d36ac0cb`](https://github.com/rustdesk/rustdesk/commit/0d36ac0cba6205db198581cb36146ac1eaba4983) | fix(linux): stop using the window in onWindowClose once GTK destroyed it (#16561) | 暂缓，未宣称同步 | 涉及 Flutter／原生宿主／输入与界面；需保留当前皮肤、虚拟键盘和会话改造后验证 |
-| [`f705902ec`](https://github.com/rustdesk/rustdesk/commit/f705902ec3dc2a4fc65d5d8a65cf99c026b8a135) | fix(windows): move installer scripts into protected temp directories (#16554) | 优先待移植 | 安全相关；需适配现有 LAN 协议／文件传输／输入实现并完成目标平台验证 |
+| [`f705902ec`](https://github.com/rustdesk/rustdesk/commit/f705902ec3dc2a4fc65d5d8a65cf99c026b8a135) | fix(windows): move installer scripts into protected temp directories (#16554) | 优先待移植 | Windows 安装器脚本／提权交接／服务控制加固；需保留 LanDesk 品牌并验证标准用户、管理员和特殊字符路径，Mac 检查不能替代 |
 | [`c0750fb50`](https://github.com/rustdesk/rustdesk/commit/c0750fb50c78740bed42bd82ff99d78af6995263) | fix(client): report one error when both WebRTC race legs fail (#16563) | 不适用于现有流程 | 涉及已移除的公网／云账号／更新／旧 UI 或原版 ID 认证路径；不机械恢复 |
 | [`392188596`](https://github.com/rustdesk/rustdesk/commit/392188596c28a33638abfcd7514f8d2db99bdb1c) | fix(video): improve clarity after scrolling by re-encoding static frames (#16128) | 暂缓，未宣称同步 | 依赖／特性或子模块关联；保留固定 LAN fork，需另做依赖闭包与平台构建验证 |
 | [`e400bb755`](https://github.com/rustdesk/rustdesk/commit/e400bb75546cebf4f72a5ef3cf6e4a3efa2c3aa7) | Enforce lockfile during pub get in build script | 暂缓，未宣称同步 | 涉及 Flutter／原生宿主／输入与界面；需保留当前皮肤、虚拟键盘和会话改造后验证 |
@@ -347,7 +350,7 @@
 | [`4e93a41ec`](https://github.com/rustdesk/rustdesk/commit/4e93a41ecc3848abf88feb9a364cd1e7c7af570f) | Tune MediaCodec static refresh budgets (#16579) | 暂缓，未宣称同步 | 相关源码尚有结构分歧；须适配并补目标平台验证，当前不是已同步状态 |
 | [`bd9262397`](https://github.com/rustdesk/rustdesk/commit/bd9262397208c509ea97af61f0d44621ef25611c) | fix(linux): match the xrandr output name at the start of its line (#16590) | 本次接入 | 第二批 20 项 |
 | [`f010d33ca`](https://github.com/rustdesk/rustdesk/commit/f010d33ca622fbb7a1d8c722acb726b494f6212e) | fix(android): wheel scrolling from the controller does not reach Android peers (#16409) | 暂缓，未宣称同步 | 涉及 Flutter／原生宿主／输入与界面；需保留当前皮肤、虚拟键盘和会话改造后验证 |
-| [`2b6fedfc8`](https://github.com/rustdesk/rustdesk/commit/2b6fedfc8e8e8ba35ec764dbcc81210cb5343333) | fix(windows): protect installer handoff and use native service control (#16562) | 优先待移植 | 安全相关；需适配现有 LAN 协议／文件传输／输入实现并完成目标平台验证 |
+| [`2b6fedfc8`](https://github.com/rustdesk/rustdesk/commit/2b6fedfc8e8e8ba35ec764dbcc81210cb5343333) | fix(windows): protect installer handoff and use native service control (#16562) | 优先待移植 | Windows 安装器脚本／提权交接／服务控制加固；需保留 LanDesk 品牌并验证标准用户、管理员和特殊字符路径，Mac 检查不能替代 |
 | [`d97351ad7`](https://github.com/rustdesk/rustdesk/commit/d97351ad73058ad92d0f1dd41ed99a8fe3122655) | Custom websocket port (#16658) | 不适用于现有流程 | 涉及已移除的公网／云账号／更新／旧 UI 或原版 ID 认证路径；不机械恢复 |
 | [`3ec041644`](https://github.com/rustdesk/rustdesk/commit/3ec041644d6c18a6fbf8b8291bf60ef71614e513) | fix(linux): gtk sudo shows no false "Sorry, try again." and retries with sudo-rs (#16652) | 本次接入 | 第二批 20 项 |
 | [`828d1101a`](https://github.com/rustdesk/rustdesk/commit/828d1101afd2e656eb1c1d18511009bdf5336238) | chore(deps): pin hwcodec to rustdesk-org/hwcodec#47 | 暂缓，未宣称同步 | 依赖／特性或子模块关联；保留固定 LAN fork，需另做依赖闭包与平台构建验证 |

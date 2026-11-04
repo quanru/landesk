@@ -111,7 +111,7 @@ def main():
              "", "| 状态 | 提交数 |", "| --- | ---: |"]
     lines += [f"| {status} | {count} |" for status, count in sorted(counts.items())]
     lines += [f"| 合计 | {len(entries)} |", "", "## 优先队列", "",
-              "以下只列尚未接入的安全优先项；已接入项的平台验证边界见第四批验证记录。不能只凭本清单声称风险已消除。",
+              "以下只列尚未接入的安全优先项；已接入项的平台验证边界见第四批验证记录。不能只凭本清单声称风险已消除。", "",
               *[f"- [`{sha[:9]}`](https://github.com/rustdesk/rustdesk/commit/{sha})：{title}" for sha, title, status, reason in entries if status == "优先待移植"],
               "", "## 全部提交", "", "| RustDesk 提交 | 标题 | 状态 | 依据／处理范围 |", "| --- | --- | --- | --- |"]
     for sha, title, status, reason in entries:
