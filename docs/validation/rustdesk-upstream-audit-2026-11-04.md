@@ -1,6 +1,6 @@
 # RustDesk 上游逐提交清单
 
-核对版本：`55786aaa5709ac0a450aabcf06f9d1fee3119908`；LanDesk 对照 HEAD：`e8238ab13cb50e3e2afe1e50d461a2280189cca8`；共同祖先：`5abf4e9724dc9a8c9b45dfe13e71af11616eb2c8`。
+核对版本：`55786aaa5709ac0a450aabcf06f9d1fee3119908`；LanDesk 对照 HEAD：`8fbf8cd9bf810e3367f93c0da8c342d0e203534f`；共同祖先：`5abf4e9724dc9a8c9b45dfe13e71af11616eb2c8`。
 
 本清单覆盖共同祖先之后 RustDesk 的全部提交。分组是接入决策和后续队列，不能把‘暂缓’理解为已合入，也不能把 SHA 不同都算成功能缺失。
 已有移植记录按提交标题或原 SHA 引用追溯，证据强度低于补丁等价；不代表完整安全审计或全端运行验收。
@@ -9,12 +9,12 @@
 | --- | ---: |
 | 上游撤回／替代 | 6 |
 | 不适用于现有流程 | 36 |
-| 优先待移植 | 10 |
+| 优先待移植 | 7 |
 | 已有对应实现 | 3 |
 | 已有移植记录 | 23 |
 | 已有等价补丁 | 14 |
 | 暂缓，未宣称同步 | 154 |
-| 本次接入 | 25 |
+| 本次接入 | 28 |
 | 本轮不接入 | 106 |
 | 合计 | 377 |
 
@@ -227,7 +227,7 @@
 | [`f9c2f1685`](https://github.com/rustdesk/rustdesk/commit/f9c2f1685733af8373f549b0ab9a9505932dec61) | fix: recover DXGI capture after access loss (#16024) | 暂缓，未宣称同步 | 相关源码尚有结构分歧；须适配并补目标平台验证，当前不是已同步状态 |
 | [`f312b5790`](https://github.com/rustdesk/rustdesk/commit/f312b5790941145b11f8a1470c1fcebb16fb337a) | bump hbb_common: cap the answerer's ICE binding requests at 74 | 暂缓，未宣称同步 | 依赖／特性或子模块关联；保留固定 LAN fork，需另做依赖闭包与平台构建验证 |
 | [`4f56d6957`](https://github.com/rustdesk/rustdesk/commit/4f56d6957a49266d36960b50b00d16f3fba03733) | pin the webrtc crate to the fork that exposes max_binding_requests | 不适用于现有流程 | 涉及已移除的公网／云账号／更新／旧 UI 或原版 ID 认证路径；不机械恢复 |
-| [`092a961b6`](https://github.com/rustdesk/rustdesk/commit/092a961b629d318fe290eeafac0cd214a1e9deeb) | server: bound unauthenticated connections in number and in time (#16237) | 优先待移植 | 安全相关；需适配现有 LAN 协议／文件传输／输入实现并完成目标平台验证 |
+| [`092a961b6`](https://github.com/rustdesk/rustdesk/commit/092a961b629d318fe290eeafac0cd214a1e9deeb) | server: bound unauthenticated connections in number and in time (#16237) | 本次接入 | 第三批 3 项；适配 LAN 握手前连接名额、登录期限和多监听器 ID 隔离 |
 | [`0ac2e7fb5`](https://github.com/rustdesk/rustdesk/commit/0ac2e7fb5269b9dbdab85f7213b30d76ba2d49f9) | Avoid Xwayland scans on X11 sessions (#16232) | 暂缓，未宣称同步 | 相关源码尚有结构分歧；须适配并补目标平台验证，当前不是已同步状态 |
 | [`f4808b71d`](https://github.com/rustdesk/rustdesk/commit/f4808b71d4aedb894250c13f4a392cc3c13b8e22) | webrtc: encrypt the signalling legs to the rendezvous server, or send no WebRTC signalling (#16224) | 不适用于现有流程 | 涉及已移除的公网／云账号／更新／旧 UI 或原版 ID 认证路径；不机械恢复 |
 | [`4df7404a6`](https://github.com/rustdesk/rustdesk/commit/4df7404a6c33486a7a50543322fba3e235857803) | webrtc: cap concurrent answerer setups, pin the DTLS fingerprint binding with a test (#16225) | 不适用于现有流程 | 涉及已移除的公网／云账号／更新／旧 UI 或原版 ID 认证路径；不机械恢复 |
@@ -244,7 +244,7 @@
 | [`ea04f04f9`](https://github.com/rustdesk/rustdesk/commit/ea04f04f9df2096fccba81a133c711166fe93b28) | add hide-elevate-button-in-accept-window (#16271) | 暂缓，未宣称同步 | 涉及 Flutter／原生宿主／输入与界面；需保留当前皮肤、虚拟键盘和会话改造后验证 |
 | [`7a367f7cc`](https://github.com/rustdesk/rustdesk/commit/7a367f7cc681dfd96b3621c551d37d5f50ce9118) | bump webrtc fork: one IPv6 host candidate per interface and prefix (#16263) | 不适用于现有流程 | 涉及已移除的公网／云账号／更新／旧 UI 或原版 ID 认证路径；不机械恢复 |
 | [`97811acbd`](https://github.com/rustdesk/rustdesk/commit/97811acbddf9d1e12c640bff99ea0c731b031291) | Update Dutch translation (#16284) | 本轮不接入 | 上游文档、翻译或 CI 元数据；保留 LanDesk 品牌、已有非空翻译及本机发布流程 |
-| [`dd9b21cf8`](https://github.com/rustdesk/rustdesk/commit/dd9b21cf866d3f67f651f0002445894ab1897530) | server: hold an unauthenticated connection to a small message (#16254) | 优先待移植 | 安全相关；需适配现有 LAN 协议／文件传输／输入实现并完成目标平台验证 |
+| [`dd9b21cf8`](https://github.com/rustdesk/rustdesk/commit/dd9b21cf866d3f67f651f0002445894ab1897530) | server: hold an unauthenticated connection to a small message (#16254) | 本次接入 | 第三批 3 项；认证前 128 KiB 帧限制，禁止登录前发送剪贴板广播 |
 | [`a5d4ef97e`](https://github.com/rustdesk/rustdesk/commit/a5d4ef97e897de28faa880c6df6fa863e24ec405) | fix(ws): reject text frames after encryption is enabled (#16295) | 暂缓，未宣称同步 | 依赖／特性或子模块关联；保留固定 LAN fork，需另做依赖闭包与平台构建验证 |
 | [`763d4eeb0`](https://github.com/rustdesk/rustdesk/commit/763d4eeb05fbfe2f368a55e24a2ab7214719a926) | bump hbb_common: tungstenite 0.29 forks, read buffer grown as bytes arrive | 暂缓，未宣称同步 | 依赖／特性或子模块关联；保留固定 LAN fork，需另做依赖闭包与平台构建验证 |
 | [`6a0eb9a1f`](https://github.com/rustdesk/rustdesk/commit/6a0eb9a1fda50693a6541d3d6f8c8cac35dcea70) | fix(terminal): preserve trackpad scrolling in alternate screen | 暂缓，未宣称同步 | 涉及 Flutter／原生宿主／输入与界面；需保留当前皮肤、虚拟键盘和会话改造后验证 |
@@ -341,7 +341,7 @@
 | [`c29bef18b`](https://github.com/rustdesk/rustdesk/commit/c29bef18bb0d28154cd82a04d52c5f9993c39008) | Update Dutch translations for keyboard shortcuts (#16625) | 本轮不接入 | 上游文档、翻译或 CI 元数据；保留 LanDesk 品牌、已有非空翻译及本机发布流程 |
 | [`8b6103317`](https://github.com/rustdesk/rustdesk/commit/8b61033178c2e3bab50f69c20df17186b53ccdf6) | Update pl.rs (#16588) | 本轮不接入 | 上游文档、翻译或 CI 元数据；保留 LanDesk 品牌、已有非空翻译及本机发布流程 |
 | [`eef109639`](https://github.com/rustdesk/rustdesk/commit/eef1096395517a1ee123e98c3190777d114aee26) | Update fa.rs (#16587) | 本轮不接入 | 上游文档、翻译或 CI 元数据；保留 LanDesk 品牌、已有非空翻译及本机发布流程 |
-| [`b44b71cfa`](https://github.com/rustdesk/rustdesk/commit/b44b71cfabe9898d5eada9b07cb583fe995ed45e) | Fix/download path validation (#16601) | 优先待移植 | 安全相关；需适配现有 LAN 协议／文件传输／输入实现并完成目标平台验证 |
+| [`b44b71cfa`](https://github.com/rustdesk/rustdesk/commit/b44b71cfabe9898d5eada9b07cb583fe995ed45e) | Fix/download path validation (#16601) | 本次接入 | 第三批 3 项；下载目标、覆盖确认、续传和空目录校验，适配本地目标平台规则 |
 | [`2016f48dd`](https://github.com/rustdesk/rustdesk/commit/2016f48dd728b9571001a08f8406bcdfe6a6c0d4) | fix(file-transfer): keyboard navigation in the desktop file list (#16642) | 暂缓，未宣称同步 | 涉及 Flutter／原生宿主／输入与界面；需保留当前皮肤、虚拟键盘和会话改造后验证 |
 | [`ce54e33c7`](https://github.com/rustdesk/rustdesk/commit/ce54e33c71716c4cd1e93c02b4e21555cd923694) | fix(ffmpeg): handle QSV encoder stalls and undersized buffers (#16303) | 暂缓，未宣称同步 | 安装器／原生依赖／打包修改；需对应平台构建，不能只复制补丁就宣称生效 |
 | [`4e93a41ec`](https://github.com/rustdesk/rustdesk/commit/4e93a41ecc3848abf88feb9a364cd1e7c7af570f) | Tune MediaCodec static refresh budgets (#16579) | 暂缓，未宣称同步 | 相关源码尚有结构分歧；须适配并补目标平台验证，当前不是已同步状态 |
