@@ -2,7 +2,9 @@ import '../widgets/remote_session_sidebar.dart';
 import '../widgets/remote_input_stack.dart';
 import '../widgets/custom_key_overlay.dart';
 import '../widgets/remote_shortcut.dart';
+import '../widgets/window_overview.dart';
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -63,6 +65,7 @@ class _RemotePageState extends State<RemotePage> with WidgetsBindingObserver {
   bool _showBar = !isWebDesktop;
   bool _showOperations = false;
   bool _showGestureHelp = false;
+  bool _windowOverviewBusy = false;
   String _value = '';
   Orientation? _currentOrientation;
   final _uniqueKey = UniqueKey();
@@ -597,6 +600,56 @@ class _RemotePageState extends State<RemotePage> with WidgetsBindingObserver {
     });
   }
 
+  Future<void> _openWindowOverview({bool configure = false}) async {
+    if (_windowOverviewBusy) return;
+    _windowOverviewBusy = true;
+    final targetSession = sessionId;
+    try {
+      gFFI.dialogManager.dismissAll();
+      setState(() {
+        _showOperations = false;
+        _showGestureHelp = false;
+      });
+      final platform = gFFI.ffiModel.pi.platform;
+      RemoteShortcut? shortcut;
+      if (platform == kPeerPlatformMacOS) {
+        shortcut = macWindowOverview;
+      } else if (platform == kPeerPlatformWindows) {
+        shortcut = windowsWindowOverview;
+      } else if (platform == kPeerPlatformLinux) {
+        shortcut = decodeWindowOverview(await bind.sessionGetFlutterOption(
+            sessionId: targetSession, k: windowOverviewOption));
+        if (!mounted || gFFI.closed || sessionId != targetSession) return;
+        if (configure || shortcut == null) {
+          await showDialog<bool>(
+            context: context,
+            builder: (_) => WindowOverviewSettings(
+              initial: shortcut,
+              onSave: (value) async {
+                if (gFFI.closed || sessionId != targetSession) {
+                  throw StateError('Remote session closed');
+                }
+                await bind.sessionSetFlutterOption(
+                    sessionId: targetSession,
+                    k: windowOverviewOption,
+                    v: jsonEncode(value.toJson()));
+              },
+            ),
+          );
+          return;
+        }
+      }
+      if (shortcut != null && mounted && !gFFI.closed && sessionId == targetSession) {
+        await _sendShortcut(shortcut);
+      }
+    } catch (error) {
+      debugPrint('Window overview failed: $error');
+      if (mounted) showToast(translate('Failed'));
+    } finally {
+      _windowOverviewBusy = false;
+    }
+  }
+
   Widget getSideAppBar() {
     final chinese = Localizations.localeOf(context).languageCode == 'zh';
     final ffiModel = Provider.of<FfiModel>(context);
@@ -640,24 +693,13 @@ class _RemotePageState extends State<RemotePage> with WidgetsBindingObserver {
             showOptions(context, widget.id, gFFI.dialogManager);
           },
         ),
-        if (ffiModel.pi.platform == kPeerPlatformMacOS)
+        if ([kPeerPlatformMacOS, kPeerPlatformWindows, kPeerPlatformLinux]
+            .contains(ffiModel.pi.platform))
           RemoteRailButton(
             icon: Icons.window_outlined,
             label: chinese ? '所有窗口' : 'All windows',
-            onPressed: ffiModel.viewOnly || !ffiModel.keyboard ? null : () async {
-              gFFI.dialogManager.dismissAll();
-              setState(() {
-                _showOperations = false;
-                _showGestureHelp = false;
-              });
-              try {
-                // Send the Mac's F3 window-overview shortcut to the peer.
-                await _sendShortcut(const RemoteShortcut(
-                    'Mission Control', 'VK_F3'));
-              } catch (_) {
-                showToast(translate('Failed'));
-              }
-            },
+            onPressed: ffiModel.viewOnly || !ffiModel.keyboard
+                ? null : () => _openWindowOverview(),
           ),
       ],
     );
@@ -708,6 +750,14 @@ class _RemotePageState extends State<RemotePage> with WidgetsBindingObserver {
             setState(() => _showOperations = false);
           },
         ),
+        if (gFFI.ffiModel.pi.platform == kPeerPlatformLinux)
+          ListTile(
+            leading: const Icon(Icons.window_outlined),
+            title: Text(Localizations.localeOf(context).languageCode == 'zh'
+                ? '所有窗口快捷键' : 'Window overview shortcut'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => _openWindowOverview(configure: true),
+          ),
         if (!isWeb)
           futureBuilder(
             future: gFFI.invokeMethod("get_value", "KEY_IS_SUPPORT_VOICE_CALL"),

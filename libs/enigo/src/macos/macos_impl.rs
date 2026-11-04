@@ -141,9 +141,25 @@ impl Enigo {
         self.flags |= flag;
     }
 
-    // Just check F11 for minimal changes.
     // Since enigo (legacy mode) is deprecated, it is currently in maintenance only.
     fn post(&self, event: CGEvent, keycode: Option<u16>) {
+        if !self.ignore_flags
+            && matches!(
+                keycode,
+                Some(kVK_UpArrow | kVK_DownArrow | kVK_LeftArrow | kVK_RightArrow)
+            )
+        {
+            // Arrow keys carry these intrinsic flags on macOS. Dropping them
+            // makes system shortcuts such as Control-Up fail to match.
+            event.set_flags(
+                self.flags
+                    | CGEventFlags::CGEventFlagSecondaryFn
+                    | CGEventFlags::CGEventFlagNumericPad,
+            );
+            event.set_integer_value_field(EventField::EVENT_SOURCE_USER_DATA, ENIGO_INPUT_EXTRA_VALUE);
+            event.post(CGEventTapLocation::HID);
+            return;
+        }
         if keycode == Some(kVK_F11) {
             // Some key events require the flags to work.
             // We can't simply set the flag to `CGEventFlags::CGEventFlagNull`.
