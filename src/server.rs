@@ -64,6 +64,7 @@ pub mod input_service {
 }
 
 mod connection;
+mod admission;
 pub mod display_service;
 mod login_failure_check;
 #[cfg(windows)]
@@ -157,7 +158,21 @@ pub async fn create_lan_connection(
     addr: SocketAddr,
     web_client: bool,
 ) -> ResultType<()> {
-    crate::lan_protocol::server_handshake(&mut stream).await?;
+    let addr = hbb_common::try_into_v4(addr);
+    let id = server.write().unwrap().get_new_id();
+    let Some(unauthorized) = admission::admit_unauthorized(id, addr.ip()) else {
+        bail!("too many unauthenticated LAN connections from {}", addr.ip());
+    };
+    stream.set_max_packet_length(admission::MAX_UNAUTHORIZED_MESSAGE);
+    let pending = Some(unauthorized);
+    tokio::select! {
+        result = crate::lan_protocol::server_handshake(&mut stream) => result?,
+        _ = admission::unauthorized_evicted(&pending) => bail!("unauthenticated LAN connection evicted"),
+        _ = admission::login_deadline(&pending) => bail!("LAN login timed out"),
+    }
+    let Some(unauthorized) = pending else {
+        bail!("LAN admission guard missing");
+    };
     #[cfg(target_os = "macos")]
     {
         use std::process::Command;
@@ -169,13 +184,13 @@ pub async fn create_lan_connection(
             CHILD_PROCESS.lock().unwrap().push(task);
         }
     }
-    let id = server.write().unwrap().get_new_id();
     Connection::start(
         addr,
         stream,
         id,
         Arc::downgrade(&server),
         ConnectionMeta { web_client },
+        unauthorized,
     )
     .await;
     Ok(())

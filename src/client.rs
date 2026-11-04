@@ -84,6 +84,7 @@ pub use super::lang::*;
 pub mod file_trait;
 pub mod helper;
 pub mod io_loop;
+mod prelogin;
 pub mod screenshot;
 
 pub const MILLI1: Duration = Duration::from_millis(1);

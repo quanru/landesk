@@ -5,6 +5,7 @@ use super::login_failure_check::{
     record_lan_auth_failure, record_os_credential_failure, try_acquire_lan_auth_gate, FailureScope,
 };
 use super::{input_service::*, *};
+use super::admission::{UnauthorizedID, unauthorized_evicted, login_deadline};
 #[cfg(feature = "unix-file-copy-paste")]
 use crate::clipboard::try_empty_clipboard_files;
 #[cfg(not(any(target_os = "android", target_os = "ios")))]
@@ -269,6 +270,7 @@ pub struct Connection {
     port_forward_address: String,
     tx_to_cm: mpsc::UnboundedSender<ipc::Data>,
     authorized: bool,
+    unauthorized_id: Option<UnauthorizedID>,
     web_client: bool,
     keyboard: bool,
     clipboard: bool,
@@ -409,12 +411,13 @@ fn drm_can_serve_login_screen() -> bool {
 }
 
 impl Connection {
-    pub async fn start(
+    pub(super) async fn start(
         addr: SocketAddr,
         stream: super::Stream,
         id: i32,
         server: super::ServerPtrWeak,
         meta: super::ConnectionMeta,
+        unauthorized: UnauthorizedID,
     ) {
         let _raii_id = raii::ConnectionID::new(id);
         let (tx_from_cm_holder, mut rx_from_cm) = mpsc::unbounded_channel::<ipc::Data>();
@@ -455,6 +458,7 @@ impl Connection {
             port_forward_address: "".to_owned(),
             tx_to_cm,
             authorized: false,
+            unauthorized_id: Some(unauthorized),
             web_client: meta.web_client,
             keyboard: true,
             clipboard: true,
@@ -569,6 +573,15 @@ impl Connection {
         loop {
             tokio::select! {
                 // biased; // video has higher priority // causing test_delay_timer failed while transferring big file
+
+                _ = unauthorized_evicted(&conn.unauthorized_id) => {
+                    conn.on_close("Timeout", true).await;
+                    break;
+                }
+                _ = login_deadline(&conn.unauthorized_id) => {
+                    conn.on_close("Timeout", true).await;
+                    break;
+                }
 
                 Some(data) = rx_from_cm.recv() => {
                     match data {
@@ -1201,6 +1214,8 @@ impl Connection {
             return true;
         }
         self.authorized = true;
+        self.stream.set_max_packet_length(usize::MAX);
+        self.unauthorized_id = None;
         let (conn_type, auth_conn_type) = if self.file_transfer.is_some() {
             (1, AuthConnType::FileTransfer)
         } else if self.port_forward_socket.is_some() {

@@ -16,6 +16,7 @@ FIRST = "f9586e171 41f182e63 55786aaa5 4b92080e3 f299fb990".split()
 SECOND = """0cbeb0473 bd9262397 106f700be 01e1323e5 21c488b6c
 3ec041644 68a35e65f c8a4e0680 8814503e0 851d2df88 e4b9594c5 e5bc204fe
 4411d10f4 beeeef14f 182356ee8 25d274227 f7b0af78c 91c9fccbb 3202d1764 f96a44a01""".split()
+THIRD = "b44b71cfa 092a961b6 dd9b21cf8".split()
 SUPERSEDED = {"61f094499", "082a5a2a4", "291507664", "7c23fd307", "63822048d", "10bcf976f"}
 RETIRED = {"c01300be2", "20ab5ab0a", "5b4d6baf4", "d6ea17006", "dabdbf73b",
            "4dd8e2039", "7eb915011", "594e63805", "9f9585ce1", "d4ac2c07b",
@@ -48,13 +49,19 @@ def main():
         short = sha[:9]
         paths = git("diff-tree", "--no-commit-id", "--name-only", "-r", sha).splitlines()
         ports = [h for h, subject in own if subject == title and len(title) > 20]
-        if (short in FIRST or short in SECOND) and (short in bodies or args.pending_current_batch):
+        if (short in FIRST or short in SECOND or short in THIRD) and (short in bodies or args.pending_current_batch):
             status = "本次接入"
-            reason = "首批 5 项" if short in FIRST else "第二批 20 项"
+            reason = "首批 5 项" if short in FIRST else "第二批 20 项" if short in SECOND else "第三批 3 项"
             if short == "91c9fccbb":
                 reason += "；仅 bytes/crossbeam-epoch，未恢复已移除的 quinn"
             elif short == "182356ee8":
                 reason += "；适配 LAN 最近设备／收藏，未恢复云地址簿"
+            elif short == "b44b71cfa":
+                reason += "；下载目标、覆盖确认、续传和空目录校验，适配本地目标平台规则"
+            elif short == "092a961b6":
+                reason += "；适配 LAN 握手前连接名额、登录期限和多监听器 ID 隔离"
+            elif short == "dd9b21cf8":
+                reason += "；认证前 128 KiB 帧限制，禁止登录前发送剪贴板广播"
         elif sha in patch_matches:
             status, reason = "已有等价补丁", "git cherry / stable patch ID 匹配；不是缺失提交"
         elif ports:

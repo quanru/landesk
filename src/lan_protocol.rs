@@ -13,6 +13,7 @@ use hbb_common::{
 };
 
 const TRANSCRIPT_PREFIX: &[u8] = b"rustdesk-lan-handshake-v1\0";
+pub(crate) const MAX_HANDSHAKE_MESSAGE: usize = 128 * 1024;
 
 pub struct LanPeerIdentity {
     pub device_public_key: Vec<u8>,
@@ -56,6 +57,7 @@ pub fn fingerprint(device_public_key: &[u8]) -> String {
 }
 
 pub async fn client_handshake(stream: &mut Stream) -> ResultType<LanPeerIdentity> {
+    stream.set_max_packet_length(MAX_HANDSHAKE_MESSAGE);
     let client_nonce = randombytes::randombytes(NONCE_LEN);
     let mut hello = Message::new();
     hello.set_lan_client_hello(LanClientHello {
@@ -106,6 +108,7 @@ pub async fn client_handshake(stream: &mut Stream) -> ResultType<LanPeerIdentity
     stream.set_key(key);
 
     let device_public_key = server_hello.device_public_key.to_vec();
+    stream.set_max_packet_length(usize::MAX);
     Ok(LanPeerIdentity {
         fingerprint: fingerprint(&device_public_key),
         device_public_key,
@@ -248,10 +251,12 @@ mod tests {
             let (socket, _) = server_listener.accept().await.unwrap();
             let local_addr = socket.local_addr().unwrap();
             let mut stream = Stream::from(socket, local_addr);
+            stream.set_max_packet_length(128 * 1024);
             server_handshake_with_identity(&mut stream, &device_secret_key, &device_public_key)
                 .await
                 .unwrap();
             assert!(stream.is_secured());
+            stream.set_max_packet_length(usize::MAX);
             let bytes = stream.next().await.unwrap().unwrap();
             let message = Message::parse_from_bytes(&bytes).unwrap();
             let Some(message::Union::Misc(misc)) = message.union else {
@@ -314,5 +319,52 @@ mod tests {
         assert!(!captured
             .windows(marker.len())
             .any(|window| window == marker.as_bytes()));
+    }
+
+    #[tokio::test]
+    async fn handshake_refuses_an_oversized_header_before_its_body_arrives() {
+        let _ = hbb_common::sodiumoxide::init();
+        let (public, secret) = sign::gen_keypair();
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let mut client = TcpStream::connect(listener.local_addr().unwrap())
+            .await
+            .unwrap();
+        let (socket, addr) = listener.accept().await.unwrap();
+        let mut stream = Stream::from(socket, addr);
+        stream.set_max_packet_length(128 * 1024);
+        client
+            .write_all(&((((128 * 1024 + 1) << 2) | 3) as u32).to_le_bytes())
+            .await
+            .unwrap();
+        let result = tokio::time::timeout(
+            std::time::Duration::from_secs(1),
+            server_handshake_with_identity(&mut stream, &secret, &public),
+        )
+        .await
+        .unwrap();
+        assert!(result.unwrap_err().to_string().contains("Too big packet"));
+    }
+
+    #[tokio::test]
+    async fn client_refuses_an_oversized_server_hello_before_its_body_arrives() {
+        let _ = hbb_common::sodiumoxide::init();
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let socket = TcpStream::connect(listener.local_addr().unwrap())
+            .await
+            .unwrap();
+        let addr = socket.local_addr().unwrap();
+        let mut client = Stream::from(socket, addr);
+        let (mut server, _) = listener.accept().await.unwrap();
+        server
+            .write_all(&((((MAX_HANDSHAKE_MESSAGE + 1) << 2) | 3) as u32).to_le_bytes())
+            .await
+            .unwrap();
+        let result = tokio::time::timeout(
+            std::time::Duration::from_secs(1),
+            client_handshake(&mut client),
+        )
+        .await
+        .unwrap();
+        assert!(result.err().unwrap().to_string().contains("Too big packet"));
     }
 }
