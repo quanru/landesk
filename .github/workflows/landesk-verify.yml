@@ -1,0 +1,115 @@
+name: Verify LanDesk preview artifacts
+on:
+  workflow_dispatch:
+    inputs:
+      run-id:
+        description: Successful native preview build run
+        required: true
+        type: string
+      source-sha:
+        description: Exact commit built by that run
+        required: true
+        type: string
+permissions:
+  actions: read
+  contents: read
+jobs:
+  provenance:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/github-script@d7906e4ad0b1822421a7e6a35d5ca353c962f410
+        env:
+          BUILD_RUN_ID: ${{ inputs.run-id }}
+          SOURCE_SHA: ${{ inputs.source-sha }}
+        with:
+          script: |
+            const {data: run} = await github.rest.actions.getWorkflowRun({
+              owner: context.repo.owner, repo: context.repo.repo,
+              run_id: Number(process.env.BUILD_RUN_ID)
+            });
+            if (run.conclusion !== 'success' || run.head_sha !== process.env.SOURCE_SHA ||
+                run.path !== '.github/workflows/landesk-preview.yml') {
+              throw new Error('Build provenance or completion does not match');
+            }
+  windows:
+    needs: provenance
+    runs-on: windows-2022
+    timeout-minutes: 15
+    steps:
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          name: landesk-windows-x86_64
+          run-id: ${{ inputs.run-id }}
+          github-token: ${{ github.token }}
+      - name: Verify version and open a real window
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Expand-Archive landesk-1.5.1-windows-x86_64-unsigned.zip -DestinationPath candidate
+          $exe = Resolve-Path candidate/landesk.exe
+          $version = (Get-Item $exe).VersionInfo.FileVersion
+          if ($version -notmatch '^1\.5\.1') { throw "Unexpected executable version: $version" }
+          $app = Start-Process $exe -PassThru
+          try {
+            Start-Sleep -Seconds 15
+            $app.Refresh()
+            if ($app.HasExited -or $app.MainWindowHandle -eq 0) { throw 'LanDesk did not open a window' }
+            Add-Type -AssemblyName System.Windows.Forms
+            Add-Type -AssemblyName System.Drawing
+            $bounds = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
+            $bitmap = New-Object System.Drawing.Bitmap $bounds.Width, $bounds.Height
+            $graphics = [System.Drawing.Graphics]::FromImage($bitmap)
+            $graphics.CopyFromScreen($bounds.Location, [System.Drawing.Point]::Empty, $bounds.Size)
+            $bitmap.Save("$PWD/windows-desktop.png")
+            $graphics.Dispose()
+            $bitmap.Dispose()
+            @{ version = $version; source = '${{ inputs.source-sha }}'; run = '${{ inputs.run-id }}'; environment = 'windows-2022'; window = $app.MainWindowTitle } | ConvertTo-Json | Set-Content windows-verification.json
+          } finally { if (-not $app.HasExited) { Stop-Process -Id $app.Id } }
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        if: always()
+        with:
+          name: landesk-windows-verification
+          path: |
+            windows-desktop.png
+            windows-verification.json
+  linux:
+    needs: provenance
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          name: landesk-linux-x86_64
+          run-id: ${{ inputs.run-id }}
+          github-token: ${{ github.token }}
+      - name: Install runtime dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-3-0 libayatana-appindicator3-1 libasound2 libpulse0 libxdo3 libxcb-randr0 libxcb-shape0 libxcb-xfixes0 libva2 libvdpau1 libgstreamer1.0-0 libgstreamer-plugins-base1.0-0 libunwind8 xvfb imagemagick
+      - name: Open a real X11 window
+        env:
+          SOURCE_SHA: ${{ inputs.source-sha }}
+          BUILD_RUN_ID: ${{ inputs.run-id }}
+        run: |
+          mkdir candidate
+          tar -xzf landesk-1.5.1-linux-x86_64.tar.gz -C candidate
+          xvfb-run -a dbus-run-session -- bash -euo pipefail -c '
+            ./candidate/landesk > linux-startup.log 2>&1 &
+            app=$!
+            trap "kill $app 2>/dev/null || true" EXIT
+            sleep 15
+            kill -0 "$app"
+            xwininfo -root -tree > linux-windows.txt
+            grep -i landesk linux-windows.txt
+            import -window root linux-desktop.png
+          '
+          printf '%s\n' "source=$SOURCE_SHA" "run=$BUILD_RUN_ID" 'environment=ubuntu-22.04-xvfb' > linux-verification.txt
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        if: always()
+        with:
+          name: landesk-linux-verification
+          path: |
+            linux-desktop.png
+            linux-verification.txt
+            linux-startup.log
+            linux-windows.txt
