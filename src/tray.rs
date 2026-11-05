@@ -25,9 +25,11 @@ pub fn start_tray() {
 
 fn make_tray() -> hbb_common::ResultType<()> {
     #[cfg(target_os = "macos")]
-    let Some(_tray_lock) = crate::landesk_macos_tray::lock()? else {
+    let tray_lock = crate::landesk_macos_tray::lock()?;
+    #[cfg(target_os = "macos")]
+    if tray_lock.is_none() && !std::env::args().any(|arg| arg == "--server") {
         return Ok(());
-    };
+    }
 
     // https://github.com/tauri-apps/tray-icon/blob/dev/examples/tao.rs
     use hbb_common::anyhow::Context;
@@ -151,6 +153,12 @@ fn make_tray() -> hbb_common::ResultType<()> {
         );
 
         if let tao::event::Event::NewEvents(tao::event::StartCause::Init) = event {
+            // The macOS server dispatches remote input onto the main queue.
+            // Keep pumping it even when another process owns the tray icon.
+            #[cfg(target_os = "macos")]
+            if tray_lock.is_none() {
+                return;
+            }
             // for fixing https://github.com/rustdesk/rustdesk/discussions/10210#discussioncomment-14600745
             // so we start tray, but not to show it
             if crate::ui_interface::get_builtin_option(keys::OPTION_HIDE_TRAY) == "Y" {
