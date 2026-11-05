@@ -1,0 +1,25 @@
+name: LanDesk native preview
+run-name: LanDesk native preview from ${{ github.sha }}
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: landesk-preview-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  bridge:
+    uses: ./.github/workflows/landesk-bridge.yml
+  android:
+    needs: bridge
+    uses: ./.github/workflows/landesk-android.yml
+    secrets: inherit
+  windows:
+    needs: bridge
+    uses: ./.github/workflows/landesk-windows.yml
+  macos:
+    needs: bridge
+    uses: ./.github/workflows/landesk-macos.yml
+  linux:
+    needs: bridge
+    uses: ./.github/workflows/landesk-linux.yml
