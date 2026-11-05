@@ -24,6 +24,11 @@ pub fn start_tray() {
 }
 
 fn make_tray() -> hbb_common::ResultType<()> {
+    #[cfg(target_os = "macos")]
+    let Some(_tray_lock) = crate::landesk_macos_tray::lock()? else {
+        return Ok(());
+    };
+
     // https://github.com/tauri-apps/tray-icon/blob/dev/examples/tao.rs
     use hbb_common::anyhow::Context;
     use tao::event_loop::{ControlFlow, EventLoopBuilder};

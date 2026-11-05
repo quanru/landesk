@@ -81,3 +81,5 @@ sudo python3 tools/native/migrate-macos-service.py --uid "$(id -u)" --apply
 脚本只接受指向 `/Applications/LanDesk.app` 且 Bundle ID 匹配的已知旧启动项。
 先校验，再停旧服务、加载新服务，成功后移除旧 plist；加载失败则恢复原来已加载的服务。
 不读取、移动或删除用户配置，也不更改其他应用的启动项。执行后核验两个新 job 以及应用首页。
+
+迁移工具也支持新版已安装、旧版启动项仍存在的情况：先核验已有的新启动项，保留其配置，重新加载新服务后移除旧启动项；失败时恢复原先已加载的服务。默认不加 `--apply` 时只做校验。

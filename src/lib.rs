@@ -17,6 +17,8 @@ mod client;
 mod lan;
 mod landesk_native_policy;
 mod landesk;
+#[cfg(target_os = "macos")]
+mod landesk_macos_tray;
 #[cfg(not(any(target_os = "ios")))]
 mod rendezvous_mediator;
 #[cfg(not(any(target_os = "ios")))]

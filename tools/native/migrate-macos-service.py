@@ -66,9 +66,11 @@ def main():
                 sources.setdefault(kind, jobs[(label, kind)])
     if set(sources) != {'service', 'server'}:
         raise RuntimeError('Both existing LanDesk service and agent are required')
+    existing = {}
     for kind in sources:
-        if path_for(NEW, kind).exists():
-            raise RuntimeError(f'New job already exists: {path_for(NEW, kind)}')
+        path = path_for(NEW, kind)
+        if path.exists():
+            existing[kind] = read_job(path, NEW, kind)
     print('Validated migration:', ', '.join(f'{label}_{kind}' for label, kind in jobs), '->', NEW, flush=True)
     if not args.apply:
         return
@@ -77,9 +79,13 @@ def main():
     # Remember which jobs were loaded so a failed bootstrap can restore that state.
     loaded = [(label, kind) for label, kind in jobs
               if run('print', f'{domain(kind, args.uid)}/{label}_{kind}', check=False).returncode == 0]
+    loaded += [(NEW, kind) for kind in existing
+               if run('print', f'{domain(kind, args.uid)}/{NEW}_{kind}', check=False).returncode == 0]
     written = []
     try:
         for kind, source in sources.items():
+            if kind in existing:
+                continue
             body = dict(source, Label=f'{NEW}_{kind}')
             path = path_for(NEW, kind)
             write_job(path, body)
