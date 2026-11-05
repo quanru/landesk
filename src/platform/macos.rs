@@ -224,8 +224,8 @@ pub fn install_service() -> bool {
 // No need to merge the existing dup code, because the code in these two functions are too critical.
 // New code should be written in a common function.
 pub fn is_installed_daemon(prompt: bool) -> bool {
-    let daemon = format!("{}_service.plist", crate::get_full_name());
-    let agent = format!("{}_server.plist", crate::get_full_name());
+    let daemon = format!("{}_service.plist", launchd_service_name());
+    let agent = format!("{}_server.plist", launchd_service_name());
     let agent_plist_file = format!("/Library/LaunchAgents/{}", agent);
     if !prompt {
         // in macos 13, there is new way to check if they are running or enabled, https://developer.apple.com/documentation/servicemanagement/updating-helper-executables-from-earlier-versions-of-macos#Respond-to-changes-in-System-Settings
@@ -362,8 +362,15 @@ fn update_daemon_agent(agent_plist_file: String, update_source: UpdateSource) ->
     func()
 }
 
+// Service identity is independent of the existing preferences and bundle identity.
+fn launchd_service_name() -> String {
+    "md.lifeos.LanDesk".to_owned()
+}
+
 fn correct_app_name(s: &str) -> String {
-    let mut s = s.to_owned();
+    let mut s = s.replace("com.carriez.RustDesk_", &format!("{}_", launchd_service_name()));
+    s = s.replace("Preferences/com.carriez.RustDesk/",
+        &format!("Preferences/{}/", crate::get_full_name()));
     if let Some(bundleid) = get_bundle_id() {
         s = s.replace("com.carriez.rustdesk", &bundleid);
     }
@@ -396,12 +403,12 @@ fn write_plist_atomically(path: &str, body: &str) -> ResultType<()> {
 
 pub fn write_plists() -> ResultType<()> {
     let daemon_plist_path = format!(
-        "/Library/LaunchDaemons/com.carriez.{}_service.plist",
-        crate::get_app_name()
+        "/Library/LaunchDaemons/{}_service.plist",
+        launchd_service_name()
     );
     let agent_plist_path = format!(
-        "/Library/LaunchAgents/com.carriez.{}_server.plist",
-        crate::get_app_name()
+        "/Library/LaunchAgents/{}_server.plist",
+        launchd_service_name()
     );
     let Some(daemon_plist) = PRIVILEGES_SCRIPTS_DIR.get_file("daemon.plist") else {
         bail!("daemon.plist not found in embedded resources");
@@ -444,7 +451,7 @@ pub fn uninstall_service(show_new_window: bool, sync: bool) -> bool {
                 log::error!("run osascript failed: {}", e);
             }
             _ => {
-                let agent = format!("{}_server.plist", crate::get_full_name());
+                let agent = format!("{}_server.plist", launchd_service_name());
                 let agent_plist_file = format!("/Library/LaunchAgents/{}", agent);
                 let uninstalled = !std::path::Path::new(&agent_plist_file).exists();
                 log::info!(
@@ -460,7 +467,7 @@ pub fn uninstall_service(show_new_window: bool, sync: bool) -> bool {
                     }
                     crate::ipc::set_option("stop-service", "Y");
                     std::process::Command::new("launchctl")
-                        .args(&["remove", &format!("{}_server", crate::get_full_name())])
+                        .args(&["remove", &format!("{}_server", launchd_service_name())])
                         .status()
                         .ok();
                     if show_new_window {
@@ -976,7 +983,7 @@ fn update_me_from_source(update_source: UpdateSource) -> ResultType<()> {
 
     // Include launchd jobs in the transaction only while the installed service is enabled.
     if is_installed_daemon && !is_service_stopped {
-        let agent = format!("{}_server.plist", crate::get_full_name());
+        let agent = format!("{}_server.plist", launchd_service_name());
         let agent_plist_file = format!("/Library/LaunchAgents/{}", agent);
         update_daemon_agent(agent_plist_file, update_source)?;
     } else {
@@ -1226,8 +1233,8 @@ pub fn update_from_dmg_as_root(dmg_path: &str, expected_version: &str) -> Result
         use std::os::unix::fs::PermissionsExt;
         std::fs::set_permissions(&tmp_dir, std::fs::Permissions::from_mode(0o700))?;
     }
-    let agent_plist = format!("/Library/LaunchAgents/com.carriez.{}_server.plist", app_name);
-    let daemon_plist = format!("/Library/LaunchDaemons/com.carriez.{}_service.plist", app_name);
+    let agent_plist = format!("/Library/LaunchAgents/{}_server.plist", launchd_service_name());
+    let daemon_plist = format!("/Library/LaunchDaemons/{}_service.plist", launchd_service_name());
 
     log::info!("[root-update] Starting silent root update from {}", dmg_path);
     // Check sessions before extracting to avoid unnecessary work
@@ -1359,8 +1366,8 @@ pub fn update_from_dmg_as_root(dmg_path: &str, expected_version: &str) -> Result
     // Write a shell script that runs detached after this function returns.
     // We cannot directly replace /Applications/RustDesk.app while it is running,
     // so we spawn a script that waits, kills processes, copies, and restarts.
-    let daemon_label = format!("com.carriez.{}_service", app_name);
-    let agent_label = format!("com.carriez.{}_server", app_name);
+    let daemon_label = format!("{}_service", launchd_service_name());
+    let agent_label = format!("{}_server", launchd_service_name());
     let script_path = format!("{}/rustdesk_update.sh", tmp_dir);
     let script = format!(
         r#"#!/bin/sh
@@ -2140,6 +2147,24 @@ pub(crate) fn get_bundle_id() -> Option<String> {
 #[cfg(test)]
 mod update_tests {
     use super::*;
+
+    #[test]
+    fn landesk_service_detection_matches_installer_label() {
+        crate::landesk::initialize();
+        let label = launchd_service_name();
+        assert_eq!(label, "md.lifeos.LanDesk");
+        assert_ne!(label, crate::get_full_name());
+        for name in ["agent.plist", "daemon.plist", "install.scpt", "uninstall.scpt", "update.scpt"] {
+            let body = PRIVILEGES_SCRIPTS_DIR.get_file(name).unwrap().contents_utf8().unwrap();
+            let rendered = correct_app_name(body);
+            assert!(rendered.contains(&label), "{name}");
+            assert!(!rendered.contains("com.carriez.LanDesk_"), "{name}");
+            if name == "install.scpt" {
+                assert!(rendered.contains("Preferences/dev.quanru.LanDesk/"));
+                assert!(!rendered.contains("Preferences/md.lifeos.LanDesk/"));
+            }
+        }
+    }
 
     #[test]
     fn update_tree_rejects_framework_root_symlink() {

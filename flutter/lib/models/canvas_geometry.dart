@@ -43,4 +43,30 @@ extension _CanvasGeometry on CanvasModel {
     return Size(w < 0 ? 0 : w, h < 0 ? 0 : h);
   }
 
+  // Mobile only: keep the cursor visible when the desktop exceeds the viewport.
+  void _moveToCenterCursor() {
+    Rect? imageRect = parent.target?.ffiModel.rect;
+    if (imageRect == null) {
+      // unreachable
+      return;
+    }
+    final maxX = 0.0;
+    final minX = _size.width + (imageRect.left - imageRect.right) * _scale;
+    final maxY = 0.0;
+    final minY = _size.height + (imageRect.top - imageRect.bottom) * _scale;
+    Offset offsetToCenter =
+        parent.target?.cursorModel.getCanvasOffsetToCenterCursor() ??
+            Offset.zero;
+    if (minX < 0) {
+      _x = min(max(offsetToCenter.dx, minX), maxX);
+    } else {
+      // _size.width > (imageRect.right, imageRect.left) * _scale, we should not change _x
+    }
+    if (minY < 0) {
+      _y = min(max(offsetToCenter.dy, minY), maxY);
+    } else {
+      // _size.height > (imageRect.bottom - imageRect.top) * _scale, , we should not change _y
+    }
+  }
+
 }

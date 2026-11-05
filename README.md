@@ -23,8 +23,7 @@ build.** Current implementation and verification results are recorded in
   is not automatically encrypted.
 - Public device-ID connections, rendezvous, NAT punching, relays, cloud accounts
   and automatic online updates are disabled at product entry points.
-- Desktop browser access is optional and uses HTTPS plus the same native password
-  and permission checks. Enable it in Network settings; its default port is `18123`.
+- Remote access requires a native client. The embedded browser gateway and Web client have been removed.
 - Virtual keys support combinations, press/release and editable layouts. Theme
   and input controls are shared across the supported Flutter targets.
 
@@ -56,8 +55,7 @@ recorded submodule with `git submodule update --init --recursive`.
 
 The local migration environment uses Rust 1.82, Flutter 3.44.1 and
 `flutter_rust_bridge_codegen` 1.80.1. Generated bridge files must match
-`src/flutter_ffi.rs`. Browser protobufs are generated from
-`libs/base/protos/message.proto`; the browser frontend is under `web/`.
+`src/flutter_ffi.rs`.
 
 For the implementation plan, scope and acceptance criteria, see
 [the migration plan](docs/design/rustdesk-migration-plan-2026-11-04.md).
@@ -66,14 +64,13 @@ support. See the ledger for the actual verification scope.
 
 ## Credits
 
-LanDesk is distributed under **AGPL-3.0**. RustDesk supplies the remote desktop,
-media, file-transfer and authentication foundation. The previous LanDesk version
-used [SubnetDesk](https://github.com/zibo-chen/SubnetDesk)'s LAN implementation;
-retained browser gateway and related code preserve that provenance. Switching the
-baseline does not erase those contributions or license obligations. LanDesk's
-product theme, virtual keys and integration changes remain separately maintained.
+LanDesk is based on [RustDesk](https://github.com/rustdesk/rustdesk) and distributed
+under **AGPL-3.0**. Thanks to RustDesk and its contributors for the remote desktop,
+media, file-transfer and authentication foundation. LanDesk's product theme,
+virtual keys and integration changes are maintained in this repository.
 
-This is an independent fork, not an official RustDesk release. Upstream copyright
+This is an independent fork, not an official RustDesk release. Component provenance
+is documented in [the licensing guide](docs/licensing/README.md); upstream copyright
 and license notices are retained in the source.
 
 ## Upstream maintenance

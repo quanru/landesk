@@ -59,6 +59,8 @@ void main() {
         );
         final desktop = tester.getRect(find.byKey(const ValueKey('desktop')));
         expect(desktop.height, size.height);
+        final railContext = tester.element(find.byType(RemoteActionRail));
+        expect(Theme.of(railContext).brightness, Brightness.dark);
         expect(desktop.right, size.width - RemoteActionRail.width);
         expect(tester.getRect(find.byType(RemoteActionRail)).right, size.width);
         expect(tester.takeException(), isNull);

@@ -171,10 +171,6 @@ pub fn refresh_options() {
 
 #[inline]
 pub fn get_option<T: AsRef<str>>(key: T) -> String {
-    #[cfg(not(any(target_os = "android", target_os = "ios")))]
-    if key.as_ref() == "landesk-web-status" {
-        return serde_json::to_string(&crate::web_gateway::runtime_status()).unwrap_or_default();
-    }
     if key.as_ref() == "landesk-local-endpoints" {
         return crate::landesk::local_endpoints().join("\n");
     }

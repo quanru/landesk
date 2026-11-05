@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../theme/landesk_theme.dart';
 
 /// Keeps remote input mounted when the rail, keyboard or a panel changes.
 class RemoteSessionLayout extends StatelessWidget {
@@ -26,7 +27,8 @@ class RemoteSessionLayout extends StatelessWidget {
           ],
         ),
       ),
-      if (rail != null) rail!,
+      if (rail != null) Theme(
+        data: LandeskTheme.build(Brightness.dark), child: rail!),
     ],
   );
 }

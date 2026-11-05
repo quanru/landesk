@@ -106,6 +106,13 @@ class _LandeskRemoteControlsState extends State<LandeskRemoteControls> {
             keys.currentState?.editLayout();
           } : null),
           button(Icons.window_outlined, 'All windows', enabled ? overview : null),
+          button(model.touchMode ? Icons.touch_app : Icons.mouse_outlined,
+            model.touchMode ? 'Touch mode' : 'Mouse mode', enabled ? () async {
+              model.toggleTouchMode();
+              setState(() {});
+              await bind.mainSetLocalOption(key: kOptionTouchMode,
+                value: model.touchMode ? 'Y' : 'N');
+            } : null),
           button(Icons.settings_outlined, 'Display', widget.onOptions),
           button(Icons.chat_bubble_outline, 'Chat', widget.onChat),
           button(Icons.more_horiz, 'Control Actions', widget.onActions),

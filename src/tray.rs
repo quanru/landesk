@@ -299,6 +299,8 @@ async fn start_query_session_count(sender: std::sync::mpsc::Sender<Data>) {
 }
 
 fn load_icon_from_asset() -> Option<image::DynamicImage> {
+    // macOS uses the monochrome menu-bar template, not the full app icon.
+    if cfg!(target_os = "macos") { return None; }
     let Some(path) = std::env::current_exe().map_or(None, |x| x.parent().map(|x| x.to_path_buf()))
     else {
         return None;

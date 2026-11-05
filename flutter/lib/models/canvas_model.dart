@@ -63,7 +63,14 @@ class CanvasModel with ChangeNotifier {
     sessionId = parent.target!.sessionId;
   }
 
-  double get x => _x;
+  double get x {
+    final width = getDisplayWidth() * _scale;
+    // Panning must not leave a fitted landscape desktop off-centre.
+    if (isMobile && _size.width > _size.height && width <= _size.width) {
+      return (_size.width - width) / 2;
+    }
+    return _x;
+  }
   double get y => _y;
   double get scale => _scale;
   bool get locked => _locked;
@@ -567,32 +574,6 @@ class CanvasModel with ChangeNotifier {
     });
   }
 
-  // mobile only
-  // Move the canvas to make the cursor visible(center) on the screen.
-  void _moveToCenterCursor() {
-    Rect? imageRect = parent.target?.ffiModel.rect;
-    if (imageRect == null) {
-      // unreachable
-      return;
-    }
-    final maxX = 0.0;
-    final minX = _size.width + (imageRect.left - imageRect.right) * _scale;
-    final maxY = 0.0;
-    final minY = _size.height + (imageRect.top - imageRect.bottom) * _scale;
-    Offset offsetToCenter =
-        parent.target?.cursorModel.getCanvasOffsetToCenterCursor() ??
-            Offset.zero;
-    if (minX < 0) {
-      _x = min(max(offsetToCenter.dx, minX), maxX);
-    } else {
-      // _size.width > (imageRect.right, imageRect.left) * _scale, we should not change _x
-    }
-    if (minY < 0) {
-      _y = min(max(offsetToCenter.dy, minY), maxY);
-    } else {
-      // _size.height > (imageRect.bottom - imageRect.top) * _scale, , we should not change _y
-    }
-  }
 }
 
 // data for cursor

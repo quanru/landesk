@@ -118,3 +118,13 @@ pub fn set_listening(value: bool) {
 pub fn listening() -> i64 {
     i64::from(LISTENING.load(std::sync::atomic::Ordering::Relaxed))
 }
+
+/// The GUI hosts the native server directly; it still needs its own status item.
+#[cfg(target_os = "macos")]
+pub fn start_macos_tray(args: &[String]) {
+    if args.is_empty() && !crate::check_process("--tray", true) {
+        if let Err(err) = crate::run_me(vec!["--tray"]) {
+            hbb_common::log::error!("Failed to start LanDesk menu-bar icon: {err}");
+        }
+    }
+}

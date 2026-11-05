@@ -67,7 +67,9 @@ void main() {
               behavior: HitTestBehavior.opaque,
               onTap: () => canvasTaps++,
               child: const SizedBox.expand()),
-          CustomKeyOverlay(onVisibilityChanged: visibility.add, send: (shortcut) async {
+          CustomKeyOverlay(onVisibilityChanged: visibility.add,
+            mouseScroll: (_) async {}, rightClick: () async {},
+            send: (shortcut) async {
             sent.add(shortcut);
           }),
         ])));

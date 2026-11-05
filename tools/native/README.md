@@ -2,7 +2,7 @@
 
 主线 `main`（迁移来源 `migration/rustdesk-native`），固定上游见 `../migration/native-baseline.json`。本目录只构建开发候选，不上传、发布或更改 `/Applications`。验证进度见 `docs/validation/native-migration-progress-2026-11-04.md`。
 
-工具链：Rust 1.82.0、Flutter 3.44.1、flutter_rust_bridge_codegen 1.80.1、Bun 1.3.4、CocoaPods、Xcode。原生依赖来源参考项目 `res/vcpkg`；本轮移动端开发验证使用的源码归档与校验值记录在 `development-dependencies.json`，不作为发行依赖锁定结果；iOS 模拟器与真机的库不能混用。所有构建通过本机 `dev-gate`，内部编译并发为 2。上游 `build.py` 和自动发布工作流仍包含 RustDesk 包装约定，不能作为 LanDesk 发布入口；本次没有验证 Windows／Linux 安装包。
+工具链：Rust 1.82.0、Flutter 3.44.1、flutter_rust_bridge_codegen 1.80.1、CocoaPods、Xcode。原生依赖来源参考项目 `res/vcpkg`；本轮移动端开发验证使用的源码归档与校验值记录在 `development-dependencies.json`，不作为发行依赖锁定结果；iOS 模拟器与真机的库不能混用。所有构建通过本机 `dev-gate`，内部编译并发为 2。上游 `build.py` 和自动发布工作流仍包含 RustDesk 包装约定，不能作为 LanDesk 发布入口；本次没有验证 Windows／Linux 安装包。
 
 ## 通用生成步骤
 
@@ -14,10 +14,9 @@ flutter_rust_bridge_codegen --rust-input src/flutter_ffi.rs \
   --c-output flutter/ios/Runner/bridge_generated.h \
   --extra-c-output-path flutter/macos/Runner --skip-deps-check --no-build-runner
 (cd flutter && dart run build_runner build --delete-conflicting-outputs --build-filter=lib/generated_bridge.freezed.dart)
-(cd web && bun install --frozen-lockfile && bun run generate:proto && bun run typecheck && bun test && bun run build)
 ```
 
-必须先构建 Web 资源再编译 Rust，网关会把 `web/dist` 嵌入二进制。FRB 生成需要本机 `cargo-expand` 及完整的 Cargo 依赖缓存；离线缓存完整时可设置 `CARGO_NET_OFFLINE=true`。
+内置浏览器远控已移除，构建不再需要 Bun 或 Web 资源。FRB 生成需要本机 `cargo-expand` 及完整的 Cargo 依赖缓存；离线缓存完整时可设置 `CARGO_NET_OFFLINE=true`。
 
 ## macOS
 
@@ -41,9 +40,9 @@ cargo build --locked --lib --features flutter --target aarch64-apple-ios-sim
 
 ## 配置隔离
 
-macOS 新配置为 `~/Library/Preferences/dev.quanru.LanDesk/`，旧 LocalDesk 配置不导入。验证可以给新配置设独立 `direct-access-port` 和 `web-listen-port`，不要占用已运行旧版的端口。浏览器开关为 `web-access-enabled=Y`，默认关闭；原生端口默认 21118，HTTPS 默认 18123。
+macOS 新配置为 `~/Library/Preferences/dev.quanru.LanDesk/`，旧 LocalDesk 配置不导入。验证可以给新配置设独立 `direct-access-port`，不要占用已运行旧版的端口。原生端口默认 21118。
 
-原生直连不加密，保持官方密码或被控端批准及权限检查；需要传输加密时搭配 Tailscale／VPN。浏览器外部连接使用 HTTPS。
+原生直连不加密，保持官方密码或被控端批准及权限检查；需要传输加密时搭配 Tailscale／VPN。
 
 ## Android arm64
 
@@ -64,3 +63,21 @@ Flutter 3.44.1 已移除 Android v1 注册接口。`pubspec.yaml` 固定兼容�
 安装使用已授权真机的设备锁和 `xcrun devicectl device install app`，保留应用数据，不卸载现有版本。安装完成核验签名、设备上的版本及脱离调试器启动；这不上传 App Store Connect 或 TestFlight。
 
 真机 Release 构建必须保留 Dart 动态查找的桥接导出。`Runner/NativeBridgeAnchor.m` 以 volatile 写入保留生成头文件的入口引用；不要改回丢弃返回值的 Swift 空调用，否则优化构建会白屏。签名后可用 `nm -gU Runner.app/Runner` 检查生成头文件引用的全部入口；2026-11-05 本地候选 326 个入口完整，并在 iPhone 14 Pro 真机验证首页正常启动。
+
+### macOS 启动服务标识
+
+启动服务统一使用 `md.lifeos.LanDesk_service` / `md.lifeos.LanDesk_server`。
+这与应用 Bundle ID `dev.quanru.localdesk`、现有配置目录 `dev.quanru.LanDesk` 相互独立。
+安装、检测、卸载与更新由 `src/platform/macos.rs` 统一替换上游模板里的服务标识。
+
+已安装旧开发版的机器可执行一次显式迁移；这不是运行时兼容分支：
+
+```sh
+python3 tools/native/migrate-macos-service.py --uid "$(id -u)"
+# 先安装包含新服务标识的应用，再通过正常管理员认证执行：
+sudo python3 tools/native/migrate-macos-service.py --uid "$(id -u)" --apply
+```
+
+脚本只接受指向 `/Applications/LanDesk.app` 且 Bundle ID 匹配的已知旧启动项。
+先校验，再停旧服务、加载新服务，成功后移除旧 plist；加载失败则恢复原来已加载的服务。
+不读取、移动或删除用户配置，也不更改其他应用的启动项。执行后核验两个新 job 以及应用首页。

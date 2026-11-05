@@ -94,6 +94,8 @@ pub fn core_main() -> Option<CoreMainAction> {
         }
         i += 1;
     }
+    #[cfg(target_os = "macos")]
+    crate::landesk::start_macos_tray(&args);
     #[cfg(any(target_os = "linux", target_os = "windows"))]
     if args.is_empty() {
         #[cfg(target_os = "linux")]

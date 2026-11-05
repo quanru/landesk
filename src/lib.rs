@@ -17,8 +17,6 @@ mod client;
 mod lan;
 mod landesk_native_policy;
 mod landesk;
-#[cfg(not(any(target_os = "android", target_os = "ios")))]
-mod web_gateway;
 #[cfg(not(any(target_os = "ios")))]
 mod rendezvous_mediator;
 #[cfg(not(any(target_os = "ios")))]

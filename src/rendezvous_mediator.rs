@@ -292,8 +292,6 @@ impl RendezvousMediator {
             allow_err!(super::lan::start_listening());
         });
         scrap::codec::test_av1();
-        #[cfg(not(any(target_os = "android", target_os = "ios")))]
-        tokio::spawn(crate::web_gateway::run(server.clone()));
         direct_server(server).await;
     }
 

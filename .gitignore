@@ -67,3 +67,6 @@ flutter/web/
 /flutter/macos/build/
 
 /flutter/android/build/
+
+# Untracked dependency cache left by the removed browser client
+/web/node_modules/

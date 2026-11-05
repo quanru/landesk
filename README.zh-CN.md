@@ -18,8 +18,7 @@
 - 原生 IP 连接不额外提供应用层传输加密，需要加密时使用 Tailscale 或 VPN。
   普通局域网连接不会自动获得加密保护。
 - 产品入口禁用公网设备 ID、会合、打洞、中继、云账号和在线自动更新。
-- 桌面端可在网络设置中开启 HTTPS 浏览器访问，默认端口为 `18123`，
-  使用与原生连接相同的密码和权限检查。
+- 远控需安装原生客户端；已移除内置浏览器网关和 Web 客户端。
 - 虚拟按键支持组合键、按住与释放、编辑布局；主题和输入控件由各 Flutter 端共用。
 
 两端都需要升级到新版。不保留旧 SubnetDesk 协议，不转换旧密码或配置。
@@ -43,20 +42,19 @@
 使用 `git submodule update --init --recursive` 初始化对应子模块。
 
 迁移验证环境为 Rust 1.82、Flutter 3.44.1 和 `flutter_rust_bridge_codegen` 1.80.1。
-生成的桥接文件必须与 `src/flutter_ffi.rs` 一致。浏览器代码位于 `web/`，
-其 protobuf 定义直接来自 `libs/base/protos/message.proto`。
+生成的桥接文件必须与 `src/flutter_ffi.rs` 一致。
 
 [迁移方案](docs/design/rustdesk-migration-plan-2026-11-04.md)记录功能范围与验收要求。
 构建或单测通过不代表各端远控已经可用，请以台账中的实际验证范围为准。
 
 ## 致谢与许可
 
-LanDesk 使用 **AGPL-3.0** 许可证。RustDesk 提供远程桌面、音视频、文件传输和认证基础。
-此前的 LanDesk 使用了 [SubnetDesk](https://github.com/zibo-chen/SubnetDesk) 的局域网实现；
-本次保留的浏览器网关及相关代码继续保留其来源。更换基线不会抹去这些贡献和许可义务。
-LanDesk 的产品主题、虚拟按键和集成改动独立维护。
+LanDesk 基于 [RustDesk](https://github.com/rustdesk/rustdesk)，使用 **AGPL-3.0** 许可证。
+感谢 RustDesk 及其贡献者提供远程桌面、音视频、文件传输和认证基础。
+LanDesk 的产品主题、虚拟按键和集成改动在本仓库独立维护。
 
-本项目是独立维护的 fork，不是 RustDesk 官方发行版。源码中的上游版权与许可声明均保留。
+本项目是独立维护的 fork，不是 RustDesk 官方发行版。
+组件来源见[许可文档](docs/licensing/README.md)，源码中的上游版权与许可声明均保留。
 
 ## 同步上游
 

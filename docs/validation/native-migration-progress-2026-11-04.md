@@ -225,3 +225,57 @@ iPhone 已通过系统联网授权，首页地址填入 `192.168.31.199:21218`�
 Mac 原生核心与 Flutter Debug UI 构建成功，strict deep 签名验证通过，以相同 designated requirement 覆盖安装 `/Applications/LanDesk.app`，保留用户数据。已安装产物哈希见 `.verify/native-runtime/mac-overview-installed.json`。真实窗口截图 `mac-connect-button-fixed.png` 确认“连接”文字完整显示。
 
 iPhone 14 Pro 实连中观察到真实 Mission Control 多窗口缩略图，截图 `iphone-window-overview-observed.png`。重复收起/展开的因果验证仍受其他桌面会话持续切换窗口干扰，不能仅凭该截图宣称快捷键稳定验收；已请求短暂独占人工/桌面自动化操作时间。未提交、推送或发布。
+
+### 2026-11-05：更改密码入口的无说明蒙层
+
+根因为上游设置页在有视频远控连接、且禁止远端修改配置时阻断整页，原来只有 50% 灰色蒙层，没有解释或退出入口；并非密码弹窗渲染失败。保留原有 `canBeBlocked`、连接数判定和安全设置解锁机制，新增独立 `SettingsSessionGuard` 显示原因、断开连接后恢复说明和返回首页按钮；不提供绕过权限的操作。设置页壳抽出 part 文件以隔离本次改动。
+
+定向 widget 回归通过：被保护的设置不能点击、返回首页回调有效、连接限制解除后可再次操作。Mac Debug UI 构建、开发签名及同身份覆盖安装成功，保留用户数据。真实窗口已观察到中文保护提示，并点击返回首页成功；截图 `.verify/native-runtime/mac-settings-session-guard.png` 与 `mac-settings-returned-home.png`。未修改真实密码或权限，未执行系统解锁认证；本次未完成真实连接断开后的密码保存验收，该恢复状态由 widget 测试覆盖。未提交、推送或发布。
+
+### 2026-11-05：菜单栏图标、手机横屏与触摸入口
+
+恢复 legacy 的 macOS 模板图标资源；主窗口启动时按既有进程检查补启托盘，保留上游托盘菜单与权限逻辑。Mac 原生核心、Flutter UI 构建和签名成功，同身份覆盖安装到 `/Applications/LanDesk.app`，实际点击图标已显示“打开／停止服务”，截图 `.verify/native-runtime/mac-restored-tray-menu.png`。
+
+手机右侧侧栏（含收起入口）固定使用暗色主题；横屏且远端画面宽度未超过可用画布时锁定水平居中，放大后继续允许平移。居中参照扣除侧栏后的画布。画布绘制与指针坐标使用同一偏移；仅把原有光标居中方法搬到 geometry part 控制文件大小。
+
+恢复丢失的触摸／鼠标模式按钮，沿用上游模式切换并保存本地选项。iPhone 14 Pro 同包覆盖安装后实连 Mac，确认旧配置为鼠标模式；切换触摸模式后，虚拟按键保持开启，单击远端收藏标签已切换。鼠标模式单击作用于当前光标位置，不能等同于手指位置。定向回归共 12 项通过（11 项虚拟按键、侧栏和手势测试；1 项真实 RawTouchGestureDetectorRegion 指针移动及 down/up 测试），验证按键空白区域不截断触摸。真机横屏截图 `.verify/native-runtime/iphone-dark-centered-landscape.png`。本轮仅开发验证与本机安装，未提交、推送或发布。
+
+补充真机验证：保持所有虚拟按键可见，在 iPhone 上单击远端 macOS 计算器数字 9，显示由原结果 42 变为 9，光标也落在 9 上。证据 `.verify/native-runtime/iphone-touch-calculator-verified.png`；证明当前触摸模式下点位与左键事件均正常到达远端普通应用。
+
+### 2026-11-05：已安装启动服务仍提示安装
+
+现场确认 `/Library/LaunchDaemons/com.carriez.LanDesk_service.plist` 与对应 LaunchAgent 已存在，系统 daemon 的 launchctl 状态为 running。迁移后配置命名空间为 `dev.quanru.LanDesk`，检测错误地据此查找 plist，而安装脚本、卸载脚本及更新模板仍使用 `com.carriez.LanDesk`。
+
+本次仅修改 `src/platform/macos.rs`：服务检测、卸载后确认与移除、更新 agent 路径使用与安装模板同源的 launchd 标识。保留配置命名空间、bundle ID、已有启动项和权限；不把“已安装”冒充重启／登录自启动验证。新增一项模板一致性回归。
+
+验收：1 项 Rust 定向回归通过（272 项未选择），Rust 核心及 macOS UI 构建成功，开发签名和同身份覆盖安装成功。真实首页已无左下角安装提示，截图 `.verify/native-runtime/mac-service-installed-no-prompt.png`，安装回执 `mac-service-detection-installed.json`。未重装启动服务、未进行重启登录验收、未提交推送或发布。
+
+### 2026-11-05：启动服务改为 md.lifeos.LanDesk
+
+按用户要求将 macOS launchd 服务标识改为 `md.lifeos.LanDesk_service` / `md.lifeos.LanDesk_server`。现有 Bundle ID `dev.quanru.localdesk` 和配置命名空间 `dev.quanru.LanDesk` 保持不变。`src/platform/macos.rs` 的安装模板渲染、检测、卸载、写 plist 及普通／root 更新路径统一使用新服务名；安装模板中的配置目录独立映射到现有配置命名空间。上游模板本身保持原样，减少未来合并冲突。
+
+Rust 定向测试通过（1 项，272 项未选择），确认五个模板的新服务名及配置路径；Rust 核心与 Mac UI 构建通过。`tools/native/migrate-macos-service.py` 提供一次显式本机迁移，默认只读校验；拒绝执行路径或 Bundle ID 不匹配的旧 job，加载失败时恢复原来已加载的服务。现场只读校验确认两套旧 job 均属于 LanDesk；语法与拒绝错误可执行文件的检查通过。系统迁移需正常管理员认证，尚待执行核验。
+
+新服务标识候选已签名并同身份覆盖安装 `/Applications/LanDesk.app`。已调起 macOS 管理员认证窗口，迁移命令等待本人输入密码；尚未确认系统启动项替换成功。暂不将本机迁移或首页验收记为完成。
+
+### 2026-11-05：README 项目级致谢
+
+按用户要求，中英文 README 项目级致谢聚焦 RustDesk 及其贡献者，移除 SubnetDesk 的项目级致谢段落。核对发现 `src/web_gateway/` 和 `web/` 仍保留 SubnetDesk 来源实现，因此在 `docs/licensing/README.md` 中按组件保留准确来源及采用提交；未删除版权、许可或历史审计记录。此次仅修改文档，未提交推送。
+
+用户随后确认保留 credit 并如实说明：中英文 README 已恢复 SubnetDesk 及贡献者致谢，明确其贡献范围为仍复用的浏览器网关与 Web 客户端；当前原生远控核心来自官方 RustDesk，旧实现保留在 legacy。组件来源文档继续保留。本条更新上一条 README 致谢调整的最终状态，未提交推送。
+
+### 2026-11-05：移除继承的浏览器远控
+
+用户明确不保留官方原生基线没有、且并非主动要求的继承功能。本轮移除内置 HTTPS/WebSocket 网关 `src/web_gateway.rs`、`src/web_gateway/` 以及 `web/` 下受 Git 管理的客户端、资源、测试和构建配置；不清理用户配置或无关本地文件。删除服务启动 hook、运行状态查询及七项网关直接依赖，Cargo.lock 只随依赖图裁剪；保留官方依赖仍使用的 TLS/WebSocket 库。
+
+桌面网络设置移除 HTTPS 开关、端口、状态轮询，只保留原生直连端口，端口校验改为单端口 1–65535。中英文 README、当前范围、开发构建、同步指南和许可文档同步更新；保留 SubnetDesk 的历史贡献致谢，原生核心继续基于 RustDesk。主题、虚拟按键、窗口总览和官方远控功能不在本轮删除范围。正在执行定向验证与构建，尚未发布。
+
+验证结果：设置组件静态分析通过；1 项 widget 回归通过，确认仅保留直连端口、拒绝非法端口且只保存原生选项。Rust 核心和 macOS UI 构建通过，开发签名及同身份覆盖安装完成；产物回执 `.verify/native-runtime/mac-native-only-installed.json`。Cargo.lock 裁掉 15 个包版本，新增版本为 0；新核心符号表不含 web_gateway。安装后默认 HTTPS 端口 18123 无监听（该观察本身不作为所有端口扫描证明）。
+
+真实应用已启动，但现有远控会话触发设置保护，未绕过保护或终止会话；因此网络页实际点击验收未完成，保留保护状态截图 `native-only-settings-protected.png`，并提供实际组件渲染预览。未提交、推送或发布；手机端本轮未重装，浏览器服务本来仅在桌面平台编译。
+
+组件预览已生成并视觉核对：`.verify/native-runtime/native-network-settings-preview.png`，使用真实 `NativeNetworkSettings` 与产品浅色主题、合成地址，字体为预览加载的 Arial。截图临时脚本在导出后等待未退出，已终止本次进程并删除临时脚本；不将该脚本计作通过测试。正式的设置行为回归已独立通过。保留已删除 Web 客户端的本地 node_modules 缓存，并在根 .gitignore 精确忽略，避免误提交。
+
+### 2026-11-05：移除当前版本的 SubnetDesk 致谢
+
+在继承的浏览器网关与 Web 客户端已从主线移除后，按用户明确要求，移除中英文 README 及当前组件来源说明中的 SubnetDesk 致谢；当前范围说明同步更新。保留 RustDesk、实际依赖版权和许可证，不改 legacy 分支及旧版本的来源审计记录。本条取代上文“保留历史贡献致谢”的展示决定；仅文档变更，未提交推送。
