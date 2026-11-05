@@ -10,7 +10,7 @@
 ## 主线迁移状态
 
 `main` 已切换到固定的官方 RustDesk 基线，此前基于 SubnetDesk 的版本保留在 `legacy`，
-**尚未完成全部验证，也未发布新版**。具体进展与验证结果见
+**原生迁移版以预览版发布，尚非稳定版，也未完成所有功能验证**。具体进展与验证结果见
 [迁移台账](docs/validation/native-migration-progress-2026-11-04.md)。
 
 - 使用私网 IP 地址直连，可指定端口，默认端口为 `21118`。局域网发现返回直连地址。
@@ -27,14 +27,15 @@
 
 ## 下载与截图
 
-[官网](https://landesk.lifeos.md/zh/) 保留现有安装包和 TestFlight 入口。
-它们是迁移前的版本，不是当前分支的构建结果。本次迁移尚未发布新版。
+通过[官网](https://landesk.lifeos.md/zh/#download)下载 **1.5.1（100）原生预览版**，飞书为主下载、GitHub 为备用。
+[发布说明与校验值](https://github.com/quanru/landesk/releases/tag/v1.5.1-preview.20261105)覆盖 macOS、Windows、Linux 和 Android，两端都需升级。
+iOS build 100 已上传 TestFlight，正在等待外部测试审核。实际检查项与限制见[发布验证记录](docs/validation/release-2026-11-05.md)。
 
 <img src="assets/screenshots/native-ios-connected.png" alt="原生迁移开发版：iOS 模拟器实际控制 Mac，横屏显示虚拟按键" width="880">
 
 <img src="assets/screenshots/native-ios-system-keyboard.png" alt="原生迁移开发版的 iOS 系统键盘" width="320">
 
-2026-11-05 实拍：iOS 模拟器通过新版原生协议连接真实 Mac。虚拟 C、Enter、V 按键已到达 TextEdit；系统键盘文字输入、横竖屏布局及键盘展开／收起已检查。这是开发版截图，不代表新版已对外发布，也不是 iOS 真机验证。
+2026-11-05 实拍：iOS 模拟器通过新版原生协议连接真实 Mac。虚拟 C、Enter、V 按键已到达 TextEdit；系统键盘文字输入、横竖屏布局及键盘展开／收起已检查。这是开发版截图，不是 iOS 真机验证；发行产物的真机检查另见发布验证记录。
 
 ## 源码与构建
 

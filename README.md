@@ -11,8 +11,8 @@ virtual keys. Use it with Tailscale when your devices are on different networks.
 ## Native RustDesk migration
 
 The `main` branch now uses a fixed official RustDesk baseline. The previous
-SubnetDesk-based implementation is preserved on `legacy`. **It is not a released or fully validated
-build.** Current implementation and verification results are recorded in
+SubnetDesk-based implementation is preserved on `legacy`. **The native migration is available as a preview, not a stable or fully validated
+release.** Current implementation and verification results are recorded in
 [the migration ledger](docs/validation/native-migration-progress-2026-11-04.md).
 
 - Connect using a numeric private IP address, optionally followed by a port.
@@ -34,9 +34,11 @@ other RustDesk builds is not promised without verification.
 
 ## Downloads and screenshots
 
-The [website](https://landesk.lifeos.md/) contains the existing downloads and
-TestFlight entry. Those builds predate this migration; they are not binaries of
-this branch. No new release has been published from this work.
+Download **1.5.1 (100) Native Preview** from the [website](https://landesk.lifeos.md/#download)
+(Feishu primary, GitHub backup). [Release notes and checksums](https://github.com/quanru/landesk/releases/tag/v1.5.1-preview.20261105)
+cover macOS, Windows, Linux and Android. Both peers need the native build.
+iOS build 100 is uploaded to TestFlight and awaiting external beta review.
+See the [release validation record](docs/validation/release-2026-11-05.md) for the actual checks and limits.
 
 <img src="assets/screenshots/native-ios-connected.png" alt="Native migration development build: iOS simulator controlling a real macOS desktop with virtual keys in landscape" width="880">
 
@@ -45,7 +47,7 @@ this branch. No new release has been published from this work.
 Captured on 2026-11-05: an iOS simulator connected to a real Mac through the
 new native protocol. Virtual C, Enter and V keys reached TextEdit; system-keyboard
 text input, portrait/landscape layout and keyboard show/hide were checked. These
-are development-build screenshots, not evidence of a new public release.
+are development-build screenshots. Release-package checks are recorded separately in the release validation record.
 
 ## Source and build
 
