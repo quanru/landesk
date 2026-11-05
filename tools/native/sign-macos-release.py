@@ -34,6 +34,10 @@ def main():
         raise ValueError('Missing native service')
     sign = ['codesign', '--force', '--sign', args.identity, '--options', 'runtime', '--timestamp']
     for binary in sorted(binaries, key=lambda p: len(p.parts), reverse=True):
+        # Signing the main executable also validates its containing bundle.
+        # Leave it for the final bundle pass, after all helpers/frameworks.
+        if binary == app / 'Contents/MacOS/LanDesk':
+            continue
         run(*sign, str(binary))
     for framework in sorted(app.rglob('*.framework'), key=lambda p: len(p.parts), reverse=True):
         if not framework.is_symlink():

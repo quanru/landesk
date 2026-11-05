@@ -1,0 +1,89 @@
+name: Upload verified LanDesk release artifacts
+on:
+  workflow_dispatch:
+    inputs:
+      build-run:
+        description: Native preview build run
+        required: true
+        type: string
+      android-run:
+        description: Successful Android packaging recovery run
+        required: true
+        type: string
+      source-sha:
+        description: Exact native build source
+        required: true
+        type: string
+      tag:
+        description: Existing draft preview release tag
+        required: true
+        type: string
+permissions:
+  actions: read
+  contents: write
+jobs:
+  upload:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
+    steps:
+      - name: Require matching build and existing draft
+        uses: actions/github-script@d7906e4ad0b1822421a7e6a35d5ca353c962f410
+        env:
+          BUILD_RUN: ${{ inputs.build-run }}
+          ANDROID_RUN: ${{ inputs.android-run }}
+          SOURCE_SHA: ${{ inputs.source-sha }}
+          RELEASE_TAG: ${{ inputs.tag }}
+        with:
+          script: |
+            const repo = {owner: context.repo.owner, repo: context.repo.repo};
+            const {data: build} = await github.rest.actions.getWorkflowRun({...repo, run_id: Number(process.env.BUILD_RUN)});
+            if (build.head_sha !== process.env.SOURCE_SHA || build.path !== '.github/workflows/landesk-preview.yml') throw new Error('Build provenance mismatch');
+            const jobs = await github.paginate(github.rest.actions.listJobsForWorkflowRun, {...repo, run_id: build.id});
+            for (const name of ['windows / x86_64-pc-windows-msvc', 'linux / linux']) {
+              if (!jobs.some(j => j.name === name && j.conclusion === 'success')) throw new Error(`Build failed: ${name}`);
+            }
+            const {data: android} = await github.rest.actions.getWorkflowRun({...repo, run_id: Number(process.env.ANDROID_RUN)});
+            if (android.path !== '.github/workflows/landesk-android-package.yml' || android.conclusion !== 'success') throw new Error('Android packaging not successful');
+            const releases = await github.paginate(github.rest.repos.listReleases, repo);
+            const release = releases.find(r => r.tag_name === process.env.RELEASE_TAG);
+            if (!release?.draft || !release.prerelease || release.target_commitish !== process.env.SOURCE_SHA) throw new Error('Require source-bound draft prerelease');
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          name: landesk-windows-x86_64
+          path: packages
+          run-id: ${{ inputs.build-run }}
+          github-token: ${{ github.token }}
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          name: landesk-linux-x86_64
+          path: packages
+          run-id: ${{ inputs.build-run }}
+          github-token: ${{ github.token }}
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          pattern: landesk-*.apk
+          path: packages
+          merge-multiple: true
+          run-id: ${{ inputs.android-run }}
+          github-token: ${{ github.token }}
+      - name: Upload immutable files to draft
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ inputs.tag }}
+        run: |
+          python3 - <<'PY'
+          import hashlib, json, os, pathlib, subprocess
+          tag = os.environ['RELEASE_TAG']
+          assets = json.loads(subprocess.check_output(['gh', 'release', 'view', tag, '--json', 'assets']))['assets']
+          files = sorted(pathlib.Path('packages').iterdir())
+          if len(files) != 5: raise RuntimeError('Expected Windows, Linux and three Android packages')
+          for file in files:
+              digest = 'sha256:' + hashlib.sha256(file.read_bytes()).hexdigest()
+              existing = next((a for a in assets if a['name'] == file.name), None)
+              if existing:
+                  if existing.get('digest') != digest: raise RuntimeError('Existing release asset differs: ' + file.name)
+              else:
+                  subprocess.run(['gh', 'release', 'upload', tag, str(file)], check=True)
+              print(file.name, digest)
+          PY
