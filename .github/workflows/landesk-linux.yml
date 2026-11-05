@@ -1,7 +1,7 @@
 ---
 name: LanDesk Linux
 'on':
-  workflow_call: 
+  workflow_call:
 permissions:
   contents: read
 env:
