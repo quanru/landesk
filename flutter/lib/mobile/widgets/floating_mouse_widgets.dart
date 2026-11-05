@@ -27,7 +27,7 @@ const double _kLeftRightButtonHeight = 40;
 const double _kBorderWidth = 1;
 final Color _kDefaultBorderColor = Colors.white.withOpacity(0.7);
 final Color _kDefaultColor = Colors.black.withOpacity(0.4);
-final Color _kTapDownColor = Colors.grey.shade700.withOpacity(0.9);
+final Color _kTapDownColor = Colors.blue.withOpacity(0.7);
 final Color _kWidgetHighlightColor = Colors.white.withOpacity(0.9);
 const int _kInputTimerIntervalMillis = 100;
 
@@ -372,6 +372,8 @@ class _FloatingLeftRightButtonState extends State<FloatingLeftRightButton> {
   Offset _position = Offset.zero;
   bool _isInitialized = false;
   bool _isDown = false;
+  Object? _activePress;
+  bool _remoteButtonDown = false;
   Rect? _lastBlockedRect;
 
   Orientation? _previousOrientation;
@@ -398,6 +400,11 @@ class _FloatingLeftRightButtonState extends State<FloatingLeftRightButton> {
 
   @override
   void dispose() {
+    _activePress = null;
+    if (_remoteButtonDown) {
+      _remoteButtonDown = false;
+      _inputModel.tapUp(_isLeft ? MouseButtons.left : MouseButtons.right);
+    }
     if (_lastBlockedRect != null) {
       _cursorModel.removeBlockedRect(_lastBlockedRect!);
     }
@@ -569,6 +576,8 @@ class _FloatingLeftRightButtonState extends State<FloatingLeftRightButton> {
       child: Listener(
         onPointerMove: _onBodyPointerMoveUpdate,
         onPointerDown: (event) async {
+          final press = Object();
+          _activePress = press;
           _isDragging = false;
           setState(() {
             _isDown = true;
@@ -579,6 +588,8 @@ class _FloatingLeftRightButtonState extends State<FloatingLeftRightButton> {
             isSpecialHoldDragActive = true;
             () async {
               await _cursorModel.syncCursorPosition();
+              if (!mounted || !identical(_activePress, press)) return;
+              _remoteButtonDown = true;
               await _inputModel
                   .tapDown(_isLeft ? MouseButtons.left : MouseButtons.right);
             }();
@@ -586,6 +597,8 @@ class _FloatingLeftRightButtonState extends State<FloatingLeftRightButton> {
           });
         },
         onPointerUp: (event) {
+          if (!mounted) return;
+          _activePress = null;
           _cursorModel.blockEvents = false;
           setState(() {
             _isDown = false;
@@ -604,8 +617,8 @@ class _FloatingLeftRightButtonState extends State<FloatingLeftRightButton> {
                         }));
           } else {
             // If it's not a quick tap, it could be a hold or drag.
-            // If it was a hold, isSpecialHoldDragActive is true.
-            if (isSpecialHoldDragActive) {
+            if (_remoteButtonDown) {
+              _remoteButtonDown = false;
               _inputModel
                   .tapUp(_isLeft ? MouseButtons.left : MouseButtons.right);
             }
@@ -617,13 +630,16 @@ class _FloatingLeftRightButtonState extends State<FloatingLeftRightButton> {
           isSpecialHoldDragActive = false;
         },
         onPointerCancel: (event) {
+          if (!mounted) return;
+          _activePress = null;
           _cursorModel.blockEvents = false;
           setState(() {
             _isDown = false;
           });
           _tapDownTimer?.cancel();
           _tapDownTimer = null;
-          if (isSpecialHoldDragActive) {
+          if (_remoteButtonDown) {
+            _remoteButtonDown = false;
             _inputModel.tapUp(_isLeft ? MouseButtons.left : MouseButtons.right);
           }
           isSpecialHoldDragActive = false;

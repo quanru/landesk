@@ -4,27 +4,24 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <meta name="color-scheme" content="light dark">
-    <title>LocalDesk Web</title>
+    <title>LanDesk Web</title>
     <link rel="stylesheet" href="/style.css">
   </head>
   <body>
     <main id="connect-panel" class="shell">
-      <h1 data-i18n="title">LocalDesk Web</h1>
+      <h1 data-i18n="title">LanDesk Web</h1>
       <p class="device"><span data-i18n="remoteAccess">远程访问</span> <strong id="device-name" data-i18n="deviceLoading">正在读取设备…</strong></p>
       <form id="login-form" autocomplete="off">
-        <label for="username" data-i18n="username">访问用户名</label>
-        <input id="username" name="username" maxlength="64" required autocomplete="username">
         <label for="password" data-i18n="password">访问密码</label>
-        <input id="password" name="password" type="password" maxlength="256" required autocomplete="off">
+        <input id="password" name="password" type="password" maxlength="256" autocomplete="off">
         <button id="connect" class="primary" type="submit" data-i18n="connect" disabled>连接此电脑</button>
       </form>
       <p id="status" aria-live="polite" data-i18n="initializing">正在初始化…</p>
       <aside id="trust-panel" class="trust" hidden>
         <strong data-i18n="firstTrust">首次访问需要信任本机证书</strong>
-        <span data-i18n="trustHelp">请核对下方设备指纹，并将本机 CA 安装到受信任证书存储。</span>
+        <span data-i18n="trustHelp">仅在确认这是目标电脑后信任其本机 CA，或使用你自己的 HTTPS 证书。</span>
         <a id="ca-certificate" href="/api/ca-certificate" data-i18n="downloadCa" download>下载本机 CA 证书</a>
       </aside>
-      <p class="fingerprint"><span data-i18n="fingerprint">设备指纹：</span> <span id="fingerprint">—</span></p>
     </main>
     <section id="viewer-panel" hidden>
       <div class="toolbar">

@@ -76,7 +76,6 @@ class ChatPage extends StatelessWidget implements PageShape {
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
     return ChangeNotifierProvider.value(
       value: chatModel,
       child: Container(
@@ -114,32 +113,27 @@ class ChatPage extends StatelessWidget implements PageShape {
                         isDense: true,
                         hintText: translate('Write a message'),
                         filled: true,
-                        fillColor: colors.surfaceContainer,
+                        fillColor: Theme.of(context).colorScheme.background,
                         contentPadding: EdgeInsets.all(10),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(10.0),
-                          borderSide: BorderSide(color: colors.outlineVariant),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                          borderSide: BorderSide(color: colors.outlineVariant),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                          borderSide: BorderSide(color: colors.onSurfaceVariant),
+                          borderSide: const BorderSide(
+                            width: 1,
+                            style: BorderStyle.solid,
+                          ),
                         ),
                       ),
                       sendButtonBuilder: defaultSendButton(
                         padding:
                             EdgeInsets.symmetric(horizontal: 6, vertical: 0),
-                        color: colors.onSurface,
+                        color: MyTheme.accent,
                         icon: Icons.send_rounded,
                       ),
                     ),
                     messageOptions: MessageOptions(
                       showOtherUsersAvatar: false,
                       showOtherUsersName: false,
-                      textColor: colors.onSurface,
+                      textColor: Colors.white,
                       maxWidth: constraints.maxWidth * 0.7,
                       messageTextBuilder: (message, _, __) {
                         final isOwnMessage = message.user.id.isBlank!;
@@ -149,12 +143,12 @@ class ChatPage extends StatelessWidget implements PageShape {
                               : CrossAxisAlignment.start,
                           children: <Widget>[
                             Text(message.text,
-                                style: TextStyle(color: colors.onSurface, fontSize: 14, height: 1.4)),
+                                style: TextStyle(color: Colors.white)),
                             Text(
                               "${message.createdAt.hour}:${message.createdAt.minute.toString().padLeft(2, '0')}",
                               style: TextStyle(
-                                color: colors.onSurfaceVariant,
-                                fontSize: 11,
+                                color: Colors.white,
+                                fontSize: 8,
                               ),
                             ).marginOnly(top: 3),
                           ],
@@ -165,11 +159,11 @@ class ChatPage extends StatelessWidget implements PageShape {
                         final isOwnMessage = message.user.id.isBlank!;
                         return defaultMessageDecoration(
                           color:
-                              isOwnMessage ? colors.surfaceContainerHighest : colors.surfaceContainer,
-                          borderTopLeft: 12,
-                          borderTopRight: 12,
-                          borderBottomRight: isOwnMessage ? 4 : 12,
-                          borderBottomLeft: isOwnMessage ? 12 : 4,
+                              isOwnMessage ? MyTheme.accent : Colors.blueGrey,
+                          borderTopLeft: 8,
+                          borderTopRight: 8,
+                          borderBottomRight: isOwnMessage ? 2 : 8,
+                          borderBottomLeft: isOwnMessage ? 8 : 2,
                         );
                       },
                     ),

@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_hbb/common/widgets/audio_input.dart';
 import 'package:flutter_hbb/common/widgets/dialog.dart';
+import 'package:flutter_hbb/common/widgets/keyboard_shortcuts/display.dart';
 import 'package:flutter_hbb/common/widgets/toolbar.dart';
 import 'package:flutter_hbb/models/chat_model.dart';
 import 'package:flutter_hbb/models/state_model.dart';
@@ -24,7 +25,6 @@ import './popup_menu.dart';
 import './kb_layout_type_chooser.dart';
 import 'package:flutter_hbb/utils/scale.dart';
 import 'package:flutter_hbb/common/widgets/custom_scale_base.dart';
-import 'package:flutter_hbb/common/widgets/safe_slider.dart';
 
 enum _ToolbarEdge { top, right, bottom, left }
 
@@ -332,21 +332,6 @@ class _ToolbarTheme {
 
   static const Color redColor = Colors.redAccent;
   static const Color hoverRedColor = Colors.red;
-
-  static Color actionForeground(BuildContext context, Color color) {
-    final scheme = Theme.of(context).colorScheme;
-    if (color == redColor) return scheme.error;
-    return color == inactiveColor ? scheme.onSurfaceVariant : scheme.onSurface;
-  }
-
-  static Color actionBackground(BuildContext context, Color color, bool hover) {
-    final scheme = Theme.of(context).colorScheme;
-    if (color == redColor) {
-      return hover ? scheme.errorContainer : Colors.transparent;
-    }
-    return hover ? scheme.surfaceContainerHighest : Colors.transparent;
-  }
-
   // kMinInteractiveDimension
   static const double height = 20.0;
   static const double dividerHeight = 12.0;
@@ -355,15 +340,15 @@ class _ToolbarTheme {
   static const double buttonHMargin = 2;
   static const double buttonVMargin = 6;
   static const double iconRadius = 8;
-  static const double elevation = 2;
+  static const double elevation = 3;
 
   static double dividerSpaceToAction = isWindows ? 8 : 14;
 
-  static const double menuBorderRadius = LandeskTheme.controlRadius;
+  static double menuBorderRadius = isWindows ? 5.0 : 7.0;
   static EdgeInsets menuPadding = isWindows
       ? EdgeInsets.fromLTRB(4, 12, 4, 12)
       : EdgeInsets.fromLTRB(6, 14, 6, 14);
-  static const double menuButtonBorderRadius = 8.0;
+  static const double menuButtonBorderRadius = 3.0;
 
   static Color borderColor(BuildContext context) =>
       MyTheme.color(context).border3 ?? MyTheme.border;
@@ -981,8 +966,8 @@ class _MobileActionMenu extends StatelessWidget {
           onPressed: () => ffi.dialogManager.setMobileActionsOverlayVisible(
               !ffi.dialogManager.mobileActionsOverlayVisible.value),
           color: ffi.dialogManager.mobileActionsOverlayVisible.isTrue
-              ? Theme.of(context).colorScheme.onSurface
-              : Theme.of(context).colorScheme.onSurfaceVariant,
+              ? _ToolbarTheme.blueColor
+              : _ToolbarTheme.inactiveColor,
           hoverColor: ffi.dialogManager.mobileActionsOverlayVisible.isTrue
               ? _ToolbarTheme.hoverBlueColor
               : _ToolbarTheme.hoverInactiveColor,
@@ -1050,15 +1035,15 @@ class _MainMonitorSwitchButton extends StatelessWidget {
               SvgPicture.asset(
                 'assets/display_switcher.svg',
                 colorFilter:
-                    ColorFilter.mode(Theme.of(context).colorScheme.onSurfaceVariant, BlendMode.srcIn),
+                    const ColorFilter.mode(Colors.white, BlendMode.srcIn),
                 width: _ToolbarTheme.buttonSize,
                 height: _ToolbarTheme.buttonSize,
               ),
               Text(
                 label,
                 textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: Theme.of(context).colorScheme.onSurface,
+                style: const TextStyle(
+                  color: Colors.black,
                   fontSize: 11,
                   height: 1,
                   fontWeight: FontWeight.bold,
@@ -1107,7 +1092,7 @@ class _MonitorMenu extends StatelessWidget {
   Widget buildMonitorMenu(BuildContext context) {
     final width = SimpleWrapper<double>(0);
     final monitorsIcon =
-        globalMonitorsWidget(context, width);
+        globalMonitorsWidget(width, Colors.white, Colors.black38);
     return _IconSubmenuButton(
         tooltip: 'Select Monitor',
         icon: monitorsIcon,
@@ -1151,12 +1136,12 @@ class _MonitorMenu extends StatelessWidget {
         child: Text(translate('Show displays as individual windows')));
   }
 
-  buildOneMonitorButton(BuildContext context, i, curDisplay) => Text(
+  buildOneMonitorButton(i, curDisplay) => Text(
         '${i + 1}',
         style: TextStyle(
           color: i == curDisplay
-              ? Theme.of(context).colorScheme.onSurface
-              : Theme.of(context).colorScheme.onSurfaceVariant,
+              ? _ToolbarTheme.blueColor
+              : _ToolbarTheme.inactiveColor,
           fontSize: 12,
           fontWeight: FontWeight.bold,
         ),
@@ -1173,7 +1158,8 @@ class _MonitorMenu extends StatelessWidget {
           final width = SimpleWrapper<double>(0);
           Widget? monitorsIcon;
           if (isAllMonitors) {
-            monitorsIcon = globalMonitorsWidget(context, width);
+            monitorsIcon = globalMonitorsWidget(
+                width, Colors.white, _ToolbarTheme.blueColor);
           }
           return _IconMenuButton(
             tooltip: isMulti
@@ -1203,9 +1189,9 @@ class _MonitorMenu extends StatelessWidget {
                         SvgPicture.asset(
                           "assets/screen.svg",
                           colorFilter:
-                              ColorFilter.mode(Theme.of(context).colorScheme.onSurfaceVariant, BlendMode.srcIn),
+                              ColorFilter.mode(Colors.white, BlendMode.srcIn),
                         ),
-                        Obx(() => buildOneMonitorButton(context, i, display.value)),
+                        Obx(() => buildOneMonitorButton(i, display.value)),
                       ],
                     ),
                   ),
@@ -1223,8 +1209,7 @@ class _MonitorMenu extends StatelessWidget {
   }
 
   globalMonitorsWidget(
-      BuildContext context, SimpleWrapper<double> width) {
-    final colors = Theme.of(context).colorScheme;
+      SimpleWrapper<double> width, Color activeTextColor, Color activeBgColor) {
     getMonitors() {
       final pi = ffi.ffiModel.pi;
       RxInt display = CurrentDisplayState.find(id);
@@ -1259,15 +1244,15 @@ class _MonitorMenu extends StatelessWidget {
                 color: Colors.grey,
                 width: 1.0,
               ),
-              color: display.value == i ? colors.primary : colors.surfaceContainer,
+              color: display.value == i ? activeBgColor : Colors.white,
             ),
             child: Center(
                 child: Text(
               '${i + 1}',
               style: TextStyle(
                 color: display.value == i
-                    ? colors.onPrimary
-                    : colors.onSurface,
+                    ? activeTextColor
+                    : _ToolbarTheme.inactiveColor,
                 fontSize: fontSize,
                 fontWeight: FontWeight.bold,
               ),
@@ -1334,8 +1319,35 @@ class _ControlMenu extends StatelessWidget {
               if (e.divider) {
                 return Divider();
               } else {
+                final hint = e.actionId == null
+                    ? null
+                    : ShortcutDisplay.formatFor(e.actionId!);
+                final child = hint == null
+                    ? e.child
+                    : Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Flexible(child: e.child),
+                          Flexible(
+                            child: Padding(
+                              padding: const EdgeInsets.only(left: 16),
+                              child: Text(
+                                hint,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodySmall
+                                    ?.copyWith(
+                                      color: Theme.of(context).hintColor,
+                                    ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      );
                 return MenuButton(
-                    child: e.child,
+                    child: child,
                     onPressed: e.onPressed,
                     ffi: ffi,
                     trailingIcon: e.trailingIcon);
@@ -1529,7 +1541,7 @@ class ScreenAdjustor {
         // Linux Adjust Window unmaximizes; macOS and Windows exit fullscreen
         // before resizing. Predict the restored normal-window edges when
         // deciding whether to show the menu item.
-        final resizePadding = isLinux
+        final resizePadding = isLinux && !kUseCompatibleUiMode
             ? kDragToResizeAreaPaddingSize
             : 0.0;
         final windowEdge = kWindowBorderWidth + resizePadding;
@@ -1703,13 +1715,11 @@ class _DisplayMenu extends StatefulWidget {
   final FFI ffi;
   final ToolbarState state;
   final Function(bool) setFullscreen;
-  _DisplayMenu(
-      {Key? key,
-      required this.id,
+  const _DisplayMenu(
+      {required this.id,
       required this.ffi,
       required this.state,
-      required this.setFullscreen})
-      : super(key: key);
+      required this.setFullscreen});
 
   @override
   State<_DisplayMenu> createState() => _DisplayMenuState();
@@ -1760,9 +1770,6 @@ class _DisplayMenuState extends State<_DisplayMenu> {
             ffi: widget.ffi,
             screenAdjustor: _screenAdjustor,
           ),
-        if (ffi.connType == ConnType.defaultConn &&
-            ffiModel.clientRotationSupported)
-          rotation(),
         if (showVirtualDisplayMenu(ffi) && ffi.connType == ConnType.defaultConn)
           _SubmenuButton(
             ffi: widget.ffi,
@@ -1958,74 +1965,6 @@ class _DisplayMenuState extends State<_DisplayMenu> {
     });
   }
 
-  /// Client-side view and panel rotation. Both are local: the remote display
-  /// is never rotated. Shown for single-display sessions (for example a
-  /// tablet with a physically rotated panel that reports "normal" orientation
-  /// to the compositor). The view rotation only changes how the frame is
-  /// drawn; the panel orientation is the peer's pointer space and is used for
-  /// input, so the two can differ.
-  rotation() {
-    return Obx(() {
-      final viewValue = 'view:${ffiModel.clientRotation.value}';
-      final panelValue = 'panel:${ffiModel.panelRotation.value}';
-      Widget groupLabel(String key) => MenuButton(
-            child: Text(
-              translate(key),
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-          );
-      return _SubmenuButton(
-        ffi: widget.ffi,
-        child: Text(translate('Rotation')),
-        menuChildren: [
-          groupLabel('View'),
-          for (final angle in const [0, 90, 180, 270])
-            RdoMenuButton<String>(
-              value: 'view:$angle',
-              groupValue: viewValue,
-              onChanged: _changeViewRotation,
-              child: Text(translate(_rotationLabel(angle))),
-              ffi: ffi,
-            ),
-          Divider(),
-          groupLabel('Panel'),
-          for (final angle in const [0, 90, 180, 270])
-            RdoMenuButton<String>(
-              value: 'panel:$angle',
-              groupValue: panelValue,
-              onChanged: _changePanelRotation,
-              child: Text(translate(_rotationLabel(angle))),
-              ffi: ffi,
-            ),
-        ],
-      );
-    });
-  }
-
-  static String _rotationLabel(int angle) {
-    switch (angle) {
-      case 90:
-        return 'Rotate 90° clockwise';
-      case 180:
-        return 'Rotate 180°';
-      case 270:
-        return 'Rotate 270° clockwise';
-      default:
-        return 'No rotation';
-    }
-  }
-
-  void _changeViewRotation(String? value) {
-    ffiModel.setClientRotation(_rotationFromValue(value));
-  }
-
-  void _changePanelRotation(String? value) {
-    ffiModel.setPanelRotation(_rotationFromValue(value));
-  }
-
-  static int _rotationFromValue(String? value) =>
-      int.tryParse(value?.split(':').last ?? '0') ?? 0;
-
   imageQuality() {
     return futureBuilder(
         future: toolbarImageQuality(context, widget.id, widget.ffi),
@@ -2128,34 +2067,35 @@ class _CustomScaleMenuControlsState
     final colorScheme = Theme.of(context).colorScheme;
     const smallBtnConstraints = BoxConstraints(minWidth: 28, minHeight: 28);
 
-    final sliderControl = SliderTheme(
-      data: SliderTheme.of(context).copyWith(
-        activeTrackColor: colorScheme.primary,
-        thumbColor: colorScheme.primary,
-        overlayColor: colorScheme.primary.withOpacity(0.1),
-        showValueIndicator: ShowValueIndicator.never,
-        thumbShape: _RectValueThumbShape(
-          min: CustomScaleControls.minPercent.toDouble(),
-          max: CustomScaleControls.maxPercent.toDouble(),
-          width: 52,
-          height: 24,
-          radius: 4,
-          displayValueForNormalized: (t) => mapPosToPercent(t),
+    final sliderControl = Semantics(
+      label: translate('Custom scale slider'),
+      value: '$scaleValue%',
+      child: SliderTheme(
+        data: SliderTheme.of(context).copyWith(
+          activeTrackColor: colorScheme.primary,
+          thumbColor: colorScheme.primary,
+          overlayColor: colorScheme.primary.withOpacity(0.1),
+          showValueIndicator: ShowValueIndicator.never,
+          thumbShape: _RectValueThumbShape(
+            min: CustomScaleControls.minPercent.toDouble(),
+            max: CustomScaleControls.maxPercent.toDouble(),
+            width: 52,
+            height: 24,
+            radius: 4,
+            displayValueForNormalized: (t) => mapPosToPercent(t),
+          ),
         ),
-      ),
-      child: SafeSlider(
-        value: scalePos,
-        min: 0.0,
-        max: 1.0,
-        semanticLabel: translate('Custom scale slider'),
-        semanticFormatterCallback: (_) => '$scaleValue%',
-        thumbText: '$scaleValue%',
-        // Use a wide range of divisions (calculated as (CustomScaleControls.maxPercent - CustomScaleControls.minPercent)) to provide ~1% precision increments.
-        // This allows users to set precise scale values. Lower values would require more fine-tuning via the +/- buttons, which is undesirable for big ranges.
-        divisions:
-            (CustomScaleControls.maxPercent - CustomScaleControls.minPercent)
-                .round(),
-        onChanged: onSliderChanged,
+        child: Slider(
+          value: scalePos,
+          min: 0.0,
+          max: 1.0,
+          // Use a wide range of divisions (calculated as (CustomScaleControls.maxPercent - CustomScaleControls.minPercent)) to provide ~1% precision increments.
+          // This allows users to set precise scale values. Lower values would require more fine-tuning via the +/- buttons, which is undesirable for big ranges.
+          divisions:
+              (CustomScaleControls.maxPercent - CustomScaleControls.minPercent)
+                  .round(),
+          onChanged: onSliderChanged,
+        ),
       ),
     );
 
@@ -2780,6 +2720,8 @@ class _KeyboardMenu extends StatelessWidget {
             ? (v) async {
                 if (v != null) {
                   await stateGlobal.setInputSource(ffi.sessionId, v);
+                  // Release native input; see the macOS trade-offs in RemotePage.
+                  if (isMacOS) ffi.inputModel.enterOrLeave(false);
                   await ffi.ffiModel.checkDesktopKeyboardMode();
                   await ffi.inputModel.updateKeyboardMode();
                 }
@@ -3118,9 +3060,7 @@ class _IconMenuButtonState extends State<_IconMenuButton> {
     final icon = widget.icon ??
         SvgPicture.asset(
           widget.assetName!,
-          colorFilter: ColorFilter.mode(
-            _ToolbarTheme.actionForeground(context, widget.color),
-            BlendMode.srcIn),
+          colorFilter: ColorFilter.mode(Colors.white, BlendMode.srcIn),
           width: _ToolbarTheme.buttonSize,
           height: _ToolbarTheme.buttonSize,
         );
@@ -3131,10 +3071,7 @@ class _IconMenuButtonState extends State<_IconMenuButton> {
           style: ButtonStyle(
               backgroundColor: MaterialStatePropertyAll(Colors.transparent),
               padding: MaterialStatePropertyAll(EdgeInsets.zero),
-              overlayColor: WidgetStateProperty.resolveWith((states) =>
-                  states.contains(WidgetState.focused) || states.contains(WidgetState.pressed)
-                      ? Theme.of(context).colorScheme.onSurface.withValues(alpha: .12)
-                      : Colors.transparent)),
+              overlayColor: MaterialStatePropertyAll(Colors.transparent)),
           onHover: (value) => setState(() {
                 hover = value;
               }),
@@ -3147,9 +3084,7 @@ class _IconMenuButtonState extends State<_IconMenuButton> {
                     decoration: BoxDecoration(
                       borderRadius:
                           BorderRadius.circular(_ToolbarTheme.iconRadius),
-                      color: widget.icon != null
-                          ? (hover ? widget.hoverColor : widget.color)
-                          : _ToolbarTheme.actionBackground(context, widget.color, hover),
+                      color: hover ? widget.hoverColor : widget.color,
                     ),
                     child: icon)),
           )),
@@ -3210,9 +3145,7 @@ class _IconSubmenuButtonState extends State<_IconSubmenuButton> {
     final icon = widget.icon ??
         SvgPicture.asset(
           widget.svg!,
-          colorFilter: ColorFilter.mode(
-            _ToolbarTheme.actionForeground(context, widget.color),
-            BlendMode.srcIn),
+          colorFilter: ColorFilter.mode(Colors.white, BlendMode.srcIn),
           width: _ToolbarTheme.buttonSize,
           height: _ToolbarTheme.buttonSize,
         );
@@ -3222,12 +3155,7 @@ class _IconSubmenuButtonState extends State<_IconSubmenuButton> {
         child: SubmenuButton(
             menuStyle:
                 widget.menuStyle ?? _ToolbarTheme.defaultMenuStyle(context),
-            style: _ToolbarTheme.defaultMenuButtonStyle.copyWith(
-              overlayColor: WidgetStateProperty.resolveWith((states) =>
-                  states.contains(WidgetState.focused) || states.contains(WidgetState.pressed)
-                      ? Theme.of(context).colorScheme.onSurface.withValues(alpha: .12)
-                      : Colors.transparent),
-            ),
+            style: _ToolbarTheme.defaultMenuButtonStyle,
             onHover: (value) => setState(() {
                   hover = value;
                 }),
@@ -3239,9 +3167,7 @@ class _IconSubmenuButtonState extends State<_IconSubmenuButton> {
                         decoration: BoxDecoration(
                           borderRadius:
                               BorderRadius.circular(_ToolbarTheme.iconRadius),
-                          color: widget.icon != null
-                          ? (hover ? widget.hoverColor : widget.color)
-                          : _ToolbarTheme.actionBackground(context, widget.color, hover),
+                          color: hover ? widget.hoverColor : widget.color,
                         ),
                         child: icon))),
             menuChildren: widget
@@ -3805,17 +3731,18 @@ class EdgeThicknessControl extends StatelessWidget {
           unit: 'px',
         ),
       ),
-      child: SafeSlider(
-        value: value,
-        min: EdgeThicknessControl.kMin,
-        max: EdgeThicknessControl.kMax,
-        semanticLabel: translate('Edge thickness'),
-        thumbText: '${value.round()}px',
-        divisions:
-            (EdgeThicknessControl.kMax - EdgeThicknessControl.kMin).round(),
-        semanticFormatterCallback: (double newValue) =>
-            "${newValue.round()}px",
-        onChanged: onChanged,
+      child: Semantics(
+        value: value.toInt().toString(),
+        child: Slider(
+          value: value,
+          min: EdgeThicknessControl.kMin,
+          max: EdgeThicknessControl.kMax,
+          divisions:
+              (EdgeThicknessControl.kMax - EdgeThicknessControl.kMin).round(),
+          semanticFormatterCallback: (double newValue) =>
+              "${newValue.round()}px",
+          onChanged: onChanged,
+        ),
       ),
     );
 

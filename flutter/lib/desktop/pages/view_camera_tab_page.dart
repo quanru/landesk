@@ -97,8 +97,12 @@ class _ViewCameraTabPageState extends State<ViewCameraTabPage> {
           display: display,
           displays: displays?.cast<int>(),
           password: params['password'],
+          loginMethod: params['loginMethod'] ?? '',
           toolbarState: ToolbarState(),
           tabController: tabController,
+          connToken: params['connToken'],
+          forceRelay: params['forceRelay'],
+          isSharedPassword: params['isSharedPassword'],
         ),
       ));
       _update_remote_count();
@@ -220,7 +224,7 @@ class _ViewCameraTabPageState extends State<ViewCameraTabPage> {
                   ),
                   child: child,
                 )));
-    return isMacOS
+    return isMacOS || kUseCompatibleUiMode
         ? tabWidget
         : Obx(() => SubWindowDragToResizeArea(
               key: contentKey,
@@ -383,7 +387,7 @@ class _ViewCameraTabPageState extends State<ViewCameraTabPage> {
 
   Future<dynamic> _remoteMethodHandler(call, fromWindowId) async {
     debugPrint(
-        "[View Camera Page] call ${call.method} from window $fromWindowId");
+        "[View Camera Page] call ${call.method} with args ${call.arguments} from window $fromWindowId");
 
     dynamic returnValue;
     // for simplify, just replace connectionId
@@ -430,8 +434,12 @@ class _ViewCameraTabPageState extends State<ViewCameraTabPage> {
           display: display,
           displays: displays?.cast<int>(),
           password: args['password'],
+          loginMethod: args['loginMethod'] ?? '',
           toolbarState: ToolbarState(),
           tabController: tabController,
+          connToken: args['connToken'],
+          forceRelay: args['forceRelay'],
+          isSharedPassword: args['isSharedPassword'],
         ),
       ));
     } else if (call.method == kWindowDisableGrabKeyboard) {

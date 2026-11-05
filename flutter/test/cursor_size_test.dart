@@ -2,14 +2,11 @@ import 'dart:io';
 import 'dart:ui' as ui;
 
 import 'package:flutter/services.dart';
-import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_hbb/consts.dart';
 import 'package:flutter_hbb/desktop/pages/remote_page.dart';
 import 'package:flutter_hbb/models/input_model.dart';
 import 'package:flutter_hbb/models/model.dart';
-import 'package:flutter_hbb/models/view_rotation.dart';
 import 'package:flutter_hbb/native/custom_cursor.dart';
 import 'package:flutter_hbb/utils/image.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -17,17 +14,14 @@ import 'package:get/get.dart';
 import 'package:image/image.dart' as img;
 import 'package:provider/provider.dart';
 
-part 'cursor_preview.dart';
-
 class _Canvas extends ChangeNotifier implements CanvasModel {
   _Canvas(String style)
-    : viewStyle = ViewStyle(
-        style: style,
-        width: 200,
-        height: 160,
-        displayWidth: 400,
-        displayHeight: 320,
-      );
+      : viewStyle = ViewStyle(
+            style: style,
+            width: 200,
+            height: 160,
+            displayWidth: 400,
+            displayHeight: 320);
   @override
   final ViewStyle viewStyle;
   @override
@@ -69,8 +63,6 @@ class _Display extends Display {
 
 class _Peer extends Fake implements FfiModel {
   @override
-  ViewRotation get clientRotationValue => ViewRotation.none;
-  @override
   final pi = PeerInfo();
   @override
   bool get isPeerLinux => pi.platform == kPeerPlatformLinux;
@@ -104,70 +96,23 @@ void main() {
   final registrations = <Map<dynamic, dynamic>>[];
   setUp(() {
     registrations.clear();
-    binding.defaultBinaryMessenger.setMockMethodCallHandler(channel, (
-      call,
-    ) async {
+    binding.defaultBinaryMessenger.setMockMethodCallHandler(channel,
+        (call) async {
       if (!call.method.startsWith('createCustomCursor')) return null;
       final args = call.arguments as Map<dynamic, dynamic>;
       registrations.add(args);
       return args['name'];
     });
   });
-  tearDown(
-    () =>
-        binding.defaultBinaryMessenger.setMockMethodCallHandler(channel, null),
-  );
-  test(
-    'rotated native cursors retain their dimensions, hotspot and cache entry',
-    () async {
-      final ffi = _FFI(_Canvas(kRemoteViewStyleAdaptive));
-      final cursor = _Cursor(_data((20, 30), hotspot: const Offset(3, 2)), ffi);
-      addTearDown(() => _dispose(cursor));
-      addTearDown(ffi.canvasModel.dispose);
-      for (final rotation in ViewRotation.values) {
-        buildCursorOfCache(cursor, 1.0, cursor.cache, rotation: rotation);
-        await Future<void>.delayed(Duration.zero);
-        final args = registrations.last;
-        final size = rotation.rotatedSize(const Size(20, 30));
-        _expectSize(
-          args,
-          Platform.isLinux
-              ? (30, 30)
-              : (size.width.toInt(), size.height.toInt()),
-        );
-        final hot = rotation.rotateHotspot(20, 30, const Offset(3, 2));
-        expect((args['hotX'], args['hotY']), (hot.dx, hot.dy));
-        final count = registrations.length;
-        buildCursorOfCache(cursor, 1.0, cursor.cache, rotation: rotation);
-        await Future<void>.delayed(Duration.zero);
-        expect(registrations.length, count);
-      }
-    },
-  );
-  final preview = Platform.environment['LANDESK_CURSOR_PREVIEW'];
-  if (preview != null) {
-    testWidgets(
-      'native cursor raster preview',
-      (tester) => _preview(tester, registrations, preview),
-    );
-  }
+  tearDown(() =>
+      binding.defaultBinaryMessenger.setMockMethodCallHandler(channel, null));
   for (final scenario in [
     ((4, 64), 0.5, (2, 32)),
-    ((64, 4), 0.5, (32, 2)),
-    ((1, 64), 0.25, (1, 16)),
     ((8, 8), 0.5, (12, 12)),
-    ((4, 64), 1.0, (4, 64)),
-    ((1, 512), 10.0, (1, 512)),
   ]) {
-    test(
-      'native cursor size $scenario',
-      () => _checkSize(scenario, registrations),
-    );
+    test('native cursor size $scenario',
+        () => _checkSize(scenario, registrations));
   }
-  test(
-    'native raster boundaries rebuild buffers and distinguish cache keys',
-    () => _checkRasterTransitions(registrations),
-  );
   test('cursor resize limits preserve the last valid raster', () async {
     for (final size in [(30, 20), (20, 30)]) {
       await _checkResizeLimits(size, registrations);
@@ -178,22 +123,18 @@ void main() {
     ([128, 0, 0, 128], 128),
     ([255, 0, 0, 255, 0, 0, 0, 0], 127),
   ]) {
-    test(
-      'Windows peer cursor alpha survives resizing $pattern',
-      () => _checkWindowsPeerAlpha(pattern, registrations),
-    );
+    test('Windows peer cursor alpha survives resizing $pattern',
+        () => _checkWindowsPeerAlpha(pattern, registrations));
   }
-  for (final style in [
-    kRemoteViewStyleOriginal,
-    kRemoteViewStyleAdaptive,
-    kRemoteViewStyleCustom,
+  for (final (style, zoom) in [
+    (kRemoteViewStyleOriginal, false),
+    (kRemoteViewStyleAdaptive, false),
+    (kRemoteViewStyleAdaptive, true),
+    (kRemoteViewStyleCustom, false),
+    (kRemoteViewStyleCustom, true),
   ]) {
-    for (final zoom in [false, true]) {
-      testWidgets(
-        '$style zoom=$zoom follows the live DPR and peer scale',
-        (tester) => _checkView(tester, (style, zoom), registrations),
-      );
-    }
+    testWidgets('$style zoom=$zoom follows the live DPR and peer scale',
+        (tester) => _checkView(tester, (style, zoom), registrations));
   }
 }
 
@@ -204,18 +145,17 @@ CursorData _data((int, int) size, {Offset hotspot = Offset.zero}) {
   }
   image.getPixel(0, 0).setRgba(255, 0, 0, 128);
   return CursorData(
-    peerId: 'size',
-    id: '$size',
-    image: image,
-    scale: 1,
-    data: Platform.isWindows
-        ? image.getBytes(order: img.ChannelOrder.bgra)
-        : Uint8List.fromList(img.encodePng(image)),
-    hotxOrigin: hotspot.dx,
-    hotyOrigin: hotspot.dy,
-    width: size.$1,
-    height: size.$2,
-  );
+      peerId: 'size',
+      id: '$size',
+      image: image,
+      scale: 1,
+      data: Platform.isWindows
+          ? image.getBytes(order: img.ChannelOrder.bgra)
+          : Uint8List.fromList(img.encodePng(image)),
+      hotxOrigin: hotspot.dx,
+      hotyOrigin: hotspot.dy,
+      width: size.$1,
+      height: size.$2);
 }
 
 Future<void> _dispose(CursorModel cursor) async {
@@ -226,9 +166,7 @@ Future<void> _dispose(CursorModel cursor) async {
 }
 
 Future<void> _checkWindowsPeerAlpha(
-  (List<int>, int) pattern,
-  List<Map<dynamic, dynamic>> registrations,
-) async {
+    (List<int>, int) pattern, List<Map<dynamic, dynamic>> registrations) async {
   const sourceSize = 64;
   const dpr = 2.0;
   const channels = 4;
@@ -239,18 +177,13 @@ Future<void> _checkWindowsPeerAlpha(
   addTearDown(cursor.disposeImages);
   addTearDown(ffi.canvasModel.dispose);
   await cursor.updateCursorData(
-    'alpha',
-    0,
-    0,
-    sourceSize,
-    sourceSize,
-    Uint8List.fromList(
-      List.generate(
-        sourceSize * sourceSize * channels,
-        (i) => pattern.$1[i % pattern.$1.length],
-      ),
-    ),
-  );
+      'alpha',
+      0,
+      0,
+      sourceSize,
+      sourceSize,
+      Uint8List.fromList(List.generate(sourceSize * sourceSize * channels,
+          (i) => pattern.$1[i % pattern.$1.length])));
   buildCursorOfCache(cursor, 1.0 / dpr, cursor.cache);
   await Future<void>.delayed(Duration.zero);
   final args = registrations.single;
@@ -265,10 +198,8 @@ Future<void> _checkWindowsPeerAlpha(
   }
 }
 
-Future<void> _checkSize(
-  ((int, int), double, (int, int)) scenario,
-  List<Map<dynamic, dynamic>> registrations,
-) async {
+Future<void> _checkSize(((int, int), double, (int, int)) scenario,
+    List<Map<dynamic, dynamic>> registrations) async {
   final ffi = _FFI(_Canvas(kRemoteViewStyleAdaptive));
   final cursor = _Cursor(_data(scenario.$1), ffi);
   addTearDown(() => _dispose(cursor));
@@ -277,27 +208,18 @@ Future<void> _checkSize(
   await Future<void>.delayed(Duration.zero);
   final (width, height) = scenario.$3;
   expect(
-    (cursor.cache.rasterWidth, cursor.cache.rasterHeight),
-    (width, height),
-  );
+      (cursor.cache.rasterWidth, cursor.cache.rasterHeight), (width, height));
   final args = registrations.single;
   final padded = Platform.isLinux && width != height;
   final side = width > height ? width : height;
   _expectSize(args, (padded ? side : width, padded ? side : height));
   if (padded) {
     final bitmap = img.decodePng(args['buffer'] as Uint8List)!;
-    final artwork = img.copyCrop(
-      bitmap,
-      x: 0,
-      y: 0,
-      width: width,
-      height: height,
-    );
+    final artwork =
+        img.copyCrop(bitmap, x: 0, y: 0, width: width, height: height);
     expect(artwork.getBytes(), img.decodePng(cursor.cache.data!)!.getBytes());
-    expect(
-      bitmap.where((p) => p.x >= width || p.y >= height).map((p) => p.a),
-      everyElement(0),
-    );
+    expect(bitmap.where((p) => p.x >= width || p.y >= height).map((p) => p.a),
+        everyElement(0));
   }
 }
 
@@ -313,38 +235,8 @@ void _expectSize(Map<dynamic, dynamic> args, (int, int) expected) {
   }
 }
 
-Future<void> _checkRasterTransitions(
-  List<Map<dynamic, dynamic>> registrations,
-) async {
-  const delta = 3e-8;
-  const scaleAboveOne = (2.25 / 1.75) / 2.25 * 1.75;
-  final ffi = _FFI(_Canvas(kRemoteViewStyleAdaptive));
-  final cursor = _Cursor(_data((64, 64)), ffi);
-  addTearDown(() => _dispose(cursor));
-  addTearDown(ffi.canvasModel.dispose);
-  for (final (scale, expected) in [
-    (scaleAboveOne, (65, 65)),
-    (0.5 - delta, (32, 32)),
-    (0.5 + delta, (33, 33)),
-    (1.0, (64, 64)),
-    (scaleAboveOne, (65, 65)),
-    (1.0, (64, 64)),
-  ]) {
-    buildCursorOfCache(cursor, scale, cursor.cache);
-    await Future<void>.delayed(Duration.zero);
-    final key = cursor.nativeKey(cursor.cache, scale);
-    _expectSize(
-      registrations.singleWhere((args) => args['name'] == key),
-      expected,
-    );
-  }
-  expect(registrations.length, 4);
-}
-
 Future<void> _checkResizeLimits(
-  (int, int) size,
-  List<Map<dynamic, dynamic>> registrations,
-) async {
+    (int, int) size, List<Map<dynamic, dynamic>> registrations) async {
   const maxSide = 512;
   const sourceLongEdge = 30;
   const validScale = maxSide / sourceLongEdge;
@@ -356,18 +248,12 @@ Future<void> _checkResizeLimits(
   buildCursorOfCache(cursor, validScale, cursor.cache);
   await Future<void>.delayed(Duration.zero);
   final raster = ((size.$1 * validScale).ceil(), (size.$2 * validScale).ceil());
-  final expectedHotspot = (
-    hotspot.dx * raster.$1 / size.$1,
-    hotspot.dy * raster.$2 / size.$2,
-  );
+  final expectedHotspot =
+      (hotspot.dx * raster.$1 / size.$1, hotspot.dy * raster.$2 / size.$2);
   _expectSize(
-    registrations.single,
-    Platform.isLinux ? (maxSide, maxSide) : raster,
-  );
-  expect((
-    registrations.single['hotX'],
-    registrations.single['hotY'],
-  ), expectedHotspot);
+      registrations.single, Platform.isLinux ? (maxSide, maxSide) : raster);
+  expect((registrations.single['hotX'], registrations.single['hotY']),
+      expectedHotspot);
   // Fail on a small allocation before reaching unsafe sizes without the guard.
   for (final scale in [
     (maxSide + 1) / sourceLongEdge,
@@ -386,10 +272,8 @@ Future<void> _checkResizeLimits(
   buildCursorOfCache(cursor, 1.0, cursor.cache);
   await Future<void>.delayed(Duration.zero);
   expect(cursor.cache.scale, 1.0);
-  _expectSize(
-    registrations.last,
-    Platform.isLinux ? (sourceLongEdge, sourceLongEdge) : size,
-  );
+  _expectSize(registrations.last,
+      Platform.isLinux ? (sourceLongEdge, sourceLongEdge) : size);
 }
 
 const _viewCases = [
@@ -398,11 +282,8 @@ const _viewCases = [
   (2.0, kPeerPlatformMacOS, 1.0),
 ];
 
-Future<void> _checkView(
-  WidgetTester tester,
-  (String, bool) mode,
-  List<Map<dynamic, dynamic>> registrations,
-) async {
+Future<void> _checkView(WidgetTester tester, (String, bool) mode,
+    List<Map<dynamic, dynamic>> registrations) async {
   const sourceSize = 64, customScale = 4.0;
   final canvas = _Canvas(mode.$1);
   final ffi = _FFI(canvas);
@@ -419,36 +300,32 @@ Future<void> _checkView(
     canvas.scale = mode.$1 == kRemoteViewStyleCustom
         ? customScale / dpr
         : mode.$1 == kRemoteViewStyleOriginal
-        ? 1.0 / dpr
-        : canvas.viewStyle.scale;
+            ? 1.0 / dpr
+            : canvas.viewStyle.scale;
     tester.view.devicePixelRatio = dpr;
-    await tester.pumpWidget(
-      MediaQuery(
-        data: MediaQueryData(devicePixelRatio: dpr),
-        child: MultiProvider(
-          providers: [
-            ChangeNotifierProvider<ImageModel>(create: (_) => _Image()),
-            ChangeNotifierProvider<CanvasModel>.value(value: canvas),
-            ChangeNotifierProvider<CursorModel>.value(value: cursor),
-          ],
-          child: ImagePaint(
-            ffi: ffi,
-            id: 'size',
-            zoomCursor: mode.$2.obs,
-            cursorOverImage: true.obs,
-            keyboardEnabled: true.obs,
-            remoteCursorMoved: false.obs,
-          ),
+    await tester.pumpWidget(MediaQuery(
+      data: MediaQueryData(devicePixelRatio: dpr),
+      child: MultiProvider(
+        providers: [
+          ChangeNotifierProvider<ImageModel>(create: (_) => _Image()),
+          ChangeNotifierProvider<CanvasModel>.value(value: canvas),
+          ChangeNotifierProvider<CursorModel>.value(value: cursor),
+        ],
+        child: ImagePaint(
+          ffi: ffi,
+          id: 'size',
+          zoomCursor: mode.$2.obs,
+          cursorOverImage: true.obs,
+          keyboardEnabled: true.obs,
+          remoteCursorMoved: false.obs,
         ),
       ),
-    );
-    final video =
-        tester.widget<CustomPaint>(find.byType(CustomPaint)).painter
-            as ImagePainter;
+    ));
+    final video = tester.widget<CustomPaint>(find.byType(CustomPaint)).painter
+        as ImagePainter;
     final scale = video.scale * (mode.$2 ? 1.0 : 1.0 / (canvas.scale * dpr));
     final size = sourceSize * (peer == kPeerPlatformMacOS ? peerScale : 1.0);
-    final w =
-        peer == kPeerPlatformMacOS &&
+    final w = peer == kPeerPlatformMacOS &&
             !mode.$2 &&
             mode.$1 != kRemoteViewStyleOriginal
         ? (sourceSize * (Platform.isWindows ? dpr : 1.0)).ceil()

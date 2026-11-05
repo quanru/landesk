@@ -1,16 +1,14 @@
 import {
-  ControlKey,
   ClipboardFormat,
+  PermissionInfo_Permission,
   ImageQuality,
-  KeyboardMode,
   Message,
   OptionMessage_BoolOption,
   SupportedDecoding_PreferCodec,
   type DisplayInfo,
-  type KeyEvent,
   type PeerInfo,
 } from "./generated/message";
-import { LanCryptoSession } from "./crypto";
+import { nativePasswordResponse } from "./native_auth";
 import {
   chooseVideoCodec,
   coalescePointerSample,
@@ -18,7 +16,7 @@ import {
   type PointerSample,
   type SelectedVideoCodec,
 } from "./capabilities";
-import { mapCanvasPoint, mouseMask, normalizeFingerprint } from "./protocol";
+import { createRemoteInput } from "./input";
 import { localizeDocument, translate, type TranslationKey } from "./i18n";
 import {
   closeVideoDecoder,
@@ -33,13 +31,12 @@ import {
 interface ServerInfo {
   app_name: string;
   device_name: string;
-  fingerprint: string;
+  peer_id: string;
   version: string;
   secure: boolean;
   certificate_mode: "local-ca" | "custom";
   ca_certificate_url: string;
   video_worker_url: string;
-  permission_profile: "view-only" | "control" | "collaboration";
 }
 
 interface Credentials {
@@ -52,40 +49,13 @@ const encoder = new TextEncoder();
 const locale = localizeDocument();
 const t = (key: TranslationKey): string => translate(locale, key);
 
-function requiredElement<T extends HTMLElement>(id: string): T {
-  const element = document.getElementById(id);
-  if (!element) throw new Error(`页面元素缺失：${id}`);
-  return element as T;
-}
-
-const connectPanel = requiredElement<HTMLElement>("connect-panel");
-const viewerPanel = requiredElement<HTMLElement>("viewer-panel");
-const loginForm = requiredElement<HTMLFormElement>("login-form");
-const usernameInput = requiredElement<HTMLInputElement>("username");
-const passwordInput = requiredElement<HTMLInputElement>("password");
-const connectButton = requiredElement<HTMLButtonElement>("connect");
-const disconnectButton = requiredElement<HTMLButtonElement>("disconnect");
-const fullscreenButton = requiredElement<HTMLButtonElement>("fullscreen");
-const canvas = requiredElement<HTMLCanvasElement>("screen");
-const deviceName = requiredElement<HTMLElement>("device-name");
-const fingerprintElement = requiredElement<HTMLElement>("fingerprint");
-const statusElement = requiredElement<HTMLElement>("status");
-const viewerStatus = requiredElement<HTMLElement>("viewer-status");
-const connectionStats = requiredElement<HTMLElement>("connection-stats");
-const trustPanel = requiredElement<HTMLElement>("trust-panel");
-const caCertificateLink = requiredElement<HTMLAnchorElement>("ca-certificate");
-const displaySelect = requiredElement<HTMLSelectElement>("display");
-const qualitySelect = requiredElement<HTMLSelectElement>("quality");
-const clipboardReadButton = requiredElement<HTMLButtonElement>("clipboard-read");
-const clipboardWriteButton = requiredElement<HTMLButtonElement>("clipboard-write");
-const textInput = requiredElement<HTMLInputElement>("text-input");
-const sendTextButton = requiredElement<HTMLButtonElement>("send-text");
+import { renderPermissions, connectPanel, viewerPanel, loginForm, passwordInput, connectButton, disconnectButton, fullscreenButton, canvas, deviceName, statusElement, viewerStatus, connectionStats, trustPanel, caCertificateLink, displaySelect, qualitySelect, clipboardReadButton, clipboardWriteButton, textInput, sendTextButton } from "./elements";
 
 let serverInfo: ServerInfo;
 let socket: WebSocket | undefined;
-let cryptoSession: LanCryptoSession | undefined;
-let secured = false;
 let authenticated = false;
+let keyboardAllowed = true;
+let clipboardAllowed = true;
 let remoteDisplay: DisplayInfo | undefined;
 let peerInfo: PeerInfo | undefined;
 let decoder: VideoDecoder | undefined;
@@ -104,15 +74,17 @@ let lastRemoteClipboard = "";
 let decoderRecoveryState: DecoderRecoveryState = initialDecoderRecoveryState();
 let firstDecoderError = "";
 
+const { sendKey, sendText, sendMouse, pointerSample, currentModifiers } = createRemoteInput(
+  canvas, () => authenticated && keyboardAllowed, () => remoteDisplay, send);
+
 function setStatus(message: string, error = false): void {
   statusElement.textContent = message;
   statusElement.dataset.error = error ? "true" : "false";
 }
 
 function resetConnection(message = t("disconnected")): void {
-  secured = false;
   authenticated = false;
-  cryptoSession = undefined;
+  keyboardAllowed = clipboardAllowed = true;
   connectButton.disabled = false;
   socket = undefined;
   closeVideoDecoder(decoder);
@@ -152,128 +124,7 @@ function sendRaw(payload: Uint8Array): void {
 }
 
 function send(message: Message): void {
-  if (!cryptoSession || !secured) throw new Error("安全通道尚未建立");
-  sendRaw(cryptoSession.encrypt(message));
-}
-
-function currentModifiers(
-  event: Pick<KeyboardEvent, "altKey" | "ctrlKey" | "shiftKey" | "metaKey">,
-): ControlKey[] {
-  const modifiers: ControlKey[] = [];
-  if (event.altKey) modifiers.push(ControlKey.Alt);
-  if (event.ctrlKey) modifiers.push(ControlKey.Control);
-  if (event.shiftKey) modifiers.push(ControlKey.Shift);
-  if (event.metaKey) modifiers.push(ControlKey.Meta);
-  return modifiers;
-}
-
-const controlKeys: Record<string, ControlKey> = {
-  Alt: ControlKey.Alt,
-  Backspace: ControlKey.Backspace,
-  CapsLock: ControlKey.CapsLock,
-  Control: ControlKey.Control,
-  Delete: ControlKey.Delete,
-  ArrowDown: ControlKey.DownArrow,
-  End: ControlKey.End,
-  Escape: ControlKey.Escape,
-  Home: ControlKey.Home,
-  ArrowLeft: ControlKey.LeftArrow,
-  Meta: ControlKey.Meta,
-  PageDown: ControlKey.PageDown,
-  PageUp: ControlKey.PageUp,
-  Enter: ControlKey.Return,
-  ArrowRight: ControlKey.RightArrow,
-  Shift: ControlKey.Shift,
-  " ": ControlKey.Space,
-  Tab: ControlKey.Tab,
-  ArrowUp: ControlKey.UpArrow,
-  Insert: ControlKey.Insert,
-};
-for (let index = 1; index <= 12; index += 1) {
-  controlKeys[`F${index}`] = ControlKey[`F${index}` as keyof typeof ControlKey] as ControlKey;
-}
-
-function sendKey(event: KeyboardEvent, release = false): void {
-  if (!authenticated || serverInfo.permission_profile === "view-only") return;
-  const controlKey = controlKeys[event.key];
-  if (release && controlKey === undefined) return;
-  const keyEvent: Partial<KeyEvent> = {
-    down: !release,
-    press: !release,
-    modifiers: currentModifiers(event),
-    mode: KeyboardMode.Legacy,
-  };
-  if (controlKey !== undefined) {
-    keyEvent.control_key = controlKey;
-  } else {
-    const codePoint = Array.from(event.key)[0]?.codePointAt(0);
-    if (codePoint === undefined || event.key.length > 2) return;
-    keyEvent.unicode = codePoint;
-  }
-  event.preventDefault();
-  send(Message.create({ key_event: keyEvent }));
-}
-
-function sendText(value: string): void {
-  if (!authenticated || serverInfo.permission_profile === "view-only" || !value) return;
-  for (const character of Array.from(value)) {
-    const codePoint = character.codePointAt(0);
-    if (codePoint === undefined) continue;
-    send(
-      Message.create({
-        key_event: {
-          down: false,
-          press: true,
-          modifiers: [],
-          mode: KeyboardMode.Legacy,
-          unicode: codePoint,
-        },
-      }),
-    );
-  }
-}
-
-function canvasCoordinates(event: Pick<PointerSample, "clientX" | "clientY">): { x: number; y: number } {
-  if (!remoteDisplay) return { x: 0, y: 0 };
-  const bounds = canvas.getBoundingClientRect();
-  return mapCanvasPoint(
-    event.clientX - bounds.left,
-    event.clientY - bounds.top,
-    bounds.width,
-    bounds.height,
-    remoteDisplay.width,
-    remoteDisplay.height,
-    remoteDisplay.x,
-    remoteDisplay.y,
-  );
-}
-
-function sendMouse(event: PointerSample, type: number): void {
-  if (!authenticated || serverInfo.permission_profile === "view-only") return;
-  const point = canvasCoordinates(event);
-  send(
-    Message.create({
-      mouse_event: {
-        mask: mouseMask(type, event.button, event.buttons),
-        x: point.x,
-        y: point.y,
-        modifiers: currentModifiers(event),
-      },
-    }),
-  );
-}
-
-function pointerSample(event: PointerEvent): PointerSample {
-  return {
-    clientX: event.clientX,
-    clientY: event.clientY,
-    button: event.button,
-    buttons: event.buttons,
-    altKey: event.altKey,
-    ctrlKey: event.ctrlKey,
-    shiftKey: event.shiftKey,
-    metaKey: event.metaKey,
-  };
+  sendRaw(Message.encode(message).finish());
 }
 
 function queuePointerMove(event: PointerEvent): void {
@@ -444,7 +295,7 @@ function configureDecoder(peer: PeerInfo, recovering = false): void {
   viewerStatus.textContent = `${peer.hostname || serverInfo.device_name} · ${display.width}×${display.height}`;
 }
 
-function authenticate(username: string, password: string): void {
+function authenticate(password: Uint8Array): void {
   if (!selectedCodec) throw new Error(t("noCodec"));
   const prefer =
     selectedCodec.protocol === "h264"
@@ -452,12 +303,14 @@ function authenticate(username: string, password: string): void {
       : selectedCodec.protocol === "av1"
         ? SupportedDecoding_PreferCodec.AV1
         : SupportedDecoding_PreferCodec.VP9;
-  const passwordBytes = encoder.encode(password);
+  const passwordBytes = password;
   try {
     send(
       Message.create({
         login_request: {
-          my_id: cryptoSession?.clientIdentifier() ?? "web",
+          my_id: `web_${crypto.randomUUID()}`,
+          username: serverInfo.peer_id,
+          password: passwordBytes,
           my_name:
             (navigator as Navigator & { userAgentData?: { platform?: string } }).userAgentData
               ?.platform || navigator.platform || "Browser",
@@ -465,15 +318,10 @@ function authenticate(username: string, password: string): void {
           version: serverInfo.version,
           video_ack_required: true,
           session_id: 0n,
-          lan_login: {
-            access_username: username,
-            access_password: passwordBytes,
-            credential_revision_hint: 0n,
-          },
           option: {
             disable_audio: OptionMessage_BoolOption.Yes,
             disable_clipboard:
-              serverInfo.permission_profile === "collaboration"
+              clipboardAllowed
                 ? OptionMessage_BoolOption.No
                 : OptionMessage_BoolOption.Yes,
             show_remote_cursor: OptionMessage_BoolOption.No,
@@ -493,35 +341,32 @@ function authenticate(username: string, password: string): void {
 }
 
 async function handleMessage(payload: Uint8Array, credentials: Credentials): Promise<void> {
-  if (!cryptoSession) throw new Error("连接状态无效");
-  if (!secured) {
-    const message = Message.decode(payload);
-    if (!message.lan_server_hello) throw new Error("服务器没有返回 LAN 安全握手");
-    const result = await cryptoSession.acceptServerHello(message.lan_server_hello);
-    if (normalizeFingerprint(result.fingerprint) !== normalizeFingerprint(serverInfo.fingerprint)) {
-      throw new Error("网页公布的设备指纹与握手签名不一致");
-    }
-    sendRaw(result.keyMessage);
-    secured = true;
-    setStatus(t("secureChannel"));
-    authenticate(credentials.username, credentials.password);
+  const message = Message.decode(payload);
+  if (message.hash) {
+    const response = nativePasswordResponse(credentials.password, message.hash);
     credentials.password = "";
+    authenticate(response);
     return;
   }
 
-  const message = cryptoSession.decrypt(payload);
   if (message.login_response) {
     if (message.login_response.error) {
-      const retry = message.login_response.retry_after_seconds;
-      throw new Error(`${message.login_response.error}${retry ? `（${retry} 秒后重试）` : ""}`);
+      throw new Error(message.login_response.error);
     }
     if (!message.login_response.peer_info) throw new Error("服务器没有返回桌面信息");
     configureDecoder(message.login_response.peer_info);
     authenticated = true;
+    renderPermissions(keyboardAllowed, clipboardAllowed);
     connectPanel.hidden = true;
     viewerPanel.hidden = false;
     canvas.focus();
     setStatus(t("connected"));
+  }
+  const permission = message.misc?.permission_info;
+  if (permission) {
+    if (permission.permission === PermissionInfo_Permission.Keyboard) keyboardAllowed = permission.enabled;
+    if (permission.permission === PermissionInfo_Permission.Clipboard) clipboardAllowed = permission.enabled;
+    renderPermissions(keyboardAllowed, clipboardAllowed);
   }
   if (message.peer_info) configureDecoder(message.peer_info);
   if (message.video_frame) {
@@ -552,7 +397,7 @@ async function handleMessage(payload: Uint8Array, credentials: Credentials): Pro
   if (message.message_box?.text) viewerStatus.textContent = message.message_box.text;
   if (
     message.clipboard &&
-    serverInfo.permission_profile === "collaboration" &&
+    clipboardAllowed &&
     !message.clipboard.compress &&
     message.clipboard.format === ClipboardFormat.Text
   ) {
@@ -584,7 +429,6 @@ async function connect(username: string, password: string): Promise<void> {
   if (!selectedCodec) {
     throw new Error(t("codecUnsupported"));
   }
-  cryptoSession = await LanCryptoSession.create();
   const scheme = location.protocol === "https:" ? "wss:" : "ws:";
   const nextSocket = new WebSocket(`${scheme}//${location.host}/ws`);
   const credentials: Credentials = { username, password };
@@ -593,9 +437,8 @@ async function connect(username: string, password: string): Promise<void> {
   socket = nextSocket;
 
   nextSocket.addEventListener("open", () => {
-    if (socket !== nextSocket || !cryptoSession) return;
-    setStatus(t("verifyingIdentity"));
-    sendRaw(cryptoSession.clientHello());
+    if (socket !== nextSocket) return;
+    setStatus(t("connecting"));
   });
   nextSocket.addEventListener("message", (event) => {
     if (socket !== nextSocket || !(event.data instanceof ArrayBuffer)) return;
@@ -621,12 +464,8 @@ async function connect(username: string, password: string): Promise<void> {
 
 loginForm.addEventListener("submit", (event) => {
   event.preventDefault();
-  const username = usernameInput.value.trim();
+  const username = "";
   const password = passwordInput.value;
-  if (!username || !password) {
-    setStatus(t("enterCredentials"), true);
-    return;
-  }
   if (encoder.encode(password).length > MAX_PASSWORD_LENGTH) {
     setStatus(t("passwordTooLong"), true);
     return;
@@ -662,7 +501,7 @@ canvas.addEventListener("pointercancel", (event) => {
 canvas.addEventListener(
   "wheel",
   (event) => {
-    if (!authenticated || serverInfo.permission_profile === "view-only") return;
+    if (!authenticated || !keyboardAllowed) return;
     event.preventDefault();
     send(
       Message.create({
@@ -744,18 +583,10 @@ void fetch("/api/info", { cache: "no-store", credentials: "same-origin" })
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     serverInfo = (await response.json()) as ServerInfo;
     deviceName.textContent = serverInfo.device_name;
-    fingerprintElement.textContent = serverInfo.fingerprint.match(/.{1,4}/g)?.join(" ") ?? serverInfo.fingerprint;
     if (serverInfo.certificate_mode === "local-ca" && serverInfo.ca_certificate_url) {
       trustPanel.hidden = false;
       caCertificateLink.href = serverInfo.ca_certificate_url;
     }
-    const collaboration = serverInfo.permission_profile === "collaboration";
-    clipboardReadButton.hidden = !collaboration;
-    clipboardWriteButton.hidden = !collaboration;
-    const viewOnly = serverInfo.permission_profile === "view-only";
-    textInput.hidden = viewOnly;
-    sendTextButton.hidden = viewOnly;
-    canvas.dataset.viewOnly = viewOnly ? "true" : "false";
     connectButton.disabled = false;
     setStatus(serverInfo.secure ? t("httpsEnabled") : t("insecureHttp"), !serverInfo.secure);
   })

@@ -2,12 +2,15 @@
 use crate::flutter;
 #[cfg(target_os = "windows")]
 use crate::platform::windows::{get_char_from_vk, get_unicode_from_vk};
+#[cfg(not(feature = "flutter"))]
+use crate::ui::CUR_SESSION;
 use crate::ui_session_interface::{InvokeUiSession, Session};
 #[cfg(not(any(target_os = "android", target_os = "ios")))]
 use crate::{client::get_key_state, common::GrabState};
-use base::message_proto::*;
 #[cfg(not(any(target_os = "android", target_os = "ios")))]
 use hbb_common::log;
+use base::message_proto::*;
+use hbb_common::SessionID;
 #[cfg(any(target_os = "windows", target_os = "macos"))]
 use rdev::KeyCode;
 use rdev::{Event, EventType, Key};
@@ -37,27 +40,18 @@ static KEYBOARD_HOOKED: AtomicBool = AtomicBool::new(false);
 // macOS: Cmd+G (track G key)
 // Windows/Linux: Ctrl+Alt (track whichever modifier was pressed last)
 // This prevents the exit from retriggering on OS key-repeat.
-#[cfg(all(
-    feature = "flutter",
-    any(target_os = "windows", target_os = "macos", target_os = "linux")
-))]
+#[cfg(all(feature = "flutter", any(target_os = "windows", target_os = "macos", target_os = "linux")))]
 static EXIT_SHORTCUT_KEY_DOWN: AtomicBool = AtomicBool::new(false);
 
 // Track whether relative mouse mode is currently active.
 // This is set by Flutter via set_relative_mouse_mode_state() and checked
 // by the rdev grab loop to determine if exit shortcuts should be processed.
-#[cfg(all(
-    feature = "flutter",
-    any(target_os = "windows", target_os = "macos", target_os = "linux")
-))]
+#[cfg(all(feature = "flutter", any(target_os = "windows", target_os = "macos", target_os = "linux")))]
 static RELATIVE_MOUSE_MODE_ACTIVE: AtomicBool = AtomicBool::new(false);
 
 /// Set the relative mouse mode state from Flutter.
 /// This is called when entering or exiting relative mouse mode.
-#[cfg(all(
-    feature = "flutter",
-    any(target_os = "windows", target_os = "macos", target_os = "linux")
-))]
+#[cfg(all(feature = "flutter", any(target_os = "windows", target_os = "macos", target_os = "linux")))]
 pub fn set_relative_mouse_mode_state(active: bool) {
     RELATIVE_MOUSE_MODE_ACTIVE.store(active, Ordering::SeqCst);
     // Reset exit shortcut state when mode changes to avoid stale state
@@ -85,6 +79,8 @@ lazy_static::lazy_static! {
         Mutex::new(m)
     };
 }
+
+pub mod shortcuts;
 
 pub mod client {
     use super::*;
@@ -326,6 +322,38 @@ pub mod client {
     }
 
     pub fn process_event(keyboard_mode: &str, event: &Event, lock_modes: Option<i32>) {
+        // Shortcut intercept — must come before any wire encoding.
+        // A press that fires a shortcut is consumed, and so are its auto repeats
+        // and its release; every other event passes through to the
+        // encode/forward path.
+        //
+        // NOTE: Shortcut matching intentionally happens BEFORE any key swapping
+        // (swap_modifier_key) so that shortcuts bind to the physical keys pressed,
+        // not the swapped keys. This makes shortcut setup intuitive: users bind
+        // shortcuts to the actual keys they press, regardless of swap settings.
+        // Key swapping only affects what gets sent to the remote.
+        //
+        // Gated on `feature = "flutter"` because the dispatch target
+        // (`flutter::push_session_event`) is Flutter-only. Sciter builds never
+        // call `reload_from_config`, so the cache stays disabled and the
+        // matcher would no-op anyway — but we still skip the call entirely so
+        // a hand-edited config can't silently swallow keys on a UI that has
+        // no way to surface the action.
+        //
+        // `None` for session_id makes the helper resolve through
+        // `flutter::get_cur_session_id()` — the rdev grab loop is process-wide
+        // and has no per-event session context to thread.
+        #[cfg(feature = "flutter")]
+        if crate::keyboard::shortcuts::try_dispatch(
+            None,
+            event,
+            keyboard_mode,
+            || get_peer_platform().to_lowercase(),
+            send_key_event,
+        ) {
+            return;
+        }
+
         let keyboard_mode = get_keyboard_mode_enum(keyboard_mode);
         if is_long_press(&event) {
             return;
@@ -341,7 +369,26 @@ pub mod client {
         event: &Event,
         lock_modes: Option<i32>,
         session: &Session<T>,
+        session_id: SessionID,
     ) {
+        // Shortcut intercept — see the long comment in `process_event` above
+        // for the consume / feature-gate rationale. The only difference
+        // here is that the Flutter FFI path threads an explicit SessionID
+        // through, so dispatch targets the exact tab the keystroke originated
+        // from — no dependency on the global focus tracker.
+        #[cfg(feature = "flutter")]
+        if crate::keyboard::shortcuts::try_dispatch(
+            Some(&session_id),
+            event,
+            keyboard_mode,
+            || session.peer_platform().to_lowercase(),
+            |key_event| session.send_key_event(key_event),
+        ) {
+            return;
+        }
+        #[cfg(not(feature = "flutter"))]
+        let _ = session_id;
+
         let keyboard_mode = get_keyboard_mode_enum(keyboard_mode);
         if is_long_press(&event) {
             return;
@@ -437,9 +484,9 @@ pub mod client {
         send_key_event(&event_lock_screen());
     }
 
-    pub fn event_ctrl_alt_del() -> KeyEvent {
+    pub fn event_ctrl_alt_del(peer_platform: &str) -> KeyEvent {
         let mut key_event = KeyEvent::new();
-        if get_peer_platform() == "Windows" {
+        if peer_platform == "Windows" {
             key_event.set_control_key(ControlKey::CtrlAltDel);
             key_event.down = true;
         } else {
@@ -454,7 +501,7 @@ pub mod client {
     #[inline]
     #[cfg(not(any(target_os = "android", target_os = "ios")))]
     pub fn ctrl_alt_del() {
-        send_key_event(&event_ctrl_alt_del());
+        send_key_event(&event_ctrl_alt_del(&get_peer_platform()));
     }
 }
 
@@ -476,6 +523,10 @@ static mut IS_LEFT_OPTION_DOWN: bool = false;
 
 #[cfg(not(any(target_os = "android", target_os = "ios")))]
 fn get_keyboard_mode() -> String {
+    #[cfg(not(feature = "flutter"))]
+    if let Some(session) = CUR_SESSION.lock().unwrap().as_ref() {
+        return session.get_keyboard_mode();
+    }
     #[cfg(feature = "flutter")]
     if let Some(session) = flutter::get_cur_session() {
         return session.get_keyboard_mode();
@@ -580,8 +631,10 @@ fn should_block_relative_mouse_shortcut(key: Key, is_press: bool) -> bool {
     #[cfg(target_os = "macos")]
     let is_tracked_key = key == Key::KeyG;
     #[cfg(not(target_os = "macos"))]
-    let is_tracked_key =
-        key == Key::ControlLeft || key == Key::ControlRight || key == Key::Alt || key == Key::AltGr;
+    let is_tracked_key = key == Key::ControlLeft
+        || key == Key::ControlRight
+        || key == Key::Alt
+        || key == Key::AltGr;
 
     // Block key up if key down was blocked (to avoid orphan key up event on remote).
     // This must be checked before clearing the flag below.
@@ -737,6 +790,10 @@ fn take_remote_keys() -> HashMap<Key, Event> {
 
 fn release_remote_keys_for_events(keyboard_mode: &str, to_release: HashMap<Key, Event>) {
     for (key, mut event) in to_release.into_iter() {
+        #[cfg(feature = "flutter")]
+        if get_peer_platform() == "Windows" && shortcuts::release_modifier_on_leave(key) {
+            continue;
+        }
         event.event_type = EventType::KeyRelease(key);
         client::process_event(keyboard_mode, &event, None);
         // If Alt or AltGr is pressed, we need to send another key stoke to release it.
@@ -992,6 +1049,11 @@ pub fn event_to_key_events(
 }
 
 pub fn send_key_event(key_event: &KeyEvent) {
+    #[cfg(not(feature = "flutter"))]
+    if let Some(session) = CUR_SESSION.lock().unwrap().as_ref() {
+        session.send_key_event(key_event);
+    }
+
     #[cfg(feature = "flutter")]
     if let Some(session) = flutter::get_cur_session() {
         session.send_key_event(key_event);
@@ -999,6 +1061,10 @@ pub fn send_key_event(key_event: &KeyEvent) {
 }
 
 pub fn get_peer_platform() -> String {
+    #[cfg(not(feature = "flutter"))]
+    if let Some(session) = CUR_SESSION.lock().unwrap().as_ref() {
+        return session.peer_platform();
+    }
     #[cfg(feature = "flutter")]
     if let Some(session) = flutter::get_cur_session() {
         return session.peer_platform();

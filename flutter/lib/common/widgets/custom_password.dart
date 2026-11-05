@@ -80,21 +80,19 @@ class PasswordStrengthIndicator extends StatelessWidget {
   Widget build(BuildContext context) {
     return Obx(() {
       var strength = estimatePasswordStrength(password.value);
-      final scheme = Theme.of(context).colorScheme;
-      final inactive = scheme.surfaceContainerHighest;
-      final active = strength < weakMedium ? scheme.error : scheme.primary;
       return Row(
         children: [
           Expanded(
-              child: _indicator(password.isEmpty ? inactive : active)),
+              child: _indicator(
+                  password.isEmpty ? Colors.grey : _getColor(strength))),
           Expanded(
               child: _indicator(password.isEmpty || strength < weakMedium
-                  ? inactive
-                  : active)),
+                  ? Colors.grey
+                  : _getColor(strength))),
           Expanded(
               child: _indicator(password.isEmpty || strength < mediumStrong
-                  ? inactive
-                  : active)),
+                  ? Colors.grey
+                  : _getColor(strength))),
           Text(password.isEmpty ? '' : translate(_getLabel(strength)))
               .marginOnly(left: password.isEmpty ? 0 : 8),
         ],
@@ -104,12 +102,8 @@ class PasswordStrengthIndicator extends StatelessWidget {
 
   Widget _indicator(Color color) {
     return Container(
-      height: 4,
-      margin: const EdgeInsets.symmetric(horizontal: 2),
-      decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(2),
-      ),
+      height: 8,
+      color: color,
     );
   }
 
@@ -120,6 +114,16 @@ class PasswordStrengthIndicator extends StatelessWidget {
       return 'Medium';
     } else {
       return 'Strong';
+    }
+  }
+
+  Color _getColor(double strength) {
+    if (strength < weakMedium) {
+      return Colors.yellow;
+    } else if (strength < mediumStrong) {
+      return Colors.blue;
+    } else {
+      return Colors.green;
     }
   }
 }

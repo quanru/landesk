@@ -1,16 +1,36 @@
 #include <windows.h>
 #include <wtsapi32.h>
 #include <tlhelp32.h>
+#include <comdef.h>
+#include <xpsprint.h>
 #include <cstdio>
 #include <cstdint>
 #include <intrin.h>
 #include <string>
+#include <memory>
 #include <shlobj.h> // NOLINT(build/include_order)
 #include <userenv.h>
 #include <versionhelpers.h>
 #include <vector>
 #include <sddl.h>
 #include <memory>
+
+#ifdef RUSTDESK_SCITER
+// Share the runner's service operations without loading either UI framework.
+#include "../../flutter/windows/runner/service_control.h"
+
+extern "C" DWORD run_service_control()
+{
+    int count = 0;
+    wchar_t** args = CommandLineToArgvW(GetCommandLineW(), &count);
+    if (!args) {
+        return GetLastError();
+    }
+    const DWORD result = service_control::RunCommand(count, args);
+    LocalFree(args);
+    return result;
+}
+#endif
 
 extern "C" uint32_t get_session_user_info(PWSTR bufin, uint32_t nin, uint32_t id);
 
@@ -539,6 +559,26 @@ extern "C"
         SHAddToRecentDocs(SHARD_PATHW, path);
     }
 
+    // Hyper-V Enhanced Session names do not have the usual "rdp" prefix.
+    static bool is_rdp_session_by_protocol(DWORD session_id)
+    {
+        LPSTR buffer = nullptr;
+        DWORD bytes = 0;
+        if (!WTSQuerySessionInformationA(
+                WTS_CURRENT_SERVER_HANDLE, session_id, WTSClientProtocolType, &buffer, &bytes)) {
+            flog("Failed to query protocol for session %lu: Windows error %lu\n",
+                session_id, GetLastError());
+            return false;
+        }
+        std::unique_ptr<char, decltype(&WTSFreeMemory)> protocol_info(buffer, WTSFreeMemory);
+        if (!buffer || bytes < sizeof(USHORT)) {
+            flog("Failed to query protocol for session %lu: Windows error %lu\n",
+                session_id, static_cast<DWORD>(ERROR_INVALID_DATA));
+            return false;
+        }
+        return *reinterpret_cast<const USHORT *>(buffer) == WTS_PROTOCOL_TYPE_RDP;
+    }
+
     DWORD get_current_session(BOOL include_rdp)
     {
         auto rdp_or_console = WTSGetActiveConsoleSessionId();
@@ -567,6 +607,10 @@ extern "C"
                         return id;
                     }
                     if (!strnicmp(info.pWinStationName, rdp, nrdp) || !strnicmp(info.pWinStationName, ica, nica))
+                    {
+                        rdp_or_console = info.SessionId;
+                    }
+                    else if (is_rdp_session_by_protocol(info.SessionId))
                     {
                         rdp_or_console = info.SessionId;
                     }
@@ -664,6 +708,9 @@ extern "C"
                     }
                     else if (include_rdp && !strnicmp(info.pWinStationName, ica, nica)) {
                         sessionIds.push_back(std::wstring(L"ICA:") + std::to_wstring(info.SessionId));
+                    }
+                    else if (include_rdp && is_rdp_session_by_protocol(info.SessionId)) {
+                        sessionIds.push_back(std::wstring(L"RDP:") + std::to_wstring(info.SessionId));
                     }
                 }
             }
@@ -891,3 +938,167 @@ extern "C"
         return isRunning;
     }
 } // end of extern "C"
+
+// Remote printing 
+extern "C"
+{
+// Dynamic loading of XPS Print functions
+typedef HRESULT(WINAPI *StartXpsPrintJobFunc)(
+    LPCWSTR printerName,
+    LPCWSTR jobName,
+    LPCWSTR outputFileName,
+    HANDLE progressEvent,
+    HANDLE completionEvent,
+    UINT8* printablePagesOn,
+    UINT32 printablePagesOnCount,
+    IXpsPrintJob** xpsPrintJob,
+    IXpsPrintJobStream** documentStream,
+    IXpsPrintJobStream** printTicketStream);
+
+static HMODULE xpsPrintModule = nullptr;
+static StartXpsPrintJobFunc StartXpsPrintJobPtr = nullptr;
+
+static bool InitXpsPrint()
+{
+    if (xpsPrintModule == nullptr)
+    {
+        xpsPrintModule = LoadLibraryA("XpsPrint.dll");
+        if (xpsPrintModule == nullptr)
+        {
+            flog("Failed to load XpsPrint.dll. Error: %d\n", GetLastError());
+            return false;
+        }
+        
+        StartXpsPrintJobPtr = (StartXpsPrintJobFunc)GetProcAddress(xpsPrintModule, "StartXpsPrintJob");
+        if (StartXpsPrintJobPtr == nullptr)
+        {
+            flog("Failed to get StartXpsPrintJob function. Error: %d\n", GetLastError());
+            FreeLibrary(xpsPrintModule);
+            xpsPrintModule = nullptr;
+            return false;
+        }
+    }
+    return true;
+}
+#pragma warning(push)
+#pragma warning(disable : 4995)
+
+#define PRINT_XPS_CHECK_HR(hr, msg)                      \
+    if (FAILED(hr))                                      \
+    {                                                    \
+        _com_error err(hr);                              \
+        flog("%s Error: %s\n", msg, err.ErrorMessage()); \
+        return -1;                                       \
+    }
+
+    int PrintXPSRawData(LPWSTR printerName, BYTE *rawData, ULONG dataSize)
+    {
+        // Check if XPS Print DLL is available
+        if (!InitXpsPrint())
+        {
+            flog("XPS Print functionality not available on this system\n");
+            return -1;
+        }
+
+        BOOL isCoInitializeOk = FALSE;
+        HRESULT hr = CoInitializeEx(nullptr, COINIT_MULTITHREADED);
+        if (hr == RPC_E_CHANGED_MODE)
+        {
+            hr = CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
+        }
+        if (hr == S_OK)
+        {
+            isCoInitializeOk = TRUE;
+        }
+        std::shared_ptr<int> coInitGuard(nullptr, [isCoInitializeOk](int *) {
+            if (isCoInitializeOk) CoUninitialize();
+        });
+
+        IXpsOMObjectFactory *xpsFactory = nullptr;
+        hr = CoCreateInstance(
+            __uuidof(XpsOMObjectFactory),
+            nullptr,
+            CLSCTX_INPROC_SERVER,
+            __uuidof(IXpsOMObjectFactory),
+            reinterpret_cast<LPVOID *>(&xpsFactory));
+        PRINT_XPS_CHECK_HR(hr, "Failed to create XPS object factory.");
+        std::shared_ptr<IXpsOMObjectFactory> xpsFactoryGuard(
+            xpsFactory,
+            [](IXpsOMObjectFactory *xpsFactory) {
+                xpsFactory->Release();
+        });
+
+        HANDLE completionEvent = CreateEvent(nullptr, TRUE, FALSE, nullptr);
+        if (completionEvent == nullptr)
+        {
+            flog("Failed to create completion event. Last error: %d\n", GetLastError());
+            return -1;
+        }
+        std::shared_ptr<HANDLE> completionEventGuard(
+            &completionEvent,
+            [](HANDLE *completionEvent) {
+                CloseHandle(*completionEvent);
+        });
+
+        IXpsPrintJob *job = nullptr;
+        IXpsPrintJobStream *jobStream = nullptr;
+        // `StartXpsPrintJob()` is deprecated, but we still use it for compatibility.
+        // We may change to use the `Print Document Package API` in the future.
+        // https://learn.microsoft.com/en-us/windows/win32/printdocs/xpsprint-functions
+        hr = StartXpsPrintJobPtr(
+            printerName,
+            L"Print Job 1",
+            nullptr,
+            nullptr,
+            completionEvent,
+            nullptr,
+            0,
+            &job,
+            &jobStream,
+            nullptr);
+        PRINT_XPS_CHECK_HR(hr, "Failed to start XPS print job.");
+
+        std::shared_ptr<IXpsPrintJobStream> jobStreamGuard(jobStream, [](IXpsPrintJobStream *jobStream) {
+                jobStream->Release();
+        });
+        BOOL jobOk = FALSE;
+        std::shared_ptr<IXpsPrintJob> jobGuard(job, [&jobOk](IXpsPrintJob* job) {
+            if (jobOk == FALSE)
+            {
+                job->Cancel();
+            }
+            job->Release();
+        });
+
+        DWORD bytesWritten = 0;
+        hr = jobStream->Write(rawData, dataSize, &bytesWritten);
+        PRINT_XPS_CHECK_HR(hr, "Failed to write data to print job stream.");
+
+        hr = jobStream->Close();
+        PRINT_XPS_CHECK_HR(hr, "Failed to close print job stream.");
+
+        // Wait about 5 minutes for the print job to complete.
+        DWORD waitMillis = 300 * 1000;
+        DWORD waitResult = WaitForSingleObject(completionEvent, waitMillis);
+        if (waitResult != WAIT_OBJECT_0)
+        {
+            flog("Wait for print job completion failed. Last error: %d\n", GetLastError());
+            return -1;
+        }
+        jobOk = TRUE;
+
+        return 0;
+    }
+
+    void CleanupXpsPrint()
+    {
+        if (xpsPrintModule != nullptr)
+        {
+            FreeLibrary(xpsPrintModule);
+            xpsPrintModule = nullptr;
+            StartXpsPrintJobPtr = nullptr;
+        }
+    }
+
+#pragma warning(pop)
+}

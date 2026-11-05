@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 
+const sidebarColor = Color(0xFF0C6AF6);
+const backgroundStartColor = Color(0xFF0583EA);
+const backgroundEndColor = Color(0xFF0697EA);
+
 class DesktopTitleBar extends StatelessWidget {
   final Widget? child;
 
@@ -8,8 +12,20 @@ class DesktopTitleBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: Theme.of(context).colorScheme.surface,
-      child: Row(children: [Expanded(child: child ?? Offstage())]),
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [backgroundStartColor, backgroundEndColor],
+            stops: [0.0, 1.0]),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: child ?? Offstage(),
+          )
+        ],
+      ),
     );
   }
 }

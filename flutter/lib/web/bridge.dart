@@ -7,6 +7,7 @@ import 'package:uuid/uuid.dart';
 import 'dart:html' as html;
 
 import 'package:flutter_hbb/consts.dart';
+import 'package:flutter_hbb/models/shortcut_model.dart';
 
 final _privateConstructorUsedError = UnsupportedError(
     'It seems like you constructed your class using `MyClass._()`. This constructor is only meant to be used by freezed and you are not supposed to need it nor use it.\nPlease check the documentation here for more information: https://github.com/rrousselGit/freezed#adding-getters-and-methods-to-our-models');
@@ -143,9 +144,25 @@ class RustdeskImpl {
       required bool isPortForward,
       required bool isRdp,
       required bool isTerminal,
+      required String switchUuid,
+      required bool forceRelay,
       required String password,
+      required bool isSharedPassword,
+      String? connToken,
+      required String loginMethod,
       dynamic hint}) {
-    return 'Web is not a LAN-only release target';
+    return js.context.callMethod('setByName', [
+      'session_add_sync',
+      jsonEncode({
+        'id': id,
+        'password': password,
+        'is_shared_password': isSharedPassword,
+        'login_method': loginMethod,
+        'isFileTransfer': isFileTransfer,
+        'isViewCamera': isViewCamera,
+        'isTerminal': isTerminal
+      })
+    ]);
   }
 
   Stream<EventToUI> sessionStart(
@@ -206,15 +223,6 @@ class RustdeskImpl {
         ]));
   }
 
-  String sessionLoginLan(
-      {required UuidValue sessionId,
-      required String username,
-      required String password,
-      required bool remember,
-      dynamic hint}) {
-    return 'LAN access credentials are not supported in the web client';
-  }
-
   Future<void> sessionSend2Fa(
       {required UuidValue sessionId,
       required String code,
@@ -245,7 +253,7 @@ class RustdeskImpl {
   }
 
   Future<void> sessionReconnect(
-      {required UuidValue sessionId, dynamic hint}) {
+      {required UuidValue sessionId, required bool forceRelay, dynamic hint}) {
     return Future(() => js.context.callMethod('setByName', ['reconnect']));
   }
 
@@ -818,10 +826,6 @@ class RustdeskImpl {
     throw UnimplementedError("mainGetError");
   }
 
-  bool mainShowOption({required String key, dynamic hint}) {
-    throw UnimplementedError("mainShowOption");
-  }
-
   Future<void> mainSetOption(
       {required String key, required String value, dynamic hint}) {
     js.context.callMethod('setByName', [
@@ -961,7 +965,11 @@ class RustdeskImpl {
   }
 
   String mainGetLocalOption({required String key, dynamic hint}) {
-    return js.context.callMethod('getByName', ['option:local', key]);
+    final v = js.context.callMethod('getByName', ['option:local', key]);
+    if (key == 'lang' && (v == 'pt' || v == 'br')) {
+      return 'pt-br';
+    }
+    return v;
   }
 
   // Do not return the real environment variables.
@@ -984,6 +992,28 @@ class RustdeskImpl {
           'option:local',
           jsonEncode({'name': key, 'value': value})
         ]));
+  }
+
+  // Tell the JS-side matcher (flutter/web/js/src/shortcut_matcher.ts) to
+  // use the same platform-filtered bindings as the Flutter matcher, while
+  // keeping unsupported saved bindings in LocalStorage.
+  void mainReloadKeyboardShortcuts({dynamic hint}) {
+    final config = ShortcutModel.config(active: true);
+    js.context.callMethod('reloadShortcuts', [
+      jsonEncode({
+        'enabled': config.enabled,
+        'pass_through': config.passThrough,
+        'bindings': config.bindings,
+      })
+    ]);
+  }
+
+  // Web has no Rust at runtime, so the defaults seed comes from the
+  // [kDefaultShortcutBindings] canonical in shortcut_constants.dart. Parity
+  // with Rust's `default_bindings()` is enforced by tests on both sides
+  // against `flutter/test/fixtures/default_keyboard_shortcuts.json`.
+  String mainGetDefaultKeyboardShortcuts({dynamic hint}) {
+    return jsonEncode(kDefaultShortcutBindings);
   }
 
   String mainGetInputSource({dynamic hint}) {
@@ -1142,6 +1172,14 @@ class RustdeskImpl {
     return js.context.callMethod('getByName', ['option:user:default', key]);
   }
 
+  Future<String> mainHandleRelayId({required String id, dynamic hint}) {
+    var newId = id;
+    if (id.endsWith("\\r") || id.endsWith("/r")) {
+      newId = id.substring(0, id.length - 2);
+    }
+    return Future.value(newId);
+  }
+
   String mainGetMainDisplay({dynamic hint}) {
     return js.context.callMethod('getByName', ['main_display']);
   }
@@ -1191,7 +1229,50 @@ class RustdeskImpl {
     return Future(() => mainGetLocalOption(key: 'last_remote_id'));
   }
 
+  Future<void> mainGetSoftwareUpdateUrl({dynamic hint}) {
+    throw UnimplementedError("mainGetSoftwareUpdateUrl");
+  }
+
+  Future<String> mainGetHomeDir({dynamic hint}) {
+    return Future.value('');
+  }
+
+  Future<String> mainGetLangs({dynamic hint}) {
+    return Future(() => js.context.callMethod('getByName', ['langs']));
+  }
+
+  Future<String> mainGetTemporaryPassword({dynamic hint}) {
+    return Future.value('');
+  }
+
+  Future<String> mainGetFingerprint({dynamic hint}) {
+    return Future.value('');
+  }
+
+  Future<String> cmGetClientsState({dynamic hint}) {
+    throw UnimplementedError("cmGetClientsState");
+  }
+
+  Future<String?> cmCheckClientsLength({required int length, dynamic hint}) {
+    throw UnimplementedError("cmCheckClientsLength");
+  }
+
+  Future<int> cmGetClientsLength({dynamic hint}) {
+    throw UnimplementedError("cmCheckClientsLength");
+  }
+
   Future<void> mainInit({required String appDir, dynamic hint}) {
+    // JS -> Dart shortcut bridge. The matcher in flutter/web/js/src/
+    // shortcut_matcher.ts calls `window.onShortcutTriggered(actionId)` when a
+    // binding fires; route it to the active session's ShortcutModel.
+    // Web uses a JS-side connection, so the event does not arrive through the
+    // native session event stream.
+    js.context['onShortcutTriggered'] = (dynamic action) {
+      if (action is String) {
+        ShortcutModel.onWebTriggered(action);
+      }
+    };
+    mainReloadKeyboardShortcuts();
     return Future.value();
   }
 
@@ -1547,13 +1628,34 @@ class RustdeskImpl {
     throw UnimplementedError("installRunWithoutInstall");
   }
 
-  Future<String> installInstallMe(
+  Future<void> installInstallMe(
       {required String options, required String path, dynamic hint}) {
     throw UnimplementedError("installInstallMe");
   }
 
   String installInstallPath({dynamic hint}) {
     throw UnimplementedError("installInstallPath");
+  }
+
+  Future<void> mainAccountAuth(
+      {required String op, required bool rememberMe, dynamic hint}) {
+    // Safari only allows auth popups while handling the original user gesture.
+    // Use Future.sync so the JS call runs synchronously (pre-opening the OIDC
+    // window) while any interop error still surfaces as a Future error.
+    return Future.sync(() => js.context.callMethod('setByName', [
+          'account_auth',
+          jsonEncode({'op': op, 'remember': rememberMe})
+        ]));
+  }
+
+  Future<void> mainAccountAuthCancel({dynamic hint}) {
+    return Future(
+        () => js.context.callMethod('setByName', ['account_auth_cancel']));
+  }
+
+  Future<String> mainAccountAuthResult({dynamic hint}) {
+    return Future(
+        () => js.context.callMethod('getByName', ['account_auth_result']));
   }
 
   Future<void> mainOnMainWindowClose({dynamic hint}) {
@@ -1607,9 +1709,8 @@ class RustdeskImpl {
   }
 
   bool isCustomClient({dynamic hint}) {
-    // The upstream and LocalDesk defaults are products, not generated custom clients.
-    final appName = mainGetAppNameSync(hint: hint);
-    return appName != "RustDesk" && appName != "LocalDesk" && appName != "landesk";
+    // is_custom_client() checks if app name is not "RustDesk"
+    return mainGetAppNameSync(hint: hint) != "RustDesk";
   }
 
   bool isDisableSettings({dynamic hint}) {
@@ -1625,6 +1726,11 @@ class RustdeskImpl {
   bool isDisableGroupPanel({dynamic hint}) {
     // Checks LocalConfig::get_option("disable-group-panel") == "Y"
     return mainGetLocalOption(key: "disable-group-panel", hint: hint) == "Y";
+  }
+
+  bool isDisableAccount({dynamic hint}) {
+    // Checks HARD_SETTINGS["disable-account"] == "Y"
+    return mainGetHardOption(key: "disable-account", hint: hint) == "Y";
   }
 
   bool isDisableInstallation({dynamic hint}) {
@@ -1730,6 +1836,10 @@ class RustdeskImpl {
     throw UnimplementedError("mainRemoveTrustedDevices");
   }
 
+  Future<void> mainRenewTrustedDevices({required String json, dynamic hint}) {
+    throw UnimplementedError("mainRenewTrustedDevices");
+  }
+
   Future<void> mainClearTrustedDevices({dynamic hint}) {
     throw UnimplementedError("mainClearTrustedDevices");
   }
@@ -1802,11 +1912,33 @@ class RustdeskImpl {
     return Future(() => js.context.callMethod('setByName', ['select_files']));
   }
 
+  String? sessionGetConnToken({required UuidValue sessionId, dynamic hint}) {
+    throw UnimplementedError("sessionGetConnToken");
+  }
+
+  String mainGetPrinterNames({dynamic hint}) {
+    return '';
+  }
+
+  Future<void> sessionPrinterResponse(
+      {required UuidValue sessionId,
+      required int id,
+      required String path,
+      required String printerName,
+      dynamic hint}) {
+    throw UnimplementedError("sessionPrinterResponse");
+  }
+
   Future<String> mainGetCommon({required String key, dynamic hint}) {
     throw UnimplementedError("mainGetCommon");
   }
 
   String mainGetCommonSync({required String key, dynamic hint}) {
+    const prefix = 'resolve-api-server:';
+    if (key.startsWith(prefix)) {
+      return js.context
+          .callMethod('getByName', ['api_server', key.substring(prefix.length)]);
+    }
     throw UnimplementedError("mainGetCommonSync");
   }
 
@@ -1834,6 +1966,9 @@ class RustdeskImpl {
       required String key,
       required String param,
       dynamic hint}) {
+    if (key == 'login_method') {
+      return js.context.callMethod('getByName', ['login_method']);
+    }
     throw UnimplementedError("sessionGetCommonSync");
   }
 

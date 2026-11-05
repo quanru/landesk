@@ -15,13 +15,8 @@ src/version.rs
 cert.pfx
 *.bak
 *png
-!flutter/assets/icon.png
-!assets/screenshots/device-discovery.png
-!assets/screenshots/lan-settings.png
 *svg
-!res/localdesk-icon.svg
 *jpg
-!assets/community/wechat-contact.jpg
 sciter.dll
 **pdb
 src/bridge_generated.rs
@@ -63,15 +58,12 @@ libsciter.dylib
 flutter/web/
 # libdrmtap is cloned at build time by build.py (not a submodule)
 /third_party/libdrmtap/
-res/*.pkg.tar.zst
-res/pkg/
+# Local git worktrees
+.worktrees/
 
-# Original source for the landesk application icon.
-!res/landesk-icon.png
+# Local native migration build and validation outputs
+/.verify/
+/midscene_run/
+/flutter/macos/build/
 
-# Locally packaged release artifacts
-/dist/releases/
-
-# Current product artwork and documentation captures.
-!assets/brand/landesk.png
-!assets/screenshots/connection.png
+/flutter/android/build/

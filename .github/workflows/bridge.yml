@@ -8,8 +8,7 @@ on:
 env:
   CARGO_EXPAND_VERSION: "1.0.95"
   FLUTTER_RUST_BRIDGE_VERSION: "1.80.1"
-  FLUTTER_VERSION: "3.44.1"
-  RUST_VERSION: "1.82"
+  RUST_VERSION: "1.75" # https://github.com/rustdesk/rustdesk/discussions/7503
 
 jobs:
   generate_bridge:
@@ -18,12 +17,21 @@ jobs:
       fail-fast: false
       matrix:
         job:
+          # Default bridge for every platform still on Flutter 3.24.5 (generated with 3.22.3).
           - {
               target: x86_64-unknown-linux-gnu,
               os: ubuntu-22.04,
               extra-build-args: "",
-              flutter-version: "3.44.1",
+              flutter-version: "3.22.3",
               artifact-name: "bridge-artifact",
+            }
+          # Dedicated bridge for the Windows and macOS arm64 builds (Flutter 3.44); runs in parallel.
+          - {
+              target: x86_64-unknown-linux-gnu,
+              os: ubuntu-22.04,
+              extra-build-args: "",
+              flutter-version: "3.44.8",
+              artifact-name: "bridge-artifact-flutter-3.44",
             }
     steps:
       - name: Checkout source code
@@ -80,6 +88,14 @@ jobs:
         run: |
           cargo install cargo-expand --version ${{ env.CARGO_EXPAND_VERSION }} --locked
           cargo install flutter_rust_bridge_codegen --version ${{ env.FLUTTER_RUST_BRIDGE_VERSION }} --features "uuid" --locked
+          if [[ "${{ matrix.job.flutter-version }}" == "3.22.3" ]]; then
+            # Default Flutter 3.22.3: extended_text 14 needs a newer Dart, so downgrade for resolution.
+            sed -i -e 's/extended_text: 14.0.0/extended_text: 13.0.0/g' flutter/pubspec.yaml
+          else
+            # Flutter 3.44 bridge for Windows/macOS arm64: match those builds' source/pubspec state so
+            # the generated *.freezed.dart compiles against the same Flutter/freezed they resolve.
+            bash .github/patches/apply_flutter_3.44_source_patches.sh
+          fi
           pushd flutter && flutter pub get && popd
 
       - name: Run flutter rust bridge

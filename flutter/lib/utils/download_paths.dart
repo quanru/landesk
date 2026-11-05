@@ -29,18 +29,12 @@ class DownloadPaths {
   }
 
   static String mapDirectory(
-    String remoteRoot,
-    String remotePath,
-    String localRoot, {
-    required bool remoteWindows,
-    required bool localWindows,
-  }) {
+      String remoteRoot, String remotePath, String localRoot,
+      {required bool remoteWindows, required bool localWindows}) {
     final remote = path.Context(
-      style: remoteWindows ? path.Style.windows : path.Style.posix,
-    );
+        style: remoteWindows ? path.Style.windows : path.Style.posix);
     final local = path.Context(
-      style: localWindows ? path.Style.windows : path.Style.posix,
-    );
+        style: localWindows ? path.Style.windows : path.Style.posix);
     if (remotePath.contains('\x00') ||
         remote.split(remotePath).contains('..') ||
         (!remote.equals(remoteRoot, remotePath) &&

@@ -364,6 +364,15 @@ pub fn get_click_time() -> i64 {
 
 #[inline]
 #[cfg(not(any(target_os = "ios")))]
+pub fn authorize(id: i32) {
+    if let Some(client) = CLIENTS.write().unwrap().get_mut(&id) {
+        client.authorized = true;
+        allow_err!(client.tx.send(Data::Authorize));
+    };
+}
+
+#[inline]
+#[cfg(not(any(target_os = "ios")))]
 pub fn close(id: i32) {
     if let Some(client) = CLIENTS.read().unwrap().get(&id) {
         allow_err!(client.tx.send(Data::Close));
@@ -394,6 +403,55 @@ pub fn send_chat(id: i32, text: String) {
     }
 }
 
+#[inline]
+#[cfg(not(any(target_os = "ios")))]
+pub fn switch_permission(id: i32, name: String, enabled: bool) {
+    #[cfg(target_os = "android")]
+    let is_keyboard_permission = name == "keyboard";
+    #[cfg(not(target_os = "android"))]
+    let is_keyboard_permission = false;
+    if !option2bool(
+        OPTION_ENABLE_PERM_CHANGE_IN_ACCEPT_WINDOW,
+        &crate::get_builtin_option(OPTION_ENABLE_PERM_CHANGE_IN_ACCEPT_WINDOW),
+    ) && !is_keyboard_permission
+    {
+        log::info!(
+            "blocked cm switch_permission by policy, conn_id={}, permission={}, enabled={}",
+            id,
+            name,
+            enabled
+        );
+        return;
+    }
+    if let Some(client) = CLIENTS.read().unwrap().get(&id) {
+        allow_err!(client.tx.send(Data::SwitchPermission { name, enabled }));
+    };
+}
+
+#[inline]
+#[cfg(target_os = "android")]
+pub fn switch_permission_all(name: String, enabled: bool) {
+    if name != "keyboard"
+        && !option2bool(
+            OPTION_ENABLE_PERM_CHANGE_IN_ACCEPT_WINDOW,
+            &crate::get_builtin_option(OPTION_ENABLE_PERM_CHANGE_IN_ACCEPT_WINDOW),
+        )
+    {
+        log::info!(
+            "blocked cm switch_permission_all by policy, permission={}, enabled={}",
+            name,
+            enabled
+        );
+        return;
+    }
+    for (_, client) in CLIENTS.read().unwrap().iter() {
+        allow_err!(client.tx.send(Data::SwitchPermission {
+            name: name.clone(),
+            enabled
+        }));
+    }
+}
+
 #[cfg(any(target_os = "android", target_os = "ios", feature = "flutter"))]
 #[inline]
 pub fn get_clients_state() -> String {
@@ -408,6 +466,21 @@ pub fn get_clients_length() -> usize {
     clients.len()
 }
 
+#[inline]
+#[cfg(target_os = "android")]
+pub fn has_active_clients() -> bool {
+    let clients = CLIENTS.read().unwrap();
+    clients.values().any(|c| !c.disconnected)
+}
+
+#[inline]
+#[cfg(feature = "flutter")]
+#[cfg(not(any(target_os = "android", target_os = "ios")))]
+pub fn switch_back(id: i32) {
+    if let Some(client) = CLIENTS.read().unwrap().get(&id) {
+        allow_err!(client.tx.send(Data::SwitchSidesBack));
+    };
+}
 
 #[cfg(not(any(target_os = "android", target_os = "ios")))]
 impl<T: InvokeUiCM> IpcTaskRunner<T> {
@@ -510,6 +583,26 @@ impl<T: InvokeUiCM> IpcTaskRunner<T> {
                                 }
                                 Data::ChatMessage { text } => {
                                     self.cm.new_message(self.conn_id, text);
+                                }
+                                Data::SwitchPermission { name, enabled } => {
+                                    // Keep this branch scoped to privacy mode rollback.
+                                    // Other CM permission toggles are updated optimistically by the UI itself.
+                                    // The backend currently sends SwitchPermission back to CM only when
+                                    // privacy-mode turn-off fails and the UI state must be restored.
+                                    if name == "privacy_mode" {
+                                        let client = {
+                                            let mut clients = CLIENTS.write().unwrap();
+                                            clients.get_mut(&self.conn_id).map(|c| {
+                                                c.privacy_mode = enabled;
+                                                c.clone()
+                                            })
+                                        };
+                                        if let Some(client) = client {
+                                            // This reuses add_connection(), and cm.tis only selectively updates
+                                            // existing rows (authorized/privacy_mode) for this fallback path.
+                                            self.cm.ui_handler.add_connection(&client);
+                                        }
+                                    }
                                 }
                                 Data::FS(mut fs) => {
                                     if let ipc::FS::WriteBlock { id, file_num, data: _, compressed } = fs {
@@ -657,6 +750,20 @@ impl<T: InvokeUiCM> IpcTaskRunner<T> {
                         log::error!("error encountered in IPC task, quitting: {}", e);
                         break;
                     }
+                    match &data {
+                        Data::SwitchPermission{name: _name, enabled: _enabled} => {
+                            #[cfg(target_os = "windows")]
+                            if _name == "file" {
+                                self.file_transfer_enabled = *_enabled;
+                            }
+                        }
+                        Data::Authorize => {
+                            self.running = true;
+                            break;
+                        }
+                        _ => {
+                        }
+                    }
                 },
                 clip_file = rx_clip.recv() => match clip_file {
                     Some(_clip) => {
@@ -740,7 +847,12 @@ impl<T: InvokeUiCM> IpcTaskRunner<T> {
 pub async fn start_ipc<T: InvokeUiCM>(cm: ConnectionManager<T>) {
     #[cfg(target_os = "windows")]
     {
-        ContextSend::enable(true);
+        let enabled = crate::Connection::is_permission_enabled_locally(OPTION_ENABLE_FILE_TRANSFER);
+        let mut lock = crate::ui_interface::IS_FILE_TRANSFER_ENABLED
+            .lock()
+            .unwrap();
+        ContextSend::enable(enabled);
+        *lock = Some(enabled);
     }
     match ipc::new_listener("_cm").await {
         Ok(mut incoming) => {
@@ -856,6 +968,19 @@ pub async fn start_listen<T: InvokeUiCM>(
         }
     }
     cm.remove_connection(current_id, true);
+    for job in &mut write_jobs {
+        if let Err(error) = job.cancel_document().await {
+            const CLEANUP_ERROR_LOG_INTERVAL: std::time::Duration =
+                std::time::Duration::from_secs(60);
+            hbb_common::throttled_log!(
+                CLEANUP_ERROR_LOG_INTERVAL,
+                warn,
+                "Failed to clean up document transfer {} on disconnect: {}",
+                job.id(),
+                error
+            );
+        }
+    }
 }
 
 #[cfg(not(any(target_os = "ios")))]
@@ -867,6 +992,59 @@ async fn handle_fs(
     tx_log: Option<&UnboundedSender<String>>,
     _conn_id: i32,
 ) {
+    // Android is scoped-storage only, so every peer supplied path has to stay inside the
+    // app workspace. This is the filesystem boundary, keep it enforced here even though
+    // `Connection` rejects out-of-workspace requests earlier as well.
+    #[cfg(target_os = "android")]
+    {
+        // (path, job id, file num, allow empty) of the peer supplied path this message
+        // acts on.
+        let checked: Option<(&str, i32, i32, bool)> = match &fs {
+            ipc::FS::ReadEmptyDirs { dir, .. } => Some((dir.as_str(), -1, -1, false)),
+            ipc::FS::ReadDir { dir, .. } => Some((dir.as_str(), -1, -1, true)),
+            ipc::FS::RemoveDir { path, id, .. } | ipc::FS::CreateDir { path, id } => {
+                Some((path.as_str(), *id, 0, false))
+            }
+            ipc::FS::Rename { path, id, .. } => Some((path.as_str(), *id, 0, false)),
+            ipc::FS::RemoveFile { path, id, file_num } => {
+                Some((path.as_str(), *id, *file_num, false))
+            }
+            ipc::FS::ReadAllFiles { path, id, .. } => Some((path.as_str(), *id, -1, false)),
+            ipc::FS::NewWrite {
+                path, id, file_num, ..
+            }
+            | ipc::FS::ReadFile {
+                path, id, file_num, ..
+            } => Some((path.as_str(), *id, *file_num, false)),
+            _ => None,
+        };
+        if let Some((path, id, file_num, allow_empty)) = checked {
+            if !crate::common::is_peer_path_allowed_async(path, allow_empty).await {
+                log::warn!("Reject file operation outside the app workspace: {}", path);
+                if id >= 0 {
+                    send_raw(fs::new_error(id, "Permission denied", file_num), tx);
+                }
+                return;
+            }
+        }
+        if let ipc::FS::Rename { path, new_name, id } = &fs {
+            let destination = std::path::Path::new(path)
+                .parent()
+                .map(|parent| parent.join(new_name));
+            let allowed = match destination.as_deref().and_then(std::path::Path::to_str) {
+                Some(path) => crate::common::is_peer_path_allowed_async(path, false).await,
+                None => false,
+            };
+            if !allowed {
+                log::warn!(
+                    "Reject rename destination outside the app workspace: {:?}",
+                    destination
+                );
+                send_raw(fs::new_error(*id, "Permission denied", 0), tx);
+                return;
+            }
+        }
+    }
     match fs {
         ipc::FS::ReadEmptyDirs {
             dir,
@@ -935,6 +1113,12 @@ async fn handle_fs(
         }
         ipc::FS::CancelWrite { id } => {
             if let Some(job) = fs::remove_job(id, write_jobs) {
+                #[cfg(target_os = "android")]
+                let mut job = job;
+                #[cfg(target_os = "android")]
+                if let Err(error) = job.cancel_document().await {
+                    send_raw(fs::new_error(id, error, job.file_num()), tx);
+                }
                 job.remove_download_file();
                 if let Some(tx) = tx_log {
                     if let Err(e) = tx.send(serialize_transfer_job(&job, false, true, "")) {
@@ -945,6 +1129,13 @@ async fn handle_fs(
         }
         ipc::FS::WriteDone { id, file_num } => {
             if let Some(job) = fs::remove_job(id, write_jobs) {
+                #[cfg(target_os = "android")]
+                let mut job = job;
+                #[cfg(target_os = "android")]
+                if let Err(error) = job.finish_document().await {
+                    send_raw(fs::new_error(id, error, file_num), tx);
+                    return;
+                }
                 job.modify_time();
                 send_raw(fs::new_done(id, file_num), tx);
                 tx_log.map(|tx| tx.send(serialize_transfer_job(&job, true, false, "")));
@@ -952,6 +1143,20 @@ async fn handle_fs(
         }
         ipc::FS::WriteError { id, file_num, err } => {
             if let Some(job) = fs::remove_job(id, write_jobs) {
+                #[cfg(target_os = "android")]
+                let mut job = job;
+                #[cfg(target_os = "android")]
+                if let Err(error) = job.cancel_document().await {
+                    const CLEANUP_ERROR_LOG_INTERVAL: std::time::Duration =
+                        std::time::Duration::from_secs(60);
+                    hbb_common::throttled_log!(
+                        CLEANUP_ERROR_LOG_INTERVAL,
+                        warn,
+                        "Failed to clean up document transfer {}: {}",
+                        id,
+                        error
+                    );
+                }
                 tx_log.map(|tx| tx.send(serialize_transfer_job(&job, false, false, &err)));
                 send_raw(fs::new_error(job.id(), err, file_num), tx);
             }
@@ -1000,37 +1205,48 @@ async fn handle_fs(
                     ..Default::default()
                 };
                 if let Some(file) = job.files().get(file_num as usize) {
-                    let fs::DataSource::FilePath(p) = &job.data_source else {
-                        // In-memory transfer jobs have no on-disk path.
-                        return;
-                    };
-                    let path = get_string(&fs::TransferJob::join(p, &file.name));
-                    match is_write_need_confirmation(is_resume, &path, &digest) {
-                        Ok(digest_result) => {
-                            job.set_digest(file_size, last_modified);
-                            match digest_result {
-                                DigestCheckResult::IsSame => {
-                                    req.set_skip(true);
-                                    let msg_out = new_send_confirm(req);
-                                    send_raw(msg_out, &tx);
-                                }
-                                DigestCheckResult::NeedConfirm(mut digest) => {
-                                    // upload to server, but server has the same file, request
-                                    digest.is_upload = is_upload;
-                                    let mut msg_out = Message::new();
-                                    let mut fr = FileResponse::new();
-                                    fr.set_digest(digest);
-                                    msg_out.set_file_response(fr);
-                                    send_raw(msg_out, &tx);
-                                }
-                                DigestCheckResult::NoSuchFile => {
-                                    let msg_out = new_send_confirm(req);
-                                    send_raw(msg_out, &tx);
+                    if let fs::DataSource::FilePath(p) = &job.data_source {
+                        let path = get_string(&fs::TransferJob::join(p, &file.name));
+                        #[cfg(target_os = "android")]
+                        let digest_result = if fs::android::is_path(path.as_ref()) {
+                            spawn_blocking(move || {
+                                is_write_need_confirmation(is_resume, &path, &digest)
+                            })
+                            .await
+                            .map_err(hbb_common::anyhow::Error::from)
+                            .and_then(|result| result)
+                        } else {
+                            is_write_need_confirmation(is_resume, &path, &digest)
+                        };
+                        #[cfg(not(target_os = "android"))]
+                        let digest_result = is_write_need_confirmation(is_resume, &path, &digest);
+                        match digest_result {
+                            Ok(digest_result) => {
+                                job.set_digest(file_size, last_modified);
+                                match digest_result {
+                                    DigestCheckResult::IsSame => {
+                                        req.set_skip(true);
+                                        let msg_out = new_send_confirm(req);
+                                        send_raw(msg_out, &tx);
+                                    }
+                                    DigestCheckResult::NeedConfirm(mut digest) => {
+                                        // upload to server, but server has the same file, request
+                                        digest.is_upload = is_upload;
+                                        let mut msg_out = Message::new();
+                                        let mut fr = FileResponse::new();
+                                        fr.set_digest(digest);
+                                        msg_out.set_file_response(fr);
+                                        send_raw(msg_out, &tx);
+                                    }
+                                    DigestCheckResult::NoSuchFile => {
+                                        let msg_out = new_send_confirm(req);
+                                        send_raw(msg_out, &tx);
+                                    }
                                 }
                             }
-                        }
-                        Err(err) => {
-                            send_raw(fs::new_error(id, err, file_num), &tx);
+                            Err(err) => {
+                                send_raw(fs::new_error(id, err, file_num), &tx);
+                            }
                         }
                     }
                 }
@@ -1433,7 +1649,11 @@ async fn read_empty_dirs(dir: &str, include_hidden: bool, tx: &UnboundedSender<D
 async fn read_dir(dir: &str, include_hidden: bool, tx: &UnboundedSender<Data>) {
     let path = {
         if dir.is_empty() {
-            Config::get_home()
+            #[cfg(target_os = "android")]
+            let home = fs::get_path(&fs::get_home_as_string());
+            #[cfg(not(target_os = "android"))]
+            let home = Config::get_home();
+            home
         } else {
             fs::get_path(dir)
         }
@@ -1511,6 +1731,14 @@ async fn remove_dir(path: String, id: i32, recursive: bool, tx: &UnboundedSender
     let path = fs::get_path(&path);
     handle_result(
         spawn_blocking(move || {
+            #[cfg(target_os = "android")]
+            if fs::android::is_path(&path) {
+                return if recursive {
+                    fs::android::remove_empty_tree(&fs::get_string(&path))
+                } else {
+                    fs::android::remove_empty_dir(&fs::get_string(&path))
+                };
+            }
             if recursive {
                 fs::remove_all_empty_dir(&path)
             } else {
@@ -1682,47 +1910,5 @@ mod tests {
                 _ => panic!("unexpected data"),
             }
         });
-    }
-
-    /// Tests that symlink creation works on this platform.
-    /// This is a helper to verify the test environment supports symlinks.
-    #[test]
-    #[cfg(not(any(target_os = "ios")))]
-    fn test_symlink_creation_works() {
-        let base_dir = std::env::temp_dir().join("rustdesk_symlink_test");
-        let _ = fs::remove_dir_all(&base_dir);
-        fs::create_dir_all(&base_dir).unwrap();
-
-        // Create target file in a subdirectory
-        let target_dir = base_dir.join("target_dir");
-        fs::create_dir_all(&target_dir).unwrap();
-        let target_file = target_dir.join("target.txt");
-        fs::write(&target_file, b"content").unwrap();
-
-        // Create symlink in a different directory
-        let link_dir = base_dir.join("link_dir");
-        fs::create_dir_all(&link_dir).unwrap();
-        let link_path = link_dir.join("link.txt");
-
-        #[cfg(unix)]
-        {
-            use std::os::unix::fs::symlink;
-            if symlink(&target_file, &link_path).is_err() {
-                let _ = fs::remove_dir_all(&base_dir);
-                return;
-            }
-        }
-
-        #[cfg(windows)]
-        {
-            use std::os::windows::fs::symlink_file;
-            if symlink_file(&target_file, &link_path).is_err() {
-                // Skip if no permission (needs admin or dev mode on Windows)
-                let _ = fs::remove_dir_all(&base_dir);
-                return;
-            }
-        }
-
-        let _ = fs::remove_dir_all(&base_dir);
     }
 }

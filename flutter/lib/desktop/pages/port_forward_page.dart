@@ -29,13 +29,21 @@ class PortForwardPage extends StatefulWidget {
     Key? key,
     required this.id,
     required this.password,
+    this.loginMethod = '',
     required this.tabController,
     required this.isRDP,
+    required this.isSharedPassword,
+    this.forceRelay,
+    this.connToken,
   }) : super(key: key);
   final String id;
   final String? password;
+  final String loginMethod;
   final DesktopTabController tabController;
   final bool isRDP;
+  final bool? forceRelay;
+  final bool? isSharedPassword;
+  final String? connToken;
   final SimpleWrapper<State<PortForwardPage>?> _lastState = SimpleWrapper(null);
 
   FFI get ffi => (_lastState.value! as _PortForwardPageState)._ffi;
@@ -63,6 +71,10 @@ class _PortForwardPageState extends State<PortForwardPage>
     _ffi.start(widget.id,
         isPortForward: true,
         password: widget.password,
+        loginMethod: widget.loginMethod,
+        isSharedPassword: widget.isSharedPassword,
+        forceRelay: widget.forceRelay,
+        connToken: widget.connToken,
         isRdp: widget.isRDP);
     Get.put<FFI>(_ffi, tag: 'pf_${widget.id}');
     debugPrint("Port forward page init success with id ${widget.id}");
@@ -123,22 +135,18 @@ class _PortForwardPageState extends State<PortForwardPage>
           offstage: pfs.isEmpty && !widget.isRDP,
           child: Container(
               height: 45,
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surfaceContainer,
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
-              ),
+              color: const Color(0xFF007F00),
               child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
                       translate('Listening ...'),
-                      style: TextStyle(fontSize: 14, color: Theme.of(context).colorScheme.onSurface),
+                      style: const TextStyle(fontSize: 16, color: Colors.white),
                     ),
                     Text(
                       translate('not_close_tcp_tip'),
-                      style: TextStyle(
-                          fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant, height: 1.2),
+                      style: const TextStyle(
+                          fontSize: 10, color: Color(0xFFDDDDDD), height: 1.2),
                     )
                   ])).marginOnly(bottom: 8),
         ));

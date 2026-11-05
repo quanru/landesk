@@ -1,8 +1,9 @@
+import 'theme/landesk_theme.dart';
+export 'theme/landesk_theme.dart';
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
+import 'dart:math';
 
-import 'package:app_links/app_links.dart';
 import 'package:back_button_interceptor/back_button_interceptor.dart';
 import 'package:desktop_multi_window/desktop_multi_window.dart';
 import 'package:flutter/foundation.dart';
@@ -10,7 +11,6 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_hbb/common/formatter/id_formatter.dart';
-import 'package:flutter_hbb/desktop/peer_tab_label.dart';
 import 'package:flutter_hbb/desktop/widgets/refresh_wrapper.dart';
 import 'package:flutter_hbb/desktop/widgets/tabbar_widget.dart';
 import 'package:flutter_hbb/main.dart';
@@ -23,6 +23,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
 import 'package:get/get_rx/src/rx_workers/utils/debouncer.dart';
 import 'package:provider/provider.dart';
+import 'package:uni_links/uni_links.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:uuid/uuid.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
@@ -30,9 +31,6 @@ import 'package:window_manager/window_manager.dart';
 import 'package:window_size/window_size.dart' as window_size;
 
 import '../consts.dart';
-import 'common/platform_font_fallback.dart';
-import 'theme/landesk_theme.dart';
-export 'theme/landesk_theme.dart';
 import 'common/widgets/overlay.dart';
 import 'mobile/pages/file_manager_page.dart';
 import 'mobile/pages/remote_page.dart';
@@ -49,6 +47,7 @@ import 'package:flutter_hbb/native/win32.dart'
     if (dart.library.html) 'package:flutter_hbb/web/win32.dart';
 import 'package:flutter_hbb/native/common.dart'
     if (dart.library.html) 'package:flutter_hbb/web/common.dart';
+import 'package:flutter_hbb/utils/http_service.dart' as http;
 
 final globalKey = GlobalKey<NavigatorState>();
 final navigationBarKey = GlobalKey();
@@ -100,13 +99,8 @@ typedef FMethod = String Function(String, dynamic);
 
 typedef StreamEventHandler = Future<void> Function(Map<String, dynamic>);
 typedef SessionID = UuidValue;
-final iconHardDrive = MemoryImage(
-  Uint8List.fromList(
-    base64Decode(
-      'iVBORw0KGgoAAAANSUhEUgAAAMgAAADICAMAAACahl6sAAAAmVBMVEUAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAjHWqVAAAAMnRSTlMAv0BmzLJNXlhiUu2fxXDgu7WuSUUe29LJvpqUjX53VTstD7ilNujCqTEk5IYH+vEoFjKvAagAAAPpSURBVHja7d0JbhpBEIXhB3jYzb5vBgzYgO04df/DJXGUKMwU9ECmZ6pQfSfw028LCXW3YYwxxhhjjDHGGGOM0eZ9VV1MckdKWLM1bRQ/35GW/WxHHu1me6ShuyHvNl34VhlTKsYVeDWj1EzgUZ1S1DrAk/UDparZgxd9Sl0BHnxSBhpI3jfKQG2FpLUpE69I2ILikv1nsvygjBwPSNKYMlNHggqUoSKS80AZCnwHqQ1zCRvW+CRegwRFeFAMKKrtM8gTPJlzSfwFgT9dJom3IDN4VGaSeAryAK8m0SSeghTg1ZYiql6CjBDhO8mzlyAVhKhIwgXxrh5NojGIhyRckEdwpCdhgpSQgiWTRGMQNonGIGySp0SDvMDBX5KWxiB8Eo1BgE00SYJBykhNnkmSWJAcLpGaJNMgfJKyxiDAK4WNEwryhMtkJsk8CJtEYxA+icYgQIfCcgkEqcJNXhIRQdgkGoPwSTQG+e8khdu/7JOVREwQIKCwF41B2CQljUH4JLcH6SI+OUlEBQHa0SQag/BJNAbhkjxqDMIn0RgEeI4muSlID9eSkERgEKAVTaIxCJ9EYxA2ydVB8hCASVLRGAQYR5NoDMIn0RgEyFHYSGMQPonGII4kziCNvBgNJonEk4u3GAk8Sprk6eYaqbMDY0oKvUm5jfC/viGiSypV7+M3i2iDsAGpNEDYjlTa3W8RdR/r544g50ilnA0RxoZIE2NIXqQbhkAkGyKNDZHGhkhjQ6SxIdLYEGlsiDQ2JGTVeD0264U9zipPh7XOooffpA6pfNCXjxl4/c3pUzlChwzor53zwYYVfpI5pOV6LWFF/2jiJ5FDSs5jdY/0rwUAkUMeXWdBqnSqD0DikBqdqCHsjTvELm9In0IOri/0pwAEDtlSyNaRjAIAAoesKWTtuusxByBwCJp0oomwBXcYUuCQgE50ENajE4OvZAKHLB1/68Br5NqiyCGYOY8YRd77kTkEb64n7lZN+mOIX4QOwb5FX0ZVx3uOxwW+SB0CbBubemWP8/rlaaeRX+M3uUOuZENsiA25zIbYkPsZElBIHwL13U/PTjJ/cyOOEoVM3I+hziDQlELm7pPxw3eI8/7gPh1fpLA6xGnEeDDgO0UcIAzzM35HxLPIq5SXe9BLzOsj9eUaQqyXzxS1QFSfWM2cCANiHcAISJ0AnCKpUwTuIkkA3EeSInAXSQKcs1V18e24wlllUmQp9v9zXKeHi+akRAMOPVKhAqdPBZeUmnnEsO6QcJ0+4qmOSbBxFfGVRiTUqITrdKcCbyYO3/K4wX4+aQ+FfNjXhu3JfAVjjDHGGGOMMcYYY4xIPwCgfqT6TbhCLAAAAABJRU5ErkJggg==',
-    ),
-  ),
-);
+final iconHardDrive = MemoryImage(Uint8List.fromList(base64Decode(
+    'iVBORw0KGgoAAAANSUhEUgAAAMgAAADICAMAAACahl6sAAAAmVBMVEUAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAjHWqVAAAAMnRSTlMAv0BmzLJNXlhiUu2fxXDgu7WuSUUe29LJvpqUjX53VTstD7ilNujCqTEk5IYH+vEoFjKvAagAAAPpSURBVHja7d0JbhpBEIXhB3jYzb5vBgzYgO04df/DJXGUKMwU9ECmZ6pQfSfw028LCXW3YYwxxhhjjDHGGGOM0eZ9VV1MckdKWLM1bRQ/35GW/WxHHu1me6ShuyHvNl34VhlTKsYVeDWj1EzgUZ1S1DrAk/UDparZgxd9Sl0BHnxSBhpI3jfKQG2FpLUpE69I2ILikv1nsvygjBwPSNKYMlNHggqUoSKS80AZCnwHqQ1zCRvW+CRegwRFeFAMKKrtM8gTPJlzSfwFgT9dJom3IDN4VGaSeAryAK8m0SSeghTg1ZYiql6CjBDhO8mzlyAVhKhIwgXxrh5NojGIhyRckEdwpCdhgpSQgiWTRGMQNonGIGySp0SDvMDBX5KWxiB8Eo1BgE00SYJBykhNnkmSWJAcLpGaJNMgfJKyxiDAK4WNEwryhMtkJsk8CJtEYxA+icYgQIfCcgkEqcJNXhIRQdgkGoPwSTQG+e8khdu/7JOVREwQIKCwF41B2CQljUH4JLcH6SI+OUlEBQHa0SQag/BJNAbhkjxqDMIn0RgEeI4muSlID9eSkERgEKAVTaIxCJ9EYxA2ydVB8hCASVLRGAQYR5NoDMIn0RgEyFHYSGMQPonGII4kziCNvBgNJonEk4u3GAk8Sprk6eYaqbMDY0oKvUm5jfC/viGiSypV7+M3i2iDsAGpNEDYjlTa3W8RdR/r544g50ilnA0RxoZIE2NIXqQbhkAkGyKNDZHGhkhjQ6SxIdLYEGlsiDQ2JGTVeD0264U9zipPh7XOooffpA6pfNCXjxl4/c3pUzlChwzor53zwYYVfpI5pOV6LWFF/2jiJ5FDSs5jdY/0rwUAkUMeXWdBqnSqD0DikBqdqCHsjTvELm9In0IOri/0pwAEDtlSyNaRjAIAAoesKWTtuusxByBwCJp0oomwBXcYUuCQgE50ENajE4OvZAKHLB1/68Br5NqiyCGYOY8YRd77kTkEb64n7lZN+mOIX4QOwb5FX0ZVx3uOxwW+SB0CbBubemWP8/rlaaeRX+M3uUOuZENsiA25zIbYkPsZElBIHwL13U/PTjJ/cyOOEoVM3I+hziDQlELm7pPxw3eI8/7gPh1fpLA6xGnEeDDgO0UcIAzzM35HxLPIq5SXe9BLzOsj9eUaQqyXzxS1QFSfWM2cCANiHcAISJ0AnCKpUwTuIkkA3EeSInAXSQKcs1V18e24wlllUmQp9v9zXKeHi+akRAMOPVKhAqdPBZeUmnnEsO6QcJ0+4qmOSbBxFfGVRiTUqITrdKcCbyYO3/K4wX4+aQ+FfNjXhu3JfAVjjDHGGGOMMcYYY4xIPwCgfqT6TbhCLAAAAABJRU5ErkJggg==')));
 
 enum DesktopType {
   main,
@@ -140,14 +134,10 @@ class IconFont {
   static const IconData search = IconData(0xe6a4, fontFamily: _family2);
   static const IconData roundClose = IconData(0xe6ed, fontFamily: _family2);
   static const IconData addressBook = IconData(0xe602, fontFamily: _family3);
-  static const IconData deviceGroupOutline = IconData(
-    0xe623,
-    fontFamily: _family4,
-  );
-  static const IconData deviceGroupFill = IconData(
-    0xe748,
-    fontFamily: _family4,
-  );
+  static const IconData deviceGroupOutline =
+      IconData(0xe623, fontFamily: _family4);
+  static const IconData deviceGroupFill =
+      IconData(0xe748, fontFamily: _family4);
   static const IconData more = IconData(0xe609, fontFamily: _family5);
 }
 
@@ -179,19 +169,31 @@ class ColorThemeExtension extends ThemeExtension<ColorThemeExtension> {
   final Color? divider;
 
   static final light = ColorThemeExtension(
-    border: SuyaPalette.light.border, border2: SuyaPalette.light.strongBorder,
-    border3: SuyaPalette.light.border, highlight: SuyaPalette.light.selection,
-    drag_indicator: SuyaPalette.light.secondary, shadow: Colors.black.withValues(alpha: .12),
-    errorBannerBg: SuyaPalette.light.dangerSurface, me: SuyaPalette.light.accent,
-    toastBg: SuyaPalette.light.text, toastText: SuyaPalette.light.background, divider: SuyaPalette.light.border,
+    border: Color(0xFFCCCCCC),
+    border2: Color(0xFFBBBBBB),
+    border3: Colors.black26,
+    highlight: Color(0xFFE5E5E5),
+    drag_indicator: Colors.grey[800],
+    shadow: Colors.black,
+    errorBannerBg: Color(0xFFFDEEEB),
+    me: Colors.green,
+    toastBg: Colors.black.withOpacity(0.6),
+    toastText: Colors.white,
+    divider: Colors.black38,
   );
 
   static final dark = ColorThemeExtension(
-    border: SuyaPalette.dark.border, border2: SuyaPalette.dark.strongBorder,
-    border3: SuyaPalette.dark.border, highlight: SuyaPalette.dark.selection,
-    drag_indicator: SuyaPalette.dark.secondary, shadow: Colors.black.withValues(alpha: .12),
-    errorBannerBg: SuyaPalette.dark.dangerSurface, me: SuyaPalette.dark.accent,
-    toastBg: SuyaPalette.dark.text, toastText: SuyaPalette.dark.background, divider: SuyaPalette.dark.border,
+    border: Color(0xFF555555),
+    border2: Color(0xFFE5E5E5),
+    border3: Colors.white24,
+    highlight: Color(0xFF3F3F3F),
+    drag_indicator: Colors.grey,
+    shadow: Colors.grey,
+    errorBannerBg: Color(0xFF470F2D),
+    me: Colors.greenAccent,
+    toastBg: Colors.white.withOpacity(0.6),
+    toastText: Colors.black,
+    divider: Colors.white38,
   );
 
   @override
@@ -225,9 +227,7 @@ class ColorThemeExtension extends ThemeExtension<ColorThemeExtension> {
 
   @override
   ThemeExtension<ColorThemeExtension> lerp(
-    ThemeExtension<ColorThemeExtension>? other,
-    double t,
-  ) {
+      ThemeExtension<ColorThemeExtension>? other, double t) {
     if (other is! ColorThemeExtension) {
       return this;
     }
@@ -238,11 +238,11 @@ class ColorThemeExtension extends ThemeExtension<ColorThemeExtension> {
       highlight: Color.lerp(highlight, other.highlight, t),
       drag_indicator: Color.lerp(drag_indicator, other.drag_indicator, t),
       shadow: Color.lerp(shadow, other.shadow, t),
-      errorBannerBg: Color.lerp(errorBannerBg, other.errorBannerBg, t),
-      me: Color.lerp(me, other.me, t),
-      toastBg: Color.lerp(toastBg, other.toastBg, t),
-      toastText: Color.lerp(toastText, other.toastText, t),
-      divider: Color.lerp(divider, other.divider, t),
+      errorBannerBg: Color.lerp(shadow, other.errorBannerBg, t),
+      me: Color.lerp(shadow, other.me, t),
+      toastBg: Color.lerp(shadow, other.toastBg, t),
+      toastText: Color.lerp(shadow, other.toastText, t),
+      divider: Color.lerp(shadow, other.divider, t),
     );
   }
 }
@@ -250,43 +250,45 @@ class ColorThemeExtension extends ThemeExtension<ColorThemeExtension> {
 class MyTheme {
   MyTheme._();
 
-  static const Color grayBg = Color(0xFFF5F5F5);
-  static const Color accent = Color(0xFF333333);
-  static const Color accent50 = Color(0x772F7A4B);
-  static const Color accent80 = Color(0xAA2F7A4B);
+  static const Color grayBg = Color(0xFFEFEFF2);
+  static const Color accent = Color(0xFF0071FF);
+  static const Color accent50 = Color(0x770071FF);
+  static const Color accent80 = Color(0xAA0071FF);
   static const Color canvasColor = Color(0xFF212121);
   static const Color border = Color(0xFFCCCCCC);
-  static const Color idColor = Color(0xFF333333);
+  static const Color idColor = Color(0xFF00B6F0);
   static const Color darkGray = Color.fromARGB(255, 148, 148, 148);
-  static const Color cmIdColor = Color(0xFF666666);
+  static const Color cmIdColor = Color(0xFF21790B);
   static const Color dark = Colors.black87;
-  static const Color button = Color(0xFF333333);
+  static const Color button = Color(0xFF2C8CFF);
   static const Color hoverBorder = Color(0xFF999999);
 
   // ListTile
   static const ListTileThemeData listTileTheme = ListTileThemeData(
     shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.all(Radius.circular(5)),
+      borderRadius: BorderRadius.all(
+        Radius.circular(5),
+      ),
     ),
   );
 
   static SwitchThemeData switchTheme() {
     return SwitchThemeData(
-      splashRadius: (isDesktop || isWebDesktop) ? 0 : kRadialReactionRadius,
-    );
+        splashRadius: (isDesktop || isWebDesktop) ? 0 : kRadialReactionRadius);
   }
 
   static RadioThemeData radioTheme() {
     return RadioThemeData(
-      splashRadius: (isDesktop || isWebDesktop) ? 0 : kRadialReactionRadius,
-    );
+        splashRadius: (isDesktop || isWebDesktop) ? 0 : kRadialReactionRadius);
   }
 
   // Checkbox
   static const CheckboxThemeData checkboxTheme = CheckboxThemeData(
     splashRadius: 0,
     shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.all(Radius.circular(5)),
+      borderRadius: BorderRadius.all(
+        Radius.circular(5),
+      ),
     ),
   );
 
@@ -299,7 +301,9 @@ class MyTheme {
   static TextButtonThemeData mobileTextButtonTheme = TextButtonThemeData(
     style: TextButton.styleFrom(
       padding: EdgeInsets.symmetric(horizontal: mobileTextButtonPaddingLR),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.0)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8.0),
+      ),
     ),
   );
 
@@ -374,11 +378,6 @@ class MyTheme {
     extensions: <ThemeExtension<dynamic>>[ColorThemeExtension.dark, TabbarTheme.dark],
   );
 
-  static void applyPlatformFontFallback(TargetPlatform platform) {
-    lightTheme = applySafePlatformFontFallback(lightTheme, platform);
-    darkTheme = applySafePlatformFontFallback(darkTheme, platform);
-  }
-
   static ThemeMode getThemeModePreference() {
     return themeModeFromString(bind.mainGetLocalOption(key: kCommConfKeyTheme));
   }
@@ -388,14 +387,10 @@ class MyTheme {
     if (desktopType == DesktopType.main || isAndroid || isIOS || isWeb) {
       if (mode == ThemeMode.system) {
         await bind.mainSetLocalOption(
-          key: kCommConfKeyTheme,
-          value: defaultOptionTheme,
-        );
+            key: kCommConfKeyTheme, value: defaultOptionTheme);
       } else {
         await bind.mainSetLocalOption(
-          key: kCommConfKeyTheme,
-          value: mode.toShortString(),
-        );
+            key: kCommConfKeyTheme, value: mode.toShortString());
       }
       if (!isWeb) await bind.mainChangeTheme(dark: mode.toShortString());
       // Synchronize the window theme of the system.
@@ -444,10 +439,10 @@ extension ParseToString on ThemeMode {
 }
 
 final ButtonStyle flatButtonStyle = TextButton.styleFrom(
-  minimumSize: Size(0, isMobile ? 44 : 40),
+  minimumSize: Size(0, 36),
   padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 10.0),
   shape: const RoundedRectangleBorder(
-    borderRadius: BorderRadius.all(Radius.circular(LandeskTheme.controlRadius)),
+    borderRadius: BorderRadius.all(Radius.circular(2.0)),
   ),
 );
 
@@ -509,10 +504,8 @@ String formatDurationToTime(Duration duration) {
 closeConnection({String? id}) {
   if (isAndroid || isIOS) {
     () async {
-      await SystemChrome.setEnabledSystemUIMode(
-        SystemUiMode.manual,
-        overlays: SystemUiOverlay.values,
-      );
+      await SystemChrome.setEnabledSystemUIMode(SystemUiMode.manual,
+          overlays: SystemUiOverlay.values);
       gFFI.chatModel.hideChatOverlay();
       Navigator.popUntil(globalKey.currentContext!, ModalRoute.withName("/"));
       stateGlobal.isInMainPage = true;
@@ -529,136 +522,13 @@ closeConnection({String? id}) {
         // closeConnection() is that peer id, not a terminal tab key
         // (${peerId}_${terminalId}). Closing from terminal dialogs should close
         // the peer's whole terminal window, including all terminal tabs.
-        unawaited(
-          controller.onCloseWindow!().catchError((e, _) {
-            debugPrint('[closeConnection] Failed to close terminal window: $e');
-          }),
-        );
+        unawaited(controller.onCloseWindow!().catchError((e, _) {
+          debugPrint('[closeConnection] Failed to close terminal window: $e');
+        }));
         return;
       }
       controller.closeBy(id);
     }
-  }
-}
-
-// TODO(upstream window_manager): rustdesk-org/window_manager's Linux plugin
-// raises the window via a bare gtk_window_present(get_window(self))
-// (linux/window_manager_plugin.cc), with no timestamp -- GTK treats that as
-// GDK_CURRENT_TIME, which every modern WM's focus-stealing prevention
-// (Mutter, KWin) can defer or ignore when it doesn't follow a live GTK
-// input event (e.g. right after a slow Flutter cold start triggered by the
-// tray's "Open", or a D-Bus-triggered re-show of an already-hidden window).
-// A matching Rust-side workaround exists in src/server/dbus.rs for the
-// D-Bus entry point, but it only retries for ~1s from the moment of the
-// tray click -- nowhere near long enough to cover a slow cold start, since
-// the window doesn't exist yet for xdotool to find. Firing this here,
-// immediately after show()/focus() actually return, runs it at exactly the
-// right moment regardless of how long startup took, instead of guessing a
-// timeout. xdotool sends a proper EWMH _NET_ACTIVE_WINDOW client message
-// (source_indication=2, "pager"), which WMs honor without the same
-// timestamp scrutiny. Best-effort: xdotool is optional (Recommends on the
-// .deb, a hard dependency on the Arch package) and any failure -- missing
-// binary, no matching window -- is swallowed silently, leaving prior
-// behavior. Remove once window_manager's Linux backend calls
-// gtk_window_present_with_time() with a real server timestamp instead.
-// Note this searches by PID, not a specific window handle: desktop_multi_
-// window runs every window (main plus every remote-desktop/file-transfer/
-// etc. sub-window) in this one process, so a call here can end up raising
-// more than the intended window when several are open. That's an accepted
-// imprecision of this best-effort workaround, not a targeted fix -- see
-// multi_window_manager.dart's `_newSession` for the other call site.
-//
-// KWin (KDE Plasma) applies a stricter focus-stealing-prevention policy to
-// this externally-sourced EWMH request than GNOME/Mutter does: the same
-// xdotool call below activates a window within ~0.3s under Mutter but was
-// observed (live-tested, 2026-09-12) taking several seconds under KWin,
-// until some unrelated fresh user input event (e.g. right-clicking the
-// tray again) happened to make KWin finally honor it. _activateViaKWinScript
-// sidesteps that policy entirely by using KWin's own scripting D-Bus
-// interface (org.kde.KWin, /Scripting) to set `workspace.activeWindow`
-// directly -- an internal, privileged KWin mechanism, not an external
-// activation *request* -- verified live to activate instantly where
-// xdotool alone was unreliable. A near-identical implementation exists in
-// src/server/dbus.rs's activate_via_kwin_script() for the D-Bus entry
-// point; duplicated here via a plain dbus-send shell-out (matching this
-// function's existing xdotool pattern) rather than adding a new FFI
-// binding just for this best-effort, KDE-only workaround.
-Future<void> _activateViaKWinScript() async {
-  Directory? scriptDir;
-  try {
-    // A shared temp dir keyed only on the PID is a symlink/overwrite target
-    // for another local user (see the matching hardening in
-    // src/server/dbus.rs's activate_via_kwin_script()). createTemp() creates
-    // a privately-owned, uniquely-named directory atomically.
-    scriptDir =
-        await Directory.systemTemp.createTemp('localdesk-kwin-activate-');
-    final scriptPath = '${scriptDir.path}/$pid.js';
-    final pluginName = 'localdesk-activate-$pid';
-    // `workspace.windowList()` (KWin 5) was renamed to the `workspace.windows`
-    // property in KWin 6's scripting API; support either.
-    //
-    // Setting `activeWindow` alone is not enough: live-tested (2026-09-12),
-    // the main window ends up in KWin's window list with `minimized: true`
-    // (window_manager's `.show()` on Linux doesn't restore a minimized
-    // window itself), and `workspace.activeWindow = win` silently does
-    // nothing for a still-minimized window. Explicitly clearing `minimized`
-    // first is what actually brings it on screen.
-    final script = "var wins = (typeof workspace.windowList === 'function') "
-        "? workspace.windowList() : workspace.windows;\n"
-        "for (var i = 0; i < wins.length; i++) {\n"
-        "\tif (wins[i].pid == $pid) {\n"
-        "\t\twins[i].minimized = false;\n"
-        "\t\tworkspace.activeWindow = wins[i];\n"
-        "\t}\n"
-        "}\n";
-    await File(scriptPath).writeAsString(script);
-    final loadResult = await Process.run('dbus-send', [
-      '--session',
-      '--print-reply',
-      '--dest=org.kde.KWin',
-      '/Scripting',
-      'org.kde.kwin.Scripting.loadScript',
-      'string:$scriptPath',
-      'string:$pluginName',
-    ]);
-    final match =
-        RegExp(r'int32\s+(-?\d+)').firstMatch(loadResult.stdout.toString());
-    if (match != null) {
-      final scriptId = match.group(1);
-      await Process.run('dbus-send', [
-        '--session',
-        '--print-reply',
-        '--dest=org.kde.KWin',
-        '/Scripting/Script$scriptId',
-        'org.kde.kwin.Script.run',
-      ]);
-      await Process.run('dbus-send', [
-        '--session',
-        '--print-reply',
-        '--dest=org.kde.KWin',
-        '/Scripting',
-        'org.kde.kwin.Scripting.unloadScript',
-        'string:$pluginName',
-      ]);
-    }
-    try {
-      await scriptDir.delete(recursive: true);
-    } catch (_) {}
-  } catch (_) {
-    // dbus-send missing, or org.kde.KWin absent (non-KDE desktop) -- harmless no-op.
-    try {
-      await scriptDir?.delete(recursive: true);
-    } catch (_) {}
-  }
-}
-
-Future<void> activateWindowWorkaroundLinux() async {
-  if (!isLinux) return;
-  await _activateViaKWinScript();
-  try {
-    await Process.run('xdotool', ['search', '--pid', '$pid', 'windowactivate']);
-  } catch (_) {
-    // xdotool not installed -- harmless no-op.
   }
 }
 
@@ -674,7 +544,6 @@ Future<void> windowOnTop(int? id) async {
     }
     await windowManager.show();
     await windowManager.focus();
-    await activateWindowWorkaroundLinux();
     await rustDeskWinManager.registerActiveWindow(kWindowMainId);
   } else {
     WindowController.fromWindowId(id)
@@ -684,12 +553,8 @@ Future<void> windowOnTop(int? id) async {
   }
 }
 
-// Overlay content can be a dialog or an edge-aligned session panel.
-typedef DialogBuilder = Widget Function(
-  StateSetter setState,
-  void Function([dynamic]) close,
-  BuildContext context,
-);
+typedef DialogBuilder = CustomAlertDialog Function(
+    StateSetter setState, void Function([dynamic]) close, BuildContext context);
 
 class Dialog<T> {
   OverlayEntry? entry;
@@ -760,21 +625,18 @@ class OverlayDialogManager {
     BackButtonInterceptor.removeByName(tag);
   }
 
-  Future<T?> show<T>(
-    DialogBuilder builder, {
-    bool clickMaskDismiss = false,
-    bool backDismiss = false,
-    String? tag,
-    bool useAnimation = true,
-    bool forceGlobal = false,
-  }) {
+  Future<T?> show<T>(DialogBuilder builder,
+      {bool clickMaskDismiss = false,
+      bool backDismiss = false,
+      String? tag,
+      bool useAnimation = true,
+      bool forceGlobal = false}) {
     final overlayState =
         forceGlobal ? globalKey.currentState?.overlay : _overlayKeyState.state;
 
     if (overlayState == null) {
       return Future.error(
-        "[OverlayDialogManager] Failed to show dialog, _overlayState is null, call [setOverlayState] first",
-      );
+          "[OverlayDialogManager] Failed to show dialog, _overlayState is null, call [setOverlayState] first");
     }
 
     final String dialogTag;
@@ -798,10 +660,9 @@ class OverlayDialogManager {
       BackButtonInterceptor.removeByName(dialogTag);
     }
 
-    dialog.entry = OverlayEntry(
-      builder: (context) {
-        bool innerClicked = false;
-        return Listener(
+    dialog.entry = OverlayEntry(builder: (context) {
+      bool innerClicked = false;
+      return Listener(
           onPointerUp: (_) {
             if (!innerClicked && clickMaskDismiss) {
               close();
@@ -809,21 +670,16 @@ class OverlayDialogManager {
             innerClicked = false;
           },
           child: Container(
-            color: Theme.of(context).brightness == Brightness.light
-                ? Colors.black12
-                : Colors.black45,
-            child: StatefulBuilder(
-              builder: (context, setState) {
+              color: Theme.of(context).brightness == Brightness.light
+                  ? Colors.black12
+                  : Colors.black45,
+              child: StatefulBuilder(builder: (context, setState) {
                 return Listener(
                   onPointerUp: (_) => innerClicked = true,
                   child: builder(setState, close, overlayState.context),
                 );
-              },
-            ),
-          ),
-        );
-      },
-    );
+              })));
+    });
     overlayState.insert(dialog.entry!);
     BackButtonInterceptor.add((stopDefaultButtonEvent, routeInfo) {
       if (backDismiss) {
@@ -834,13 +690,11 @@ class OverlayDialogManager {
     return dialog.completer.future;
   }
 
-  String showLoading(
-    String text, {
-    bool clickMaskDismiss = false,
-    bool showCancel = true,
-    VoidCallback? onCancel,
-    String? tag,
-  }) {
+  String showLoading(String text,
+      {bool clickMaskDismiss = false,
+      bool showCancel = true,
+      VoidCallback? onCancel,
+      String? tag}) {
     if (tag == null) {
       tag = _tagCount.toString();
       _tagCount++;
@@ -855,39 +709,30 @@ class OverlayDialogManager {
 
       return CustomAlertDialog(
         content: Container(
-          constraints: const BoxConstraints(maxWidth: 240),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 30),
-              const Center(child: CircularProgressIndicator()),
-              const SizedBox(height: 20),
-              Center(
-                child: Text(
-                  translate(text),
-                  style: const TextStyle(fontSize: 15),
-                ),
-              ),
-              const SizedBox(height: 20),
-              Offstage(
-                offstage: !showCancel,
-                child: Center(
-                  child: (isDesktop || isWebDesktop)
-                      ? dialogButton('Cancel', onPressed: cancel)
-                      : TextButton(
-                          style: flatButtonStyle,
-                          onPressed: cancel,
-                          child: Text(
-                            translate('Cancel'),
-                            style: const TextStyle(color: MyTheme.accent),
-                          ),
-                        ),
-                ),
-              ),
-            ],
-          ),
-        ),
+            constraints: const BoxConstraints(maxWidth: 240),
+            child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 30),
+                  const Center(child: CircularProgressIndicator()),
+                  const SizedBox(height: 20),
+                  Center(
+                      child: Text(translate(text),
+                          style: const TextStyle(fontSize: 15))),
+                  const SizedBox(height: 20),
+                  Offstage(
+                      offstage: !showCancel,
+                      child: Center(
+                          child: (isDesktop || isWebDesktop)
+                              ? dialogButton('Cancel', onPressed: cancel)
+                              : TextButton(
+                                  style: flatButtonStyle,
+                                  onPressed: cancel,
+                                  child: Text(translate('Cancel'),
+                                      style: const TextStyle(
+                                          color: MyTheme.accent)))))
+                ])),
         onCancel: showCancel ? cancel : null,
       );
     }, tag: tag);
@@ -967,51 +812,44 @@ makeMobileActionsOverlayEntry(VoidCallback? onHide, {FFI? ffi}) {
     );
   }
 
-  return OverlayEntry(
-    builder: (context) {
-      if (isDesktop) {
-        final c = Provider.of<CanvasModel>(context);
-        return makeMobileActions(context, c.scale * 2.0);
-      } else {
-        return makeMobileActions(globalKey.currentContext!, 1.0);
-      }
-    },
-  );
+  return OverlayEntry(builder: (context) {
+    if (isDesktop) {
+      final c = Provider.of<CanvasModel>(context);
+      return makeMobileActions(context, c.scale * 2.0);
+    } else {
+      return makeMobileActions(globalKey.currentContext!, 1.0);
+    }
+  });
 }
 
-void showToast(
-  String text, {
-  Duration timeout = const Duration(seconds: 3),
-  Alignment alignment = const Alignment(0.0, 0.8),
-}) {
+void showToast(String text,
+    {Duration timeout = const Duration(seconds: 3),
+    Alignment alignment = const Alignment(0.0, 0.8)}) {
   final overlayState = globalKey.currentState?.overlay;
   if (overlayState == null) return;
-  final entry = OverlayEntry(
-    builder: (context) {
-      return IgnorePointer(
+  final entry = OverlayEntry(builder: (context) {
+    return IgnorePointer(
         child: Align(
-          alignment: alignment,
-          child: Container(
-            decoration: BoxDecoration(
-              color: MyTheme.color(context).toastBg,
-              borderRadius: const BorderRadius.all(Radius.circular(20)),
-            ),
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 5),
-            child: Text(
-              text,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                decoration: TextDecoration.none,
-                fontWeight: FontWeight.w300,
-                fontSize: 18,
-                color: MyTheme.color(context).toastText,
+            alignment: alignment,
+            child: Container(
+              decoration: BoxDecoration(
+                color: MyTheme.color(context).toastBg,
+                borderRadius: const BorderRadius.all(
+                  Radius.circular(20),
+                ),
               ),
-            ),
-          ),
-        ),
-      );
-    },
-  );
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 5),
+              child: Text(
+                text,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                    decoration: TextDecoration.none,
+                    fontWeight: FontWeight.w300,
+                    fontSize: 18,
+                    color: MyTheme.color(context).toastText),
+              ),
+            )));
+  });
   overlayState.insert(entry);
   Future.delayed(timeout, () {
     entry.remove();
@@ -1023,17 +861,17 @@ void showToast(
 // - Remove "required" for argument "content". See simple confirm dialog "delete peer", only title and actions are used. No need to "content: SizedBox.shrink()".
 // - Make dead code alive, transform arguments "onSubmit" and "onCancel" into correspondenting buttons "ConfirmOkButton", "CancelButton".
 class CustomAlertDialog extends StatelessWidget {
-  const CustomAlertDialog({
-    Key? key,
-    this.title,
-    this.titlePadding,
-    required this.content,
-    this.actions,
-    this.contentPadding,
-    this.contentBoxConstraints = const BoxConstraints(maxWidth: 500),
-    this.onSubmit,
-    this.onCancel,
-  }) : super(key: key);
+  const CustomAlertDialog(
+      {Key? key,
+      this.title,
+      this.titlePadding,
+      required this.content,
+      this.actions,
+      this.contentPadding,
+      this.contentBoxConstraints = const BoxConstraints(maxWidth: 500),
+      this.onSubmit,
+      this.onCancel})
+      : super(key: key);
 
   final Widget? title;
   final EdgeInsetsGeometry? titlePadding;
@@ -1046,11 +884,16 @@ class CustomAlertDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // request focus
+    FocusScopeNode scopeNode = FocusScopeNode();
+    Future.delayed(Duration.zero, () {
+      if (!scopeNode.hasFocus) scopeNode.requestFocus();
+    });
     bool tabTapped = false;
     if (isAndroid) gFFI.invokeMethod("enable_soft_keyboard", true);
 
     return FocusScope(
-      // Let FocusScope retain and dispose its node across dialog rebuilds.
+      node: scopeNode,
       autofocus: true,
       onKey: (node, key) {
         if (key.logicalKey == LogicalKeyboardKey.escape) {
@@ -1066,7 +909,7 @@ class CustomAlertDialog extends StatelessWidget {
           return KeyEventResult.handled;
         } else if (key.logicalKey == LogicalKeyboardKey.tab) {
           if (key is RawKeyDownEvent) {
-            node.nextFocus();
+            scopeNode.nextFocus();
             tabTapped = true;
           }
           return KeyEventResult.handled;
@@ -1074,18 +917,18 @@ class CustomAlertDialog extends StatelessWidget {
         return KeyEventResult.ignored;
       },
       child: AlertDialog(
-        scrollable: true,
-        title: title,
-        content: ConstrainedBox(
-          constraints: contentBoxConstraints,
-          child: content,
-        ),
-        actions: actions,
-        titlePadding: titlePadding ?? MyTheme.dialogTitlePadding(),
-        contentPadding: MyTheme.dialogContentPadding(actions: actions is List),
-        actionsPadding: MyTheme.dialogActionsPadding(),
-        buttonPadding: MyTheme.dialogButtonPadding,
-      ),
+          scrollable: true,
+          title: title,
+          content: ConstrainedBox(
+            constraints: contentBoxConstraints,
+            child: content,
+          ),
+          actions: actions,
+          titlePadding: titlePadding ?? MyTheme.dialogTitlePadding(),
+          contentPadding:
+              MyTheme.dialogContentPadding(actions: actions is List),
+          actionsPadding: MyTheme.dialogActionsPadding(),
+          buttonPadding: MyTheme.dialogButtonPadding),
     );
   }
 }
@@ -1106,21 +949,19 @@ Widget createDialogContent(String text) {
     if (match.start > start) {
       spans.add(TextSpan(text: text.substring(start, match.start)));
     }
-    spans.add(
-      TextSpan(
-        text: match.group(0) ?? '',
-        style: const TextStyle(
-          color: Colors.blue,
-          decoration: TextDecoration.underline,
-        ),
-        recognizer: TapGestureRecognizer()
-          ..onTap = () {
-            String linkText = match.group(0) ?? '';
-            linkText = linkText.replaceAll(RegExp(r'[.,;!?]+$'), '');
-            launchUrl(Uri.parse(linkText));
-          },
+    spans.add(TextSpan(
+      text: match.group(0) ?? '',
+      style: const TextStyle(
+        color: Colors.blue,
+        decoration: TextDecoration.underline,
       ),
-    );
+      recognizer: TapGestureRecognizer()
+        ..onTap = () {
+          String linkText = match.group(0) ?? '';
+          linkText = linkText.replaceAll(RegExp(r'[.,;!?]+$'), '');
+          launchUrl(Uri.parse(linkText));
+        },
+    ));
     start = match.end;
   });
 
@@ -1129,40 +970,37 @@ Widget createDialogContent(String text) {
   }
 
   return SelectableText.rich(
-    TextSpan(style: const TextStyle(fontSize: 15), children: spans),
+    TextSpan(
+      style: const TextStyle(fontSize: 15),
+      children: spans,
+    ),
   );
 }
 
-void msgBox(
-  SessionID sessionId,
-  String type,
-  String title,
-  String text,
-  String link,
-  OverlayDialogManager dialogManager, {
-  bool? hasCancel,
-  ReconnectHandle? reconnect,
-  int? reconnectTimeout,
-  VoidCallback? onSubmit,
-  int? submitTimeout,
-}) {
+void msgBox(SessionID sessionId, String type, String title, String text,
+    String link, OverlayDialogManager dialogManager,
+    {bool? hasCancel,
+    ReconnectHandle? reconnect,
+    int? reconnectTimeout,
+    VoidCallback? onSubmit,
+    int? submitTimeout}) {
   dialogManager.dismissAll();
-  if (type.contains('lan-device')) {
-    Future<void> rejectDevice() async {
+  if (type.contains('insecure-connection')) {
+    Future<void> closeSession() async {
       await bind.sessionSetCommon(
         sessionId: sessionId,
-        key: 'confirm-lan-device',
+        key: 'continue-insecure-connection',
         value: 'N',
       );
       dialogManager.dismissAll();
       closeConnection();
     }
 
-    void trustDevice() {
+    void continueSession() {
       unawaited(
         bind.sessionSetCommon(
           sessionId: sessionId,
-          key: 'confirm-lan-device',
+          key: 'continue-insecure-connection',
           value: 'Y',
         ),
       );
@@ -1171,17 +1009,24 @@ void msgBox(
 
     dialogManager.show(
       (setState, close, context) => CustomAlertDialog(
-        title: Text(translate(title)),
-        content: SelectionArea(child: Text(text)),
+        title: null,
+        content: SelectionArea(child: msgboxContent(type, title, text)),
         actions: [
-          dialogButton('Trust and connect', onPressed: trustDevice),
-          dialogButton('Disconnect', onPressed: rejectDevice, isOutline: true),
+          dialogButton(
+            'Continue',
+            onPressed: continueSession,
+            isOutline: true,
+          ),
+          dialogButton('Disconnect', onPressed: closeSession),
         ],
-        onCancel: rejectDevice,
+        onSubmit: closeSession,
+        onCancel: closeSession,
       ),
+      tag: '$sessionId-$type-$title-$text-$link',
     );
     return;
   }
+
   List<Widget> buttons = [];
   bool hasOk = false;
   submit() {
@@ -1226,39 +1071,31 @@ void msgBox(
       type != "restarting";
   if (hasCancel) {
     buttons.insert(
-      0,
-      dialogButton('Cancel', onPressed: cancel, isOutline: true),
-    );
+        0, dialogButton('Cancel', onPressed: cancel, isOutline: true));
   }
   if (type.contains("hasclose")) {
     buttons.insert(
-      0,
-      dialogButton(
-        'Close',
-        onPressed: () {
+        0,
+        dialogButton('Close', onPressed: () {
           dialogManager.dismissAll();
-        },
-      ),
-    );
+        }));
   }
   if (reconnect != null &&
       title == "Connection Error" &&
       reconnectTimeout != null) {
     // `enabled` is used to disable the dialog button once the button is clicked.
     final enabled = true.obs;
-    final button = Obx(
-      () => _CountDownButton(
-        text: 'Reconnect',
-        second: reconnectTimeout,
-        onPressed: enabled.isTrue
-            ? () {
-                // Disable the button
-                enabled.value = false;
-                reconnect(dialogManager, sessionId, false);
-              }
-            : null,
-      ),
-    );
+    final button = Obx(() => _CountDownButton(
+          text: 'Reconnect',
+          second: reconnectTimeout,
+          onPressed: enabled.isTrue
+              ? () {
+                  // Disable the button
+                  enabled.value = false;
+                  reconnect(dialogManager, sessionId, false);
+                }
+              : null,
+        ));
     buttons.insert(0, button);
   }
   if (link.isNotEmpty) {
@@ -1286,7 +1123,7 @@ Color? _msgboxColor(String type) {
   if (type.contains("error") || type == "re-input-password") {
     return Color(0xFFE04F5F);
   }
-  return Color(0xFF333333);
+  return Color(0xFF2C8CFF);
 }
 
 Widget msgboxIcon(String type) {
@@ -1297,7 +1134,7 @@ Widget msgboxIcon(String type) {
   if (type.contains("success")) {
     iconData = Icons.check_circle;
   }
-  if (type == "wait-uac") {
+  if (type == "wait-uac" || type == "wait-remote-accept-nook") {
     iconData = Icons.hourglass_top;
   }
   if (type == 'on-uac' || type == 'on-foreground-elevated') {
@@ -1307,11 +1144,8 @@ Widget msgboxIcon(String type) {
     iconData = Icons.info;
   }
   if (iconData != null) {
-    return Icon(
-      iconData,
-      size: 50,
-      color: _msgboxColor(type),
-    ).marginOnly(right: 16);
+    return Icon(iconData, size: 50, color: _msgboxColor(type))
+        .marginOnly(right: 16);
   }
 
   return Offstage();
@@ -1358,21 +1192,18 @@ Widget msgboxContent(String type, String title, String text) {
   ).marginOnly(bottom: 12);
 }
 
-void msgBoxCommon(
-  OverlayDialogManager dialogManager,
-  String title,
-  Widget content,
-  List<Widget> buttons, {
-  bool hasCancel = true,
-}) {
-  dialogManager.show(
-    (setState, close, context) => CustomAlertDialog(
-      title: Text(translate(title), style: TextStyle(fontSize: 21)),
-      content: content,
-      actions: buttons,
-      onCancel: hasCancel ? close : null,
-    ),
-  );
+void msgBoxCommon(OverlayDialogManager dialogManager, String title,
+    Widget content, List<Widget> buttons,
+    {bool hasCancel = true}) {
+  dialogManager.show((setState, close, context) => CustomAlertDialog(
+        title: Text(
+          translate(title),
+          style: TextStyle(fontSize: 21),
+        ),
+        content: content,
+        actions: buttons,
+        onCancel: hasCancel ? close : null,
+      ));
 }
 
 Color str2color(String str, [alpha = 0xFF]) {
@@ -1414,9 +1245,8 @@ Color str2color2(String str, {List<int> existing = const []}) {
   hash = hash % colorList.length;
   var result = colorList[hash].withAlpha(0xFF);
   if (existing.contains(result.value)) {
-    Color? notUsed = colorList.firstWhereOrNull(
-      (e) => !existing.contains(e.value),
-    );
+    Color? notUsed =
+        colorList.firstWhereOrNull((e) => !existing.contains(e.value));
     if (notUsed != null) {
       result = notUsed;
     }
@@ -1453,54 +1283,36 @@ class AccessibilityListener extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Listener(
-      onPointerDown: (evt) {
-        if (evt.size == 1) {
-          GestureBinding.instance.handlePointerEvent(
-            PointerAddedEvent(
-              pointer: evt.pointer + offset,
-              position: evt.position,
-            ),
-          );
-          GestureBinding.instance.handlePointerEvent(
-            PointerDownEvent(
-              pointer: evt.pointer + offset,
-              size: 0.1,
-              position: evt.position,
-            ),
-          );
-        }
-      },
-      onPointerUp: (evt) {
-        if (evt.size == 1) {
-          GestureBinding.instance.handlePointerEvent(
-            PointerUpEvent(
-              pointer: evt.pointer + offset,
-              size: 0.1,
-              position: evt.position,
-            ),
-          );
-          GestureBinding.instance.handlePointerEvent(
-            PointerRemovedEvent(
-              pointer: evt.pointer + offset,
-              position: evt.position,
-            ),
-          );
-        }
-      },
-      onPointerMove: (evt) {
-        if (evt.size == 1) {
-          GestureBinding.instance.handlePointerEvent(
-            PointerMoveEvent(
-              pointer: evt.pointer + offset,
-              size: 0.1,
-              delta: evt.delta,
-              position: evt.position,
-            ),
-          );
-        }
-      },
-      child: child,
-    );
+        onPointerDown: (evt) {
+          if (evt.size == 1) {
+            GestureBinding.instance.handlePointerEvent(PointerAddedEvent(
+                pointer: evt.pointer + offset, position: evt.position));
+            GestureBinding.instance.handlePointerEvent(PointerDownEvent(
+                pointer: evt.pointer + offset,
+                size: 0.1,
+                position: evt.position));
+          }
+        },
+        onPointerUp: (evt) {
+          if (evt.size == 1) {
+            GestureBinding.instance.handlePointerEvent(PointerUpEvent(
+                pointer: evt.pointer + offset,
+                size: 0.1,
+                position: evt.position));
+            GestureBinding.instance.handlePointerEvent(PointerRemovedEvent(
+                pointer: evt.pointer + offset, position: evt.position));
+          }
+        },
+        onPointerMove: (evt) {
+          if (evt.size == 1) {
+            GestureBinding.instance.handlePointerEvent(PointerMoveEvent(
+                pointer: evt.pointer + offset,
+                size: 0.1,
+                delta: evt.delta,
+                position: evt.position));
+          }
+        },
+        child: child);
   }
 }
 
@@ -1508,13 +1320,6 @@ class AndroidPermissionManager {
   static Completer<bool>? _completer;
   static Timer? _timer;
   static var _current = "";
-
-  static bool isWaitingFile() {
-    if (_completer != null) {
-      return !_completer!.isCompleted && _current == kManageExternalStorage;
-    }
-    return false;
-  }
 
   static Future<bool> check(String type) {
     if (isDesktop || isWeb) {
@@ -1568,12 +1373,8 @@ class AndroidPermissionManager {
 }
 
 RadioListTile<T> getRadio<T>(
-  Widget title,
-  T toValue,
-  T curValue,
-  ValueChanged<T?>? onChange, {
-  bool? dense,
-}) {
+    Widget title, T toValue, T curValue, ValueChanged<T?>? onChange,
+    {bool? dense}) {
   return RadioListTile<T>(
     visualDensity: VisualDensity.compact,
     controlAffinity: ListTileControlAffinity.trailing,
@@ -1585,7 +1386,7 @@ RadioListTile<T> getRadio<T>(
   );
 }
 
-/// Find the session FFI by its endpoint tag.
+/// find ffi, tag is Remote ID
 /// for session specific usage
 FFI ffi(String? tag) {
   return Get.find<FFI>(tag: tag);
@@ -1620,7 +1421,8 @@ bool option2bool(String option, String value) {
     res = value != "N";
   } else if (option.startsWith("allow-") ||
       option == kOptionStopService ||
-      option == kOptionDirectServer) {
+      option == kOptionDirectServer ||
+      option == kOptionForceAlwaysRelay) {
     res = value == "Y";
   } else {
     // "" is true
@@ -1631,11 +1433,15 @@ bool option2bool(String option, String value) {
 
 String bool2option(String option, bool b) {
   String res;
-  if (option.startsWith('enable-')) {
+  if (option.startsWith('enable-') &&
+      option != kOptionEnableUdpPunch &&
+      option != kOptionEnableIpv6Punch &&
+      option != kOptionEnableWebrtc) {
     res = b ? defaultOptionYes : 'N';
   } else if (option.startsWith('allow-') ||
       option == kOptionStopService ||
-      option == kOptionDirectServer) {
+      option == kOptionDirectServer ||
+      option == kOptionForceAlwaysRelay) {
     res = b ? 'Y' : defaultOptionNo;
   } else {
     res = b ? 'Y' : 'N';
@@ -1674,10 +1480,7 @@ bool mainGetPeerBoolOptionSync(String id, String key) {
 // Because all session options use `Y` and `<Empty>` as values.
 
 Future<bool> matchPeer(
-  String searchText,
-  Peer peer,
-  PeerTabIndex peerTabIndex,
-) async {
+    String searchText, Peer peer, PeerTabIndex peerTabIndex) async {
   if (searchText.isEmpty) {
     return true;
   }
@@ -1689,6 +1492,10 @@ Future<bool> matchPeer(
     return true;
   }
   if (peer.alias.toLowerCase().contains(searchText)) {
+    return true;
+  }
+  if (peerTabShowNote(peerTabIndex) &&
+      peer.note.toLowerCase().contains(searchText)) {
     return true;
   }
   return false;
@@ -1718,14 +1525,8 @@ class LastWindowPosition {
   bool? isMaximized;
   bool? isFullscreen;
 
-  LastWindowPosition(
-    this.width,
-    this.height,
-    this.offsetWidth,
-    this.offsetHeight,
-    this.isMaximized,
-    this.isFullscreen,
-  );
+  LastWindowPosition(this.width, this.height, this.offsetWidth,
+      this.offsetHeight, this.isMaximized, this.isFullscreen);
 
   bool equals(LastWindowPosition other) {
     return ((width == other.width) &&
@@ -1758,18 +1559,12 @@ class LastWindowPosition {
     }
     try {
       final m = jsonDecode(content);
-      return LastWindowPosition(
-        m["width"],
-        m["height"],
-        m["offsetWidth"],
-        m["offsetHeight"],
-        m["isMaximized"],
-        m["isFullscreen"],
-      );
+      return LastWindowPosition(m["width"], m["height"], m["offsetWidth"],
+          m["offsetHeight"], m["isMaximized"], m["isFullscreen"]);
     } catch (e) {
       debugPrintStack(
-        label: 'Failed to load LastWindowPosition "$content" ${e.toString()}',
-      );
+          label:
+              'Failed to load LastWindowPosition "$content" ${e.toString()}');
       return null;
     }
   }
@@ -1788,15 +1583,11 @@ final Debouncer _saveWindowDebounce = Debouncer(delay: Duration(seconds: 1));
 
 /// Save window position and size on exit
 /// Note that windowId must be provided if it's subwindow
-Future<void> saveWindowPosition(
-  WindowType type, {
-  int? windowId,
-  bool? flush,
-}) async {
+Future<void> saveWindowPosition(WindowType type,
+    {int? windowId, bool? flush}) async {
   if (type != WindowType.Main && windowId == null) {
     debugPrint(
-      "Error: windowId cannot be null when saving positions for sub window",
-    );
+        "Error: windowId cannot be null when saving positions for sub window");
   }
 
   Offset? position;
@@ -1830,11 +1621,9 @@ Future<void> saveWindowPosition(
         setPreFrame();
       } else {
         position = await windowManager.getPosition(
-          ignoreDevicePixelRatio: _ignoreDevicePixelRatio,
-        );
+            ignoreDevicePixelRatio: _ignoreDevicePixelRatio);
         sz = await windowManager.getSize(
-          ignoreDevicePixelRatio: _ignoreDevicePixelRatio,
-        );
+            ignoreDevicePixelRatio: _ignoreDevicePixelRatio);
       }
       break;
     default:
@@ -1848,8 +1637,7 @@ Future<void> saveWindowPosition(
           frame = await wc.getFrame();
         } catch (e) {
           debugPrint(
-            "Failed to get frame of window $windowId, it may be hidden",
-          );
+              "Failed to get frame of window $windowId, it may be hidden");
           return;
         }
         position = frame.topLeft;
@@ -1869,14 +1657,8 @@ Future<void> saveWindowPosition(
     }
   }
 
-  final pos = LastWindowPosition(
-    sz?.width,
-    sz?.height,
-    position?.dx,
-    position?.dy,
-    isMaximized,
-    isFullscreen,
-  );
+  final pos = LastWindowPosition(sz?.width, sz?.height, position?.dx,
+      position?.dy, isMaximized, isFullscreen);
 
   final WindowKey key = (type: type, windowId: windowId);
 
@@ -1902,55 +1684,37 @@ Future<void> _saveWindowPositionActual(WindowKey key) async {
 
   if (pos != null) {
     debugPrint(
-      "Saving frame: ${key.windowId}: ${pos.width}/${pos.height}, offset:${pos.offsetWidth}/${pos.offsetHeight}, isMaximized:${pos.isMaximized}, isFullscreen:${pos.isFullscreen}",
-    );
+        "Saving frame: ${key.windowId}: ${pos.width}/${pos.height}, offset:${pos.offsetWidth}/${pos.offsetHeight}, isMaximized:${pos.isMaximized}, isFullscreen:${pos.isFullscreen}");
 
     await bind.setLocalFlutterOption(
-      k: windowFramePrefix + key.type.name,
-      v: pos.toString(),
-    );
+        k: windowFramePrefix + key.type.name, v: pos.toString());
 
     if ((key.type == WindowType.RemoteDesktop ||
             key.type == WindowType.ViewCamera) &&
         key.windowId != null) {
-      await _saveSessionWindowPosition(
-        key.type,
-        key.windowId!,
-        pos.isMaximized ?? false,
-        pos.isFullscreen ?? false,
-        pos,
-      );
+      await _saveSessionWindowPosition(key.type, key.windowId!,
+          pos.isMaximized ?? false, pos.isFullscreen ?? false, pos);
     }
   }
 }
 
-Future _saveSessionWindowPosition(
-  WindowType windowType,
-  int windowId,
-  bool isMaximized,
-  bool isFullscreen,
-  LastWindowPosition pos,
-) async {
+Future _saveSessionWindowPosition(WindowType windowType, int windowId,
+    bool isMaximized, bool isFullscreen, LastWindowPosition pos) async {
   final remoteList = await DesktopMultiWindow.invokeMethod(
-    windowId,
-    kWindowEventGetRemoteList,
-    null,
-  );
+      windowId, kWindowEventGetRemoteList, null);
   getPeerPos(String peerId) {
     if (isMaximized || isFullscreen) {
       final peerPos = bind.mainGetPeerFlutterOptionSync(
-        id: peerId,
-        k: windowFramePrefix + windowType.name,
-      );
+          id: peerId, k: windowFramePrefix + windowType.name);
       var lpos = LastWindowPosition.loadFromString(peerPos);
       return LastWindowPosition(
-        lpos?.width ?? pos.offsetWidth,
-        lpos?.height ?? pos.offsetHeight,
-        lpos?.offsetWidth ?? pos.offsetWidth,
-        lpos?.offsetHeight ?? pos.offsetHeight,
-        isMaximized,
-        isFullscreen,
-      ).toString();
+              lpos?.width ?? pos.offsetWidth,
+              lpos?.height ?? pos.offsetHeight,
+              lpos?.offsetWidth ?? pos.offsetWidth,
+              lpos?.offsetHeight ?? pos.offsetHeight,
+              isMaximized,
+              isFullscreen)
+          .toString();
     } else {
       return pos.toString();
     }
@@ -1959,10 +1723,9 @@ Future _saveSessionWindowPosition(
   if (remoteList != null) {
     for (final peerId in remoteList.split(',')) {
       bind.mainSetPeerFlutterOptionSync(
-        id: peerId,
-        k: windowFramePrefix + windowType.name,
-        v: getPeerPos(peerId),
-      );
+          id: peerId,
+          k: windowFramePrefix + windowType.name,
+          v: getPeerPos(peerId));
     }
   }
 }
@@ -2062,12 +1825,8 @@ Future<Offset?> _adjustRestoreMainWindowOffset(
 /// Note that windowId must be provided if it's subwindow
 //
 // display is used to set the offset of the window in individual display mode.
-Future<bool> restoreWindowPosition(
-  WindowType type, {
-  int? windowId,
-  String? peerId,
-  int? display,
-}) async {
+Future<bool> restoreWindowPosition(WindowType type,
+    {int? windowId, String? peerId, int? display}) async {
   if (bind
       .mainGetEnv(key: "DISABLE_RUSTDESK_RESTORE_WINDOW_POSITION")
       .isNotEmpty) {
@@ -2075,8 +1834,7 @@ Future<bool> restoreWindowPosition(
   }
   if (type != WindowType.Main && windowId == null) {
     debugPrint(
-      "Error: windowId cannot be null when saving positions for sub window",
-    );
+        "Error: windowId cannot be null when saving positions for sub window");
     return false;
   }
 
@@ -2088,9 +1846,7 @@ Future<bool> restoreWindowPosition(
       windowId != null &&
       peerId != null) {
     final peerPos = bind.mainGetPeerFlutterOptionSync(
-      id: peerId,
-      k: windowFramePrefix + type.name,
-    );
+        id: peerId, k: windowFramePrefix + type.name);
     if (peerPos.isNotEmpty) {
       pos = peerPos;
     }
@@ -2103,9 +1859,13 @@ Future<bool> restoreWindowPosition(
     debugPrint("No window position saved, trying to center the window.");
     switch (type) {
       case WindowType.Main:
-        // Give the sidebar, device cards and connection form room on first run.
-        await windowManager.setSize(const Size(1100, 760));
-        await windowManager.center();
+        // Center the main window only if no position is saved (on first run).
+        if (isWindows || isLinux) {
+          await windowManager.center();
+        }
+        // For MacOS, the window is already centered by default.
+        // See https://github.com/rustdesk/rustdesk/blob/9b9276e7524523d7f667fefcd0694d981443df0e/flutter/macos/Runner/Base.lproj/MainMenu.xib#L333
+        // If `<windowPositionMask>` in `<window>` is not set, the window will be centered.
         break;
       default:
         // No need to change the position of a sub window if no position is saved,
@@ -2134,13 +1894,6 @@ Future<bool> restoreWindowPosition(
     }
   }
 
-  // Migrate the old compact home-window default; keep custom sizes intact.
-  if (type == WindowType.Main &&
-      lpos.width == 800 &&
-      (lpos.height == 510 || lpos.height == 600)) {
-    lpos.width = 1100;
-    lpos.height = 760;
-  }
   final size = await _adjustRestoreMainWindowSize(lpos.width, lpos.height);
   final offsetLeftTop = await _adjustRestoreMainWindowOffset(
     lpos.offsetWidth,
@@ -2149,8 +1902,7 @@ Future<bool> restoreWindowPosition(
     size.height,
   );
   debugPrint(
-    "restore lpos: ${size.width}/${size.height}, offset:${offsetLeftTop?.dx}/${offsetLeftTop?.dy}, isMaximized: ${lpos.isMaximized}, isFullscreen: ${lpos.isFullscreen}",
-  );
+      "restore lpos: ${size.width}/${size.height}, offset:${offsetLeftTop?.dx}/${offsetLeftTop?.dy}, isMaximized: ${lpos.isMaximized}, isFullscreen: ${lpos.isFullscreen}");
 
   switch (type) {
     case WindowType.Main:
@@ -2158,10 +1910,8 @@ Future<bool> restoreWindowPosition(
         if (offsetLeftTop == null) {
           await windowManager.center();
         } else {
-          await windowManager.setPosition(
-            offsetLeftTop,
-            ignoreDevicePixelRatio: _ignoreDevicePixelRatio,
-          );
+          await windowManager.setPosition(offsetLeftTop,
+              ignoreDevicePixelRatio: _ignoreDevicePixelRatio);
         }
       }
       if (lpos.isMaximized == true) {
@@ -2178,24 +1928,18 @@ Future<bool> restoreWindowPosition(
             // The window belongs to the left monitor, but if it is moved a little to the right, it will belong to the right monitor.
             // After restoring, the size will be incorrect.
             // See known issue in https://github.com/rustdesk/rustdesk/pull/9840
-            await windowManager.setSize(
-              size,
-              ignoreDevicePixelRatio: _ignoreDevicePixelRatio,
-            );
+            await windowManager.setSize(size,
+                ignoreDevicePixelRatio: _ignoreDevicePixelRatio);
           }
           await restorePos();
           if (storeSize) {
-            await windowManager.setSize(
-              size,
-              ignoreDevicePixelRatio: _ignoreDevicePixelRatio,
-            );
+            await windowManager.setSize(size,
+                ignoreDevicePixelRatio: _ignoreDevicePixelRatio);
           }
         } else {
           if (storeSize) {
-            await windowManager.setSize(
-              size,
-              ignoreDevicePixelRatio: _ignoreDevicePixelRatio,
-            );
+            await windowManager.setSize(size,
+                ignoreDevicePixelRatio: _ignoreDevicePixelRatio);
           }
           await restorePos();
         }
@@ -2208,11 +1952,7 @@ Future<bool> restoreWindowPosition(
           await wc.center();
         } else {
           final frame = Rect.fromLTWH(
-            offsetLeftTop.dx,
-            offsetLeftTop.dy,
-            size.width,
-            size.height,
-          );
+              offsetLeftTop.dx, offsetLeftTop.dy, size.width, size.height);
           await wc.setFrame(frame);
         }
       }
@@ -2227,10 +1967,7 @@ Future<bool> restoreWindowPosition(
           } else {
             // If is not current window, we need to send a fullscreen message to `windowId`
             DesktopMultiWindow.invokeMethod(
-              windowId,
-              kWindowEventSetFullscreen,
-              'true',
-            );
+                windowId, kWindowEventSetFullscreen, 'true');
           }
         });
       } else if (lpos.isMaximized == true) {
@@ -2248,7 +1985,6 @@ Future<bool> restoreWindowPosition(
 }
 
 var webInitialLink = "";
-final _appLinks = AppLinks();
 
 /// Initialize uni links for macos/windows
 ///
@@ -2261,7 +1997,7 @@ Future<bool> initUniLinks() async {
   }
   // check cold boot
   try {
-    final initialLink = await _appLinks.getInitialLinkString();
+    final initialLink = await getInitialLink();
     print("initialLink: $initialLink");
     if (initialLink == null || initialLink.isEmpty) {
       return false;
@@ -2288,19 +2024,20 @@ StreamSubscription? listenUniLinks({handleByFlutter = true}) {
     return null;
   }
 
-  final sub = _appLinks.uriLinkStream.listen(
-    (Uri uri) {
-      debugPrint("A uri was received: $uri. handleByFlutter $handleByFlutter");
+  final sub = uriLinkStream.listen((Uri? uri) {
+    debugPrint("A uri was received: $uri. handleByFlutter $handleByFlutter");
+    if (uri != null) {
       if (handleByFlutter) {
         handleUriLink(uri: uri);
       } else {
         bind.sendUrlScheme(url: uri.toString());
       }
-    },
-    onError: (err) {
-      print("uni links error: $err");
-    },
-  );
+    } else {
+      print("uni listen error: uri is empty.");
+    }
+  }, onError: (err) {
+    print("uni links error: $err");
+  });
   return sub;
 }
 
@@ -2348,6 +2085,10 @@ bool handleUriLink({List<String>? cmdArgs, Uri? uri, String? uriString}) {
 
   UriLinkType? type;
   String? id;
+  String? password;
+  String? switchUuid;
+  bool? forceRelay;
+  var loginMethod = '';
   for (int i = 0; i < args.length; i++) {
     switch (args[i]) {
       case '--connect':
@@ -2387,27 +2128,74 @@ bool handleUriLink({List<String>? cmdArgs, Uri? uri, String? uriString}) {
         id = args[i + 1];
         i++;
         break;
+      case '--password':
+        password = args[i + 1];
+        i++;
+        break;
+      case '--request-approval':
+        loginMethod = 'request-approval';
+        break;
+      case '--switch_uuid':
+        switchUuid = args[i + 1];
+        i++;
+        break;
+      case '--relay':
+        forceRelay = true;
+        break;
       default:
         break;
     }
   }
+  if (loginMethod == 'request-approval') {
+    password = null;
+  }
   if (type != null && id != null) {
-    Future.delayed(Duration.zero, () {
-      final context = Get.context ?? globalKey.currentContext;
-      if (context == null) {
-        showToast(translate('Application is not ready'));
-        return;
-      }
-      connect(
-        context,
-        id!,
-        isFileTransfer: type == UriLinkType.fileTransfer,
-        isViewCamera: type == UriLinkType.viewCamera,
-        isTerminal: type == UriLinkType.terminal,
-        isTcpTunneling: type == UriLinkType.portForward,
-        isRDP: type == UriLinkType.rdp,
-      );
-    });
+    switch (type) {
+      case UriLinkType.remoteDesktop:
+        Future.delayed(Duration.zero, () {
+          rustDeskWinManager.newRemoteDesktop(id!,
+              loginMethod: loginMethod,
+              password: password,
+              switchUuid: switchUuid,
+              forceRelay: forceRelay);
+        });
+        break;
+      case UriLinkType.fileTransfer:
+        Future.delayed(Duration.zero, () {
+          rustDeskWinManager.newFileTransfer(id!,
+              loginMethod: loginMethod,
+              password: password, forceRelay: forceRelay);
+        });
+        break;
+      case UriLinkType.viewCamera:
+        Future.delayed(Duration.zero, () {
+          rustDeskWinManager.newViewCamera(id!,
+              loginMethod: loginMethod,
+              password: password, forceRelay: forceRelay);
+        });
+        break;
+      case UriLinkType.portForward:
+        Future.delayed(Duration.zero, () {
+          rustDeskWinManager.newPortForward(id!, false,
+              loginMethod: loginMethod,
+              password: password, forceRelay: forceRelay);
+        });
+        break;
+      case UriLinkType.rdp:
+        Future.delayed(Duration.zero, () {
+          rustDeskWinManager.newPortForward(id!, true,
+              loginMethod: loginMethod,
+              password: password, forceRelay: forceRelay);
+        });
+        break;
+      case UriLinkType.terminal:
+        Future.delayed(Duration.zero, () {
+          rustDeskWinManager.newTerminal(id!,
+              loginMethod: loginMethod,
+              password: password, forceRelay: forceRelay);
+        });
+        break;
+    }
 
     return true;
   }
@@ -2435,34 +2223,110 @@ List<String>? urlLinkToCmdArgs(Uri uri) {
     // For compatibility
     command = '--connect';
     id = uri.path.substring("/new/".length);
-  } else if (uri.authority == "config" || uri.authority == "password") {
-    debugPrint("Ignored obsolete LAN-only deep link: ${uri.authority}");
+  } else if (uri.authority == "config") {
+    if (isAndroid || isIOS) {
+      final allowDeepLinkServerSettings =
+          bind.mainGetBuildinOption(key: kOptionAllowDeepLinkServerSettings) ==
+              'Y';
+      if (!allowDeepLinkServerSettings) {
+        debugPrint(
+            "Ignore rustdesk://config because $kOptionAllowDeepLinkServerSettings is not enabled.");
+        // Keep the user-facing error generic; detailed rejection reason is in debug logs.
+        // Delay toast to avoid missing overlay during cold-start deeplink handling.
+        Timer(Duration(seconds: 1), () {
+          showToast(translate('Failed'));
+        });
+        return null;
+      }
+      final config = uri.path.substring("/".length);
+      // add a timer to make showToast work
+      Timer(Duration(seconds: 1), () {
+        importConfig(null, null, config);
+      });
+    }
     return null;
+  } else if (uri.authority == "password") {
+    if (isAndroid || isIOS) {
+      final allowDeepLinkPassword =
+          bind.mainGetBuildinOption(key: kOptionAllowDeepLinkPassword) == 'Y';
+      if (!allowDeepLinkPassword) {
+        debugPrint(
+            "Ignore rustdesk://password because $kOptionAllowDeepLinkPassword is not enabled.");
+        // Keep the user-facing error generic; detailed rejection reason is in debug logs.
+        // Delay toast to avoid missing overlay during cold-start deeplink handling.
+        Timer(Duration(seconds: 1), () {
+          showToast(translate('Failed'));
+        });
+        return null;
+      }
+      final password = uri.path.substring("/".length);
+      if (password.isNotEmpty) {
+        Timer(Duration(seconds: 1), () async {
+          final ok =
+              await bind.mainSetPermanentPasswordWithResult(password: password);
+          showToast(translate(ok ? 'Successful' : 'Failed'));
+        });
+      }
+    }
   } else if (options.contains(uri.authority)) {
     command = '--${uri.authority}';
     if (uri.path.length > 1) {
       id = uri.path.substring(1);
     }
-  } else if (uri.authority.length > 2 && uri.path.length <= 1) {
-    // localdesk://<endpoint>
+  } else if (uri.authority.length > 2 &&
+      (uri.path.length <= 1 ||
+          (uri.path == '/r' || uri.path.startsWith('/r@')))) {
+    // rustdesk://<connect-id>
+    // rustdesk://<connect-id>/r
+    // rustdesk://<connect-id>/r@<server>
     command = '--connect';
     id = uri.authority;
+    if (uri.path.length > 1) {
+      id = id + uri.path;
+    }
+  }
+
+  var queryParameters =
+      uri.queryParameters.map((k, v) => MapEntry(k.toLowerCase(), v));
+  final requestApproval = queryParameters['request-approval'] == 'true';
+  if (requestApproval) {
+    queryParameters.remove('password');
+  }
+
+  var key = queryParameters["key"];
+  if (id != null) {
+    if (key != null) {
+      id = "$id?key=$key";
+    }
   }
 
   if (isMobile && id != null) {
+    final forceRelay = queryParameters["relay"] != null;
+    final password = queryParameters["password"];
+    final loginMethod = requestApproval ? 'request-approval' : '';
+
     // Determine connection type based on command
     if (command == '--file-transfer') {
-      connect(Get.context!, id, isFileTransfer: true);
+      connect(Get.context!, id,
+          loginMethod: loginMethod,
+          isFileTransfer: true, forceRelay: forceRelay, password: password);
     } else if (command == '--view-camera') {
-      connect(Get.context!, id, isViewCamera: true);
+      connect(Get.context!, id,
+          loginMethod: loginMethod,
+          isViewCamera: true, forceRelay: forceRelay, password: password);
     } else if (command == '--terminal') {
-      connect(Get.context!, id, isTerminal: true);
+      connect(Get.context!, id,
+          loginMethod: loginMethod,
+          isTerminal: true, forceRelay: forceRelay, password: password);
     } else if (command == '--terminal-admin') {
       setEnvTerminalAdmin();
-      connect(Get.context!, id, isTerminal: true);
+      connect(Get.context!, id,
+          loginMethod: loginMethod,
+          isTerminal: true, forceRelay: forceRelay, password: password);
     } else {
       // Default to remote desktop for '--connect', '--play', or direct connection
-      connect(Get.context!, id);
+      connect(Get.context!, id,
+          loginMethod: loginMethod, forceRelay: forceRelay, password: password);
     }
     return null;
   }
@@ -2471,31 +2335,64 @@ List<String>? urlLinkToCmdArgs(Uri uri) {
   if (command != null && id != null) {
     args.add(command);
     args.add(id);
+    var param = queryParameters;
+    String? password = param["password"];
+    if (password != null) args.addAll(['--password', password]);
+    if (requestApproval) args.add('--request-approval');
+    String? switch_uuid = param["switch_uuid"];
+    if (switch_uuid != null) args.addAll(['--switch_uuid', switch_uuid]);
+    if (param["relay"] != null) args.add("--relay");
     return args;
   }
 
   return null;
 }
 
-connectMainDesktop(
-  String id, {
-  required bool isFileTransfer,
-  required bool isViewCamera,
-  required bool isTerminal,
-  required bool isTcpTunneling,
-  required bool isRDP,
-  String? password,
-}) async {
+connectMainDesktop(String id,
+    {required bool isFileTransfer,
+    required bool isViewCamera,
+    required bool isTerminal,
+    required bool isTcpTunneling,
+    required bool isRDP,
+    bool? forceRelay,
+    String? password,
+    String? connToken,
+    bool? isSharedPassword,
+    String loginMethod = ''}) async {
   if (isFileTransfer) {
-    await rustDeskWinManager.newFileTransfer(id, password: password);
+    await rustDeskWinManager.newFileTransfer(id,
+        loginMethod: loginMethod,
+        password: password,
+        isSharedPassword: isSharedPassword,
+        connToken: connToken,
+        forceRelay: forceRelay);
   } else if (isViewCamera) {
-    await rustDeskWinManager.newViewCamera(id, password: password);
+    await rustDeskWinManager.newViewCamera(id,
+        loginMethod: loginMethod,
+        password: password,
+        isSharedPassword: isSharedPassword,
+        connToken: connToken,
+        forceRelay: forceRelay);
   } else if (isTcpTunneling || isRDP) {
-    await rustDeskWinManager.newPortForward(id, isRDP, password: password);
+    await rustDeskWinManager.newPortForward(id, isRDP,
+        loginMethod: loginMethod,
+        password: password,
+        isSharedPassword: isSharedPassword,
+        connToken: connToken,
+        forceRelay: forceRelay);
   } else if (isTerminal) {
-    await rustDeskWinManager.newTerminal(id, password: password);
+    await rustDeskWinManager.newTerminal(id,
+        loginMethod: loginMethod,
+        password: password,
+        isSharedPassword: isSharedPassword,
+        connToken: connToken,
+        forceRelay: forceRelay);
   } else {
-    await rustDeskWinManager.newRemoteDesktop(id, password: password);
+    await rustDeskWinManager.newRemoteDesktop(id,
+        loginMethod: loginMethod,
+        password: password,
+        isSharedPassword: isSharedPassword,
+        forceRelay: forceRelay);
   }
 }
 
@@ -2504,17 +2401,17 @@ connectMainDesktop(
 /// If [isViewCamera], starts a session only for view camera.
 /// If [isTcpTunneling], starts a session only for tcp tunneling.
 /// If [isRDP], starts a session only for rdp.
-connect(
-  BuildContext context,
-  String id, {
-  bool isFileTransfer = false,
-  bool isViewCamera = false,
-  bool isTerminal = false,
-  bool isTcpTunneling = false,
-  bool isRDP = false,
-  String? password,
-  String? username,
-}) async {
+connect(BuildContext context, String id,
+    {bool isFileTransfer = false,
+    bool isViewCamera = false,
+    bool isTerminal = false,
+    bool isTcpTunneling = false,
+    bool isRDP = false,
+    bool forceRelay = false,
+    String? password,
+    String? connToken,
+    bool? isSharedPassword,
+    String loginMethod = ''}) async {
   if (id == '') return;
   if (!isDesktop || desktopType == DesktopType.main) {
     try {
@@ -2529,21 +2426,25 @@ connect(
     } catch (_) {}
   }
   id = id.replaceAll(' ', '');
-  assert(
-    !(isFileTransfer && isTcpTunneling && isRDP),
-    "more than one connect type",
-  );
+  final oldId = id;
+  id = await bind.mainHandleRelayId(id: id);
+  forceRelay = id != oldId || forceRelay;
+  assert(!(isFileTransfer && isTcpTunneling && isRDP),
+      "more than one connect type");
 
   if (isDesktop) {
     if (desktopType == DesktopType.main) {
       await connectMainDesktop(
         id,
+        loginMethod: loginMethod,
         isFileTransfer: isFileTransfer,
         isViewCamera: isViewCamera,
         isTerminal: isTerminal,
         isTcpTunneling: isTcpTunneling,
         isRDP: isRDP,
         password: password,
+        isSharedPassword: isSharedPassword,
+        forceRelay: forceRelay,
       );
     } else {
       await rustDeskWinManager.call(WindowType.Main, kWindowConnect, {
@@ -2554,34 +2455,36 @@ connect(
         'isTcpTunneling': isTcpTunneling,
         'isRDP': isRDP,
         'password': password,
+        'isSharedPassword': isSharedPassword,
+        'forceRelay': forceRelay,
+        'connToken': connToken,
+        'loginMethod': loginMethod,
       });
     }
   } else {
     if (isFileTransfer) {
-      if (isAndroid) {
-        if (!await AndroidPermissionManager.check(kManageExternalStorage)) {
-          if (!await AndroidPermissionManager.request(kManageExternalStorage)) {
-            return;
-          }
-        }
-      }
       if (isWeb) {
         Navigator.push(
           context,
           MaterialPageRoute(
             builder: (BuildContext context) =>
                 desktop_file_manager.FileManagerPage(
-              id: id,
-              password: password,
-            ),
+                    id: id,
+                    loginMethod: loginMethod,
+                    password: password,
+                    isSharedPassword: isSharedPassword),
           ),
         );
       } else {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (BuildContext context) =>
-                FileManagerPage(id: id, password: password),
+            builder: (BuildContext context) => FileManagerPage(
+                id: id,
+                loginMethod: loginMethod,
+                password: password,
+                isSharedPassword: isSharedPassword,
+                forceRelay: forceRelay),
           ),
         );
       }
@@ -2594,8 +2497,10 @@ connect(
                 desktop_view_camera.ViewCameraPage(
               key: ValueKey(id),
               id: id,
+              loginMethod: loginMethod,
               toolbarState: ToolbarState(),
               password: password,
+              isSharedPassword: isSharedPassword,
             ),
           ),
         );
@@ -2603,8 +2508,12 @@ connect(
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (BuildContext context) =>
-                ViewCameraPage(id: id, password: password),
+            builder: (BuildContext context) => ViewCameraPage(
+                id: id,
+                loginMethod: loginMethod,
+                password: password,
+                isSharedPassword: isSharedPassword,
+                forceRelay: forceRelay),
           ),
         );
       }
@@ -2612,8 +2521,13 @@ connect(
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (BuildContext context) =>
-              TerminalPage(id: id, password: password),
+          builder: (BuildContext context) => TerminalPage(
+            id: id,
+            loginMethod: loginMethod,
+            password: password,
+            isSharedPassword: isSharedPassword,
+            forceRelay: forceRelay,
+          ),
         ),
       );
     } else {
@@ -2624,8 +2538,10 @@ connect(
             builder: (BuildContext context) => desktop_remote.RemotePage(
               key: ValueKey(id),
               id: id,
+              loginMethod: loginMethod,
               toolbarState: ToolbarState(),
               password: password,
+              isSharedPassword: isSharedPassword,
             ),
           ),
         );
@@ -2633,8 +2549,12 @@ connect(
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (BuildContext context) =>
-                RemotePage(id: id, password: password),
+            builder: (BuildContext context) => RemotePage(
+                id: id,
+                loginMethod: loginMethod,
+                password: password,
+                isSharedPassword: isSharedPassword,
+                forceRelay: forceRelay),
           ),
         );
       }
@@ -2646,6 +2566,12 @@ connect(
   if (!currentFocus.hasPrimaryFocus) {
     currentFocus.unfocus();
   }
+}
+
+Map<String, String> getHttpHeaders() {
+  return {
+    'Authorization': 'Bearer ${bind.mainGetLocalOption(key: 'access_token')}'
+  };
 }
 
 // Simple wrapper of built-in types for reference use.
@@ -2674,9 +2600,8 @@ class WakelockManager {
   static void enable(UniqueKey key, {bool isServer = false}) {
     // Check if we should keep awake during outgoing sessions
     if (!isServer) {
-      final keepAwake = mainGetLocalBoolOptionSync(
-        kOptionKeepAwakeDuringOutgoingSessions,
-      );
+      final keepAwake =
+          mainGetLocalBoolOptionSync(kOptionKeepAwakeDuringOutgoingSessions);
       if (!keepAwake) {
         return; // Don't enable wakelock if user disabled keep awake
       }
@@ -2714,8 +2639,7 @@ void reloadCurrentWindow() {
     RefreshWrapper.of(Get.context!)?.rebuild();
   } else {
     debugPrint(
-      "reload current window failed, global BuildContext does not exist",
-    );
+        "reload current window failed, global BuildContext does not exist");
   }
 }
 
@@ -2746,15 +2670,14 @@ bool isRunningInPortableMode() {
 /// Window status callback
 Future<void> onActiveWindowChanged() async {
   print(
-    "[MultiWindowHandler] active window changed: ${rustDeskWinManager.getActiveWindows()}",
-  );
+      "[MultiWindowHandler] active window changed: ${rustDeskWinManager.getActiveWindows()}");
   if (rustDeskWinManager.getActiveWindows().isEmpty) {
     // close all sub windows
     try {
       if (isLinux) {
         await Future.wait([
           saveWindowPosition(WindowType.Main),
-          rustDeskWinManager.closeAllSubWindows(),
+          rustDeskWinManager.closeAllSubWindows()
         ]);
       } else {
         await rustDeskWinManager.closeAllSubWindows();
@@ -2762,7 +2685,7 @@ Future<void> onActiveWindowChanged() async {
     } catch (err) {
       debugPrintStack(label: "$err");
     } finally {
-      debugPrint("Start closing LocalDesk...");
+      debugPrint("Start closing RustDesk...");
       await windowManager.setPreventClose(false);
       await windowManager.close();
       if (isMacOS) {
@@ -2783,9 +2706,7 @@ Future<void> onActiveWindowChanged() async {
         // 2024-11-11 11:41:11.565 RustDesk[90272:2567686] Failed to send message to Flutter engine on channel 'flutter/lifecycle' (2).
         // ```
         periodic_immediate(
-          Duration(milliseconds: 30),
-          RdPlatformChannel.instance.terminate,
-        );
+            Duration(milliseconds: 30), RdPlatformChannel.instance.terminate);
       }
     }
   }
@@ -2807,8 +2728,17 @@ WindowsTarget getWindowsTarget(int buildNumber) {
     return WindowsTarget.w11;
   } else if (buildNumber >= 10240) {
     return WindowsTarget.w10;
+  } else if (buildNumber >= 9600) {
+    return WindowsTarget.w8_1;
+  } else if (buildNumber >= 9200) {
+    return WindowsTarget.w8;
+  } else if (buildNumber >= 7601) {
+    return WindowsTarget.w7;
+  } else if (buildNumber >= 6002) {
+    return WindowsTarget.vista;
   } else {
-    return WindowsTarget.unsupported;
+    // minimum support
+    return WindowsTarget.xp;
   }
 }
 
@@ -2820,16 +2750,77 @@ int getWindowsTargetBuildNumber() {
   return getWindowsTargetBuildNumber_();
 }
 
+/// Indicating we need to use compatible ui mode.
+///
+/// [Conditions]
+/// - Windows 7, window will overflow when we use frameless ui.
+bool get kUseCompatibleUiMode =>
+    isWindows &&
+    const [WindowsTarget.w7].contains(windowsBuildNumber.windowsVersion);
+
 bool get isWin10 => windowsBuildNumber.windowsVersion == WindowsTarget.w10;
 
-Widget dialogButton(
-  String text, {
-  required VoidCallback? onPressed,
-  bool isOutline = false,
-  Widget? icon,
-  TextStyle? style,
-  ButtonStyle? buttonStyle,
-}) {
+class ServerConfig {
+  late String idServer;
+  late String relayServer;
+  late String apiServer;
+  late String key;
+
+  ServerConfig(
+      {String? idServer, String? relayServer, String? apiServer, String? key}) {
+    this.idServer = idServer?.trim() ?? '';
+    this.relayServer = relayServer?.trim() ?? '';
+    this.apiServer = apiServer?.trim() ?? '';
+    this.key = key?.trim() ?? '';
+  }
+
+  /// decode from shared string (from user shared or rustdesk-server generated)
+  /// also see [encode]
+  /// throw when decoding failure
+  ServerConfig.decode(String msg) {
+    var json = {};
+    try {
+      // back compatible
+      json = jsonDecode(msg);
+    } catch (err) {
+      final input = msg.split('').reversed.join('');
+      final bytes = base64Decode(base64.normalize(input));
+      json = jsonDecode(utf8.decode(bytes, allowMalformed: true));
+    }
+    idServer = json['host'] ?? '';
+    relayServer = json['relay'] ?? '';
+    apiServer = json['api'] ?? '';
+    key = json['key'] ?? '';
+  }
+
+  /// encode to shared string
+  /// also see [ServerConfig.decode]
+  String encode() {
+    Map<String, String> config = {};
+    config['host'] = idServer.trim();
+    config['relay'] = relayServer.trim();
+    config['api'] = apiServer.trim();
+    config['key'] = key.trim();
+    return base64UrlEncode(Uint8List.fromList(jsonEncode(config).codeUnits))
+        .split('')
+        .reversed
+        .join();
+  }
+
+  /// from local options
+  ServerConfig.fromOptions(Map<String, dynamic> options)
+      : idServer = options['custom-rendezvous-server'] ?? "",
+        relayServer = options['relay-server'] ?? "",
+        apiServer = options['api-server'] ?? "",
+        key = options['key'] ?? "";
+}
+
+Widget dialogButton(String text,
+    {required VoidCallback? onPressed,
+    bool isOutline = false,
+    Widget? icon,
+    TextStyle? style,
+    ButtonStyle? buttonStyle}) {
   if (isDesktop || isWebDesktop) {
     if (isOutline) {
       return icon == null
@@ -2859,7 +2850,10 @@ Widget dialogButton(
   } else {
     return TextButton(
       onPressed: onPressed,
-      child: Text(translate(text), style: style),
+      child: Text(
+        translate(text),
+        style: style,
+      ),
     );
   }
 }
@@ -2897,10 +2891,9 @@ Future<void> updateSystemWindowTheme() async {
   if (userPreference != ThemeMode.system) {
     if (isMacOS) {
       await RdPlatformChannel.instance.changeSystemWindowTheme(
-        userPreference == ThemeMode.light
-            ? SystemWindowTheme.light
-            : SystemWindowTheme.dark,
-      );
+          userPreference == ThemeMode.light
+              ? SystemWindowTheme.light
+              : SystemWindowTheme.dark);
     }
   }
 }
@@ -2933,23 +2926,20 @@ Future<bool> osxRequestAudio() async {
   return await kMacOSPermChannel.invokeMethod("requestRecordAudio");
 }
 
-Widget futureBuilder({
-  required Future? future,
-  required Widget Function(dynamic data) hasData,
-}) {
+Widget futureBuilder(
+    {required Future? future, required Widget Function(dynamic data) hasData}) {
   return FutureBuilder(
-    future: future,
-    builder: (BuildContext context, AsyncSnapshot snapshot) {
-      if (snapshot.hasData) {
-        return hasData(snapshot.data!);
-      } else {
-        if (snapshot.hasError) {
-          debugPrint(snapshot.error.toString());
+      future: future,
+      builder: (BuildContext context, AsyncSnapshot snapshot) {
+        if (snapshot.hasData) {
+          return hasData(snapshot.data!);
+        } else {
+          if (snapshot.hasError) {
+            debugPrint(snapshot.error.toString());
+          }
+          return Container();
         }
-        return Container();
-      }
-    },
-  );
+      });
 }
 
 void onCopyFingerprint(String value) {
@@ -2958,6 +2948,15 @@ void onCopyFingerprint(String value) {
     showToast('$value\n${translate("Copied")}');
   } else {
     showToast(translate("no fingerprints"));
+  }
+}
+
+void onCopyId(String value) {
+  if (value.isNotEmpty) {
+    Clipboard.setData(ClipboardData(text: value));
+    showToast('$value\n${translate("Copied")}');
+  } else {
+    showToast(translate("Invalid ID"));
   }
 }
 
@@ -2974,77 +2973,98 @@ Future<void> start_service(bool is_start) async {
       !isMacOS ||
       await callMainCheckSuperUserPermission();
   if (checked) {
-    await mainSetBoolOption(kOptionStopService, !is_start);
+    mainSetBoolOption(kOptionStopService, !is_start);
   }
 }
 
 Future<bool> canBeBlocked() async {
-  return false;
+  if (isWeb) {
+    // Web can only act as a controller, never as a controlled side,
+    // so it should never be blocked by a remote session.
+    return false;
+  }
+  // First check control permission
+  final controlPermission = await bind.mainGetCommon(
+      key: "is-remote-modify-enabled-by-control-permissions");
+  if (controlPermission == "true") {
+    return false;
+  } else if (controlPermission == "false") {
+    return true;
+  }
+
+  // Check local settings
+  var accessMode = await bind.mainGetOption(key: kOptionAccessMode);
+  var isCustomAccessMode = accessMode != 'full' && accessMode != 'view';
+  var option = option2bool(kOptionAllowRemoteConfigModification,
+      await bind.mainGetOption(key: kOptionAllowRemoteConfigModification));
+  return accessMode == 'view' || (isCustomAccessMode && !option);
 }
 
 // to-do: web not implemented
 Future<void> shouldBeBlocked(RxBool block, WhetherUseRemoteBlock? use) async {
-  block.value = false;
+  if (use != null && !await use()) {
+    block.value = false;
+    return;
+  }
+  var time0 = DateTime.now().millisecondsSinceEpoch;
+  await bind.mainCheckMouseTime();
+  Timer(const Duration(milliseconds: 120), () async {
+    var d = time0 - await bind.mainGetMouseTime();
+    if (d < 120) {
+      block.value = true;
+    } else {
+      block.value = false;
+    }
+  });
 }
 
 typedef WhetherUseRemoteBlock = Future<bool> Function();
-Widget buildRemoteBlock({
-  required Widget child,
-  required RxBool block,
-  required bool mask,
-  WhetherUseRemoteBlock? use,
-}) {
-  return Obx(
-    () => MouseRegion(
-      onEnter: (_) async {
-        await shouldBeBlocked(block, use);
-      },
-      onExit: (event) => block.value = false,
-      child: Stack(
-        children: [
+Widget buildRemoteBlock(
+    {required Widget child,
+    required RxBool block,
+    required bool mask,
+    WhetherUseRemoteBlock? use}) {
+  return Obx(() => MouseRegion(
+        onEnter: (_) async {
+          await shouldBeBlocked(block, use);
+        },
+        onExit: (event) => block.value = false,
+        child: Stack(children: [
           // scope block tab
           preventMouseKeyBuilder(child: child, block: block.value),
           // mask block click, cm not block click and still use check_click_time to avoid block local click
           if (mask)
             Offstage(
-              offstage: !block.value,
-              child: Container(color: Colors.black.withOpacity(0.5)),
-            ),
-        ],
-      ),
-    ),
-  );
+                offstage: !block.value,
+                child: Container(
+                  color: Colors.black.withOpacity(0.5),
+                )),
+        ]),
+      ));
 }
 
 Widget preventMouseKeyBuilder({required Widget child, required bool block}) {
   return ExcludeFocus(
-    excluding: block,
-    child: AbsorbPointer(child: child, absorbing: block),
-  );
+      excluding: block, child: AbsorbPointer(child: child, absorbing: block));
 }
 
-Widget unreadMessageCountBuilder(
-  RxInt? count, {
-  double? size,
-  double? fontSize,
-}) {
-  return Obx(
-    () => Offstage(
+Widget unreadMessageCountBuilder(RxInt? count,
+    {double? size, double? fontSize}) {
+  return Obx(() => Offstage(
       offstage: !((count?.value ?? 0) > 0),
       child: Container(
         width: size ?? 16,
         height: size ?? 16,
-        decoration: BoxDecoration(color: Colors.red, shape: BoxShape.circle),
-        child: Center(
-          child: Text(
-            "${count?.value ?? 0}",
-            maxLines: 1,
-            style: TextStyle(color: Colors.white, fontSize: fontSize ?? 10),
-          ),
+        decoration: BoxDecoration(
+          color: Colors.red,
+          shape: BoxShape.circle,
         ),
-      ),
-    ),
-  );
+        child: Center(
+          child: Text("${count?.value ?? 0}",
+              maxLines: 1,
+              style: TextStyle(color: Colors.white, fontSize: fontSize ?? 10)),
+        ),
+      )));
 }
 
 Widget unreadTopRightBuilder(RxInt? count, {Widget? icon}) {
@@ -3052,10 +3072,9 @@ Widget unreadTopRightBuilder(RxInt? count, {Widget? icon}) {
     children: [
       icon ?? Icon(Icons.chat),
       Positioned(
-        top: 0,
-        right: 0,
-        child: unreadMessageCountBuilder(count, size: 12, fontSize: 8),
-      ),
+          top: 0,
+          right: 0,
+          child: unreadMessageCountBuilder(count, size: 12, fontSize: 8))
     ],
   );
 }
@@ -3067,18 +3086,15 @@ String toCapitalized(String s) {
   return s.substring(0, 1).toUpperCase() + s.substring(1);
 }
 
-Widget buildErrorBanner(
-  BuildContext context, {
-  required RxBool loading,
-  required RxString err,
-  required Function? retry,
-  required Function close,
-}) {
-  return Obx(
-    () => Offstage(
-      offstage: !(!loading.value && err.value.isNotEmpty),
-      child: Center(
-        child: Container(
+Widget buildErrorBanner(BuildContext context,
+    {required RxBool loading,
+    required RxString err,
+    required Function? retry,
+    required Function close}) {
+  return Obx(() => Offstage(
+        offstage: !(!loading.value && err.value.isNotEmpty),
+        child: Center(
+            child: Container(
           color: MyTheme.color(context).errorBannerBg,
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -3092,23 +3108,23 @@ Widget buildErrorBanner(
               ).marginAll(4),
               Flexible(
                 child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: Tooltip(
-                    message: translate(err.value),
-                    child: SelectableText(translate(err.value)),
-                  ),
-                ).marginSymmetric(vertical: 2),
+                    alignment: Alignment.centerLeft,
+                    child: Tooltip(
+                      message: translate(err.value),
+                      child: SelectableText(
+                        translate(err.value),
+                      ),
+                    )).marginSymmetric(vertical: 2),
               ),
               if (retry != null)
                 InkWell(
-                  onTap: () {
-                    retry.call();
-                  },
-                  child: Text(
-                    translate("Retry"),
-                    style: TextStyle(color: MyTheme.accent),
-                  ),
-                ).marginSymmetric(horizontal: 5),
+                    onTap: () {
+                      retry.call();
+                    },
+                    child: Text(
+                      translate("Retry"),
+                      style: TextStyle(color: MyTheme.accent),
+                    )).marginSymmetric(horizontal: 5),
               FittedBox(
                 child: InkWell(
                   onTap: () {
@@ -3116,31 +3132,29 @@ Widget buildErrorBanner(
                   },
                   child: Icon(Icons.close).marginSymmetric(horizontal: 5),
                 ),
-              ).marginAll(4),
+              ).marginAll(4)
             ],
           ),
-        ),
-      ).marginOnly(bottom: 14),
-    ),
-  );
+        )).marginOnly(bottom: 14),
+      ));
 }
 
 String getDesktopTabLabel(String peerId, String alias) {
-  String hostname = '';
+  String label = alias.isEmpty ? peerId : alias;
   try {
     String peer = bind.mainGetPeerSync(id: peerId);
     Map<String, dynamic> config = jsonDecode(peer);
     if (config['info']['hostname'] is String) {
-      hostname = config['info']['hostname'];
+      String hostname = config['info']['hostname'];
+      if (hostname.isNotEmpty &&
+          !label.toLowerCase().contains(hostname.toLowerCase())) {
+        label += "@$hostname";
+      }
     }
   } catch (e) {
     debugPrint("Failed to get hostname:$e");
   }
-  return composePeerTabLabel(
-    peerId: peerId,
-    alias: alias,
-    hostname: hostname,
-  );
+  return label;
 }
 
 sessionRefreshVideo(SessionID sessionId, PeerInfo pi) async {
@@ -3167,10 +3181,7 @@ Future<List<Rect>> getScreenListWayland() async {
     }
   } else {
     final screenList = await rustDeskWinManager.call(
-      WindowType.Main,
-      kWindowGetScreenList,
-      '',
-    );
+        WindowType.Main, kWindowGetScreenList, '');
     try {
       for (var screen in jsonDecode(screenList.result) as List<dynamic>) {
         final scale = kIgnoreDpi ? 1.0 : screen['scaleFactor'];
@@ -3216,13 +3227,8 @@ Future<List<Rect>> getScreenRectList() async {
       : await getScreenListNotWayland();
 }
 
-openMonitorInTheSameTab(
-  int i,
-  FFI ffi,
-  PeerInfo pi, {
-  bool updateCursorPos = true,
-  bool recordSelection = true,
-}) {
+openMonitorInTheSameTab(int i, FFI ffi, PeerInfo pi,
+    {bool updateCursorPos = true, bool recordSelection = true}) {
   if (recordSelection) {
     ffi.ffiModel.lastUserDisplay = i;
     ffi.ffiModel.cancelPendingRestoreTimer();
@@ -3246,24 +3252,16 @@ openMonitorInTheSameTab(
     sessionId: ffi.sessionId,
     value: Int32List.fromList(displays),
   );
-  ffi.ffiModel.switchToNewDisplay(
-    i,
-    ffi.sessionId,
-    ffi.id,
-    updateCursorPos: updateCursorPos,
-  );
+  ffi.ffiModel.switchToNewDisplay(i, ffi.sessionId, ffi.id,
+      updateCursorPos: updateCursorPos);
 }
 
 // Open new tab or window to show this monitor.
 // For now just open new window.
 //
 // screenRect is used to move the new window to the specified screen and set fullscreen.
-openMonitorInNewTabOrWindow(
-  int i,
-  String peerId,
-  PeerInfo pi, {
-  Rect? screenRect,
-}) {
+openMonitorInNewTabOrWindow(int i, String peerId, PeerInfo pi,
+    {Rect? screenRect}) {
   final args = {
     'window_id': stateGlobal.windowId,
     'peer_id': peerId,
@@ -3280,30 +3278,17 @@ openMonitorInNewTabOrWindow(
     };
   }
   DesktopMultiWindow.invokeMethod(
-    kMainWindowId,
-    kWindowEventOpenMonitorSession,
-    jsonEncode(args),
-  );
+      kMainWindowId, kWindowEventOpenMonitorSession, jsonEncode(args));
 }
 
-setNewConnectWindowFrame(
-  int windowId,
-  String peerId,
-  int preSessionCount,
-  WindowType windowType,
-  int? display,
-  Rect? screenRect,
-) async {
+setNewConnectWindowFrame(int windowId, String peerId, int preSessionCount,
+    WindowType windowType, int? display, Rect? screenRect) async {
   if (screenRect == null) {
     // Do not restore window position to new connection if there's a pre-session.
     // https://github.com/rustdesk/rustdesk/discussions/8825
     if (preSessionCount == 0) {
-      await restoreWindowPosition(
-        windowType,
-        windowId: windowId,
-        display: display,
-        peerId: peerId,
-      );
+      await restoreWindowPosition(windowType,
+          windowId: windowId, display: display, peerId: peerId);
     }
   } else {
     await tryMoveToScreenAndSetFullscreen(screenRect);
@@ -3316,12 +3301,8 @@ tryMoveToScreenAndSetFullscreen(Rect? screenRect) async {
   }
   final wc = WindowController.fromWindowId(stateGlobal.windowId);
   final curFrame = await wc.getFrame();
-  final frame = Rect.fromLTWH(
-    screenRect.left + 30,
-    screenRect.top + 30,
-    600,
-    400,
-  );
+  final frame =
+      Rect.fromLTWH(screenRect.left + 30, screenRect.top + 30, 600, 400);
   if (stateGlobal.fullscreen.isTrue &&
       curFrame.left <= frame.left &&
       curFrame.top <= frame.top &&
@@ -3409,6 +3390,100 @@ class _CountDownButtonState extends State<_CountDownButton> {
   }
 }
 
+importConfig(List<TextEditingController>? controllers, List<RxString>? errMsgs,
+    String? text) {
+  text = text?.trim();
+  if (text != null && text.isNotEmpty) {
+    try {
+      final sc = ServerConfig.decode(text);
+      if (isWeb || isIOS) {
+        sc.relayServer = '';
+      }
+      if (sc.idServer.isNotEmpty) {
+        Future<bool> success = setServerConfig(controllers, errMsgs, sc);
+        success.then((value) {
+          if (value) {
+            showToast(translate('Import server configuration successfully'));
+          } else {
+            showToast(translate('Invalid server configuration'));
+          }
+        });
+      } else {
+        showToast(translate('Invalid server configuration'));
+      }
+      return sc;
+    } catch (e) {
+      showToast(translate('Invalid server configuration'));
+    }
+  } else {
+    showToast(translate('Clipboard is empty'));
+  }
+}
+
+Future<bool> setServerConfig(
+  List<TextEditingController>? controllers,
+  List<RxString>? errMsgs,
+  ServerConfig config,
+) async {
+  String removeEndSlash(String input) {
+    if (input.endsWith('/')) {
+      return input.substring(0, input.length - 1);
+    }
+    return input;
+  }
+
+  config.idServer = removeEndSlash(config.idServer.trim());
+  config.relayServer = removeEndSlash(config.relayServer.trim());
+  config.apiServer = removeEndSlash(config.apiServer.trim());
+  config.key = config.key.trim();
+  if (controllers != null) {
+    controllers[0].text = config.idServer;
+    controllers[1].text = config.relayServer;
+    controllers[2].text = config.apiServer;
+    controllers[3].text = config.key;
+  }
+  // id
+  if (config.idServer.isNotEmpty && errMsgs != null) {
+    errMsgs[0].value = translate(await bind.mainTestIfValidServer(
+        server: config.idServer, testWithProxy: true));
+    if (errMsgs[0].isNotEmpty) {
+      return false;
+    }
+  }
+  // relay
+  if (config.relayServer.isNotEmpty && errMsgs != null) {
+    errMsgs[1].value = translate(await bind.mainTestIfValidServer(
+        server: config.relayServer, testWithProxy: true));
+    if (errMsgs[1].isNotEmpty) {
+      return false;
+    }
+  }
+  // api
+  if (config.apiServer.isNotEmpty && errMsgs != null) {
+    if (!config.apiServer.startsWith('http://') &&
+        !config.apiServer.startsWith('https://')) {
+      errMsgs[2].value =
+          '${translate("API Server")}: ${translate("invalid_http")}';
+      return false;
+    }
+  }
+  final oldApiServer = await bind.mainGetApiServer();
+
+  // should set one by one
+  await bind.mainSetOption(
+      key: 'custom-rendezvous-server', value: config.idServer);
+  await bind.mainSetOption(key: 'relay-server', value: config.relayServer);
+  await bind.mainSetOption(key: 'api-server', value: config.apiServer);
+  await bind.mainSetOption(key: 'key', value: config.key);
+  final newApiServer = await bind.mainGetApiServer();
+  if (oldApiServer.isNotEmpty &&
+      oldApiServer != newApiServer &&
+      gFFI.userModel.isLogin) {
+    gFFI.userModel.logOut(apiServer: oldApiServer);
+  }
+  return true;
+}
+
 ColorFilter? svgColor(Color? color) {
   if (color == null) {
     return null;
@@ -3450,47 +3525,43 @@ class ComboBox extends StatelessWidget {
               ? MyTheme.color(context).border2 ?? MyTheme.border
               : MyTheme.border,
         ),
-        borderRadius: BorderRadius.circular(
-          8,
-        ), //border raiuds of dropdown button
+        borderRadius:
+            BorderRadius.circular(8), //border raiuds of dropdown button
       ),
       height: 42, // should be the height of a TextField
-      child: Obx(
-        () => DropdownButton<String>(
-          isExpanded: true,
-          value: ref.value,
-          elevation: 16,
-          underline: Container(),
-          style: TextStyle(
-            color: enabled
-                ? Theme.of(context).textTheme.titleMedium?.color
-                : disabledTextColor(context, enabled),
-          ),
-          icon: const Icon(
-            Icons.expand_more_sharp,
-            size: 20,
-          ).marginOnly(right: 15),
-          onChanged: enabled
-              ? (String? newValue) {
-                  if (newValue != null && newValue != ref.value) {
-                    ref.value = newValue;
-                    current = newValue;
-                    onChanged(keys[values.indexOf(newValue)]);
+      child: Obx(() => DropdownButton<String>(
+            isExpanded: true,
+            value: ref.value,
+            elevation: 16,
+            underline: Container(),
+            style: TextStyle(
+                color: enabled
+                    ? Theme.of(context).textTheme.titleMedium?.color
+                    : disabledTextColor(context, enabled)),
+            icon: const Icon(
+              Icons.expand_more_sharp,
+              size: 20,
+            ).marginOnly(right: 15),
+            onChanged: enabled
+                ? (String? newValue) {
+                    if (newValue != null && newValue != ref.value) {
+                      ref.value = newValue;
+                      current = newValue;
+                      onChanged(keys[values.indexOf(newValue)]);
+                    }
                   }
-                }
-              : null,
-          items: values.map<DropdownMenuItem<String>>((String value) {
-            return DropdownMenuItem<String>(
-              value: value,
-              child: Text(
-                value,
-                style: const TextStyle(fontSize: 15),
-                overflow: TextOverflow.ellipsis,
-              ).marginOnly(left: 15),
-            );
-          }).toList(),
-        ),
-      ),
+                : null,
+            items: values.map<DropdownMenuItem<String>>((String value) {
+              return DropdownMenuItem<String>(
+                value: value,
+                child: Text(
+                  value,
+                  style: const TextStyle(fontSize: 15),
+                  overflow: TextOverflow.ellipsis,
+                ).marginOnly(left: 15),
+              );
+            }).toList(),
+          )),
     ).marginOnly(bottom: 5);
   }
 }
@@ -3505,12 +3576,22 @@ Widget loadPowered(BuildContext context) {
   if (bind.mainGetBuildinOption(key: "hide-powered-by-me") == 'Y') {
     return SizedBox.shrink();
   }
-  return Opacity(
-    opacity: 0.5,
-    child: Text(
-      translate("powered_by_me"),
-      overflow: TextOverflow.clip,
-      style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 9),
+  return MouseRegion(
+    cursor: SystemMouseCursors.click,
+    child: GestureDetector(
+      onTap: () {
+        launchUrl(Uri.parse('https://rustdesk.com'));
+      },
+      child: Opacity(
+          opacity: 0.5,
+          child: Text(
+            translate("powered_by_me"),
+            overflow: TextOverflow.clip,
+            style: Theme.of(context)
+                .textTheme
+                .bodySmall
+                ?.copyWith(fontSize: 9, decoration: TextDecoration.underline),
+          )),
     ),
   ).marginOnly(top: 6);
 }
@@ -3583,13 +3664,14 @@ class _LogoState extends State<_Logo> {
 Widget loadLogo() => const _Logo();
 
 Widget loadIcon(double size) {
-  return Image.asset(
-    'assets/icon.png',
-    width: size,
-    height: size,
-    errorBuilder: (ctx, error, stackTrace) =>
-        SvgPicture.asset('assets/icon.svg', width: size, height: size),
-  );
+  return Image.asset('assets/icon.png',
+      width: size,
+      height: size,
+      errorBuilder: (ctx, error, stackTrace) => SvgPicture.asset(
+            'assets/icon.svg',
+            width: size,
+            height: size,
+          ));
 }
 
 var imcomingOnlyHomeSize = Size(280, 300);
@@ -3609,19 +3691,73 @@ bool isInHomePage() {
   return controller.state.value.selected == 0;
 }
 
+Widget _buildPresetPasswordWarning() {
+  if (bind.mainGetBuildinOption(key: kOptionRemovePresetPasswordWarning) !=
+      'N') {
+    return SizedBox.shrink();
+  }
+  return Container(
+    color: Colors.yellow,
+    child: Column(
+      children: [
+        Align(
+            child: Text(
+          translate("Security Alert"),
+          style: TextStyle(
+            color: Colors.red,
+            fontSize:
+                18, // https://github.com/rustdesk/rustdesk-server-pro/issues/261
+            fontWeight: FontWeight.bold,
+          ),
+        )).paddingOnly(bottom: 8),
+        Text(
+          translate("preset_password_warning"),
+          style: TextStyle(color: Colors.red),
+        )
+      ],
+    ).paddingAll(8),
+  ); // Show a warning message if the Future completed with true
+}
+
+Widget buildPresetPasswordWarningMobile() {
+  if (bind.isPresetPasswordMobileOnly()) {
+    return _buildPresetPasswordWarning();
+  } else {
+    return SizedBox.shrink();
+  }
+}
+
+Widget buildPresetPasswordWarning() {
+  return FutureBuilder<bool>(
+    future: bind.isPresetPassword(),
+    builder: (BuildContext context, AsyncSnapshot<bool> snapshot) {
+      if (snapshot.connectionState == ConnectionState.waiting) {
+        return CircularProgressIndicator(); // Show a loading spinner while waiting for the Future to complete
+      } else if (snapshot.hasError) {
+        return Text(
+            'Error: ${snapshot.error}'); // Show an error message if the Future completed with an error
+      } else if (snapshot.hasData && snapshot.data == true) {
+        return _buildPresetPasswordWarning();
+      } else {
+        return SizedBox
+            .shrink(); // Show nothing if the Future completed with false or null
+      }
+    },
+  );
+}
+
 // https://github.com/leanflutter/window_manager/blob/87dd7a50b4cb47a375b9fc697f05e56eea0a2ab3/lib/src/widgets/virtual_window_frame.dart#L44
 Widget buildVirtualWindowFrame(BuildContext context, Widget child) {
   boxShadow() => isMainDesktopWindow
       ? <BoxShadow>[
-          if (stateGlobal.fullscreen.isFalse && stateGlobal.isMaximized.isFalse)
+          if (stateGlobal.fullscreen.isFalse || stateGlobal.isMaximized.isFalse)
             BoxShadow(
               color: Colors.black.withOpacity(0.1),
               offset: Offset(
-                0.0,
-                stateGlobal.isFocused.isTrue
-                    ? kFrameBoxShadowOffsetFocused
-                    : kFrameBoxShadowOffsetUnfocused,
-              ),
+                  0.0,
+                  stateGlobal.isFocused.isTrue
+                      ? kFrameBoxShadowOffsetFocused
+                      : kFrameBoxShadowOffsetUnfocused),
               blurRadius: kFrameBoxShadowBlurRadius,
             ),
         ]
@@ -3674,6 +3810,13 @@ setResizable(bool resizable) {
 
 isOptionFixed(String key) => bind.mainIsOptionFixed(key: key);
 
+bool isChangePermanentPasswordDisabled() =>
+    bind.mainGetBuildinOption(key: kOptionDisableChangePermanentPassword) ==
+    'Y';
+
+bool isChangeIdDisabled() =>
+    bind.mainGetBuildinOption(key: kOptionDisableChangeId) == 'Y';
+
 bool isUnlockPinDisabled() =>
     bind.mainGetBuildinOption(key: kOptionDisableUnlockPin) == 'Y';
 
@@ -3687,9 +3830,18 @@ get defaultOptionLang => isCustomClient ? 'default' : '';
 get defaultOptionTheme => isCustomClient ? 'system' : '';
 get defaultOptionYes => isCustomClient ? 'Y' : '';
 get defaultOptionNo => isCustomClient ? 'N' : '';
+get defaultOptionWhitelist => isCustomClient ? ',' : '';
+get defaultOptionAccessMode => isCustomClient ? 'custom' : '';
+get defaultOptionApproveMode => isCustomClient ? 'password-click' : '';
 
 bool whitelistNotEmpty() {
+  // https://rustdesk.com/docs/en/self-host/client-configuration/advanced-settings/#whitelist
   final v = bind.mainGetOptionSync(key: kOptionWhitelist);
+  return v != '' && v != ',';
+}
+
+bool idWhitelistNotEmpty() {
+  final v = bind.mainGetOptionSync(key: kOptionIdWhitelist);
   return v != '' && v != ',';
 }
 
@@ -3717,8 +3869,30 @@ disableWindowMovable(int? windowId) {
   }
 }
 
+Widget netWorkErrorWidget() {
+  return Center(
+      child: Column(
+    mainAxisAlignment: MainAxisAlignment.center,
+    crossAxisAlignment: CrossAxisAlignment.center,
+    children: [
+      if (!gFFI.userModel.networkErrorFromServer.value)
+        Text(translate("network_error_tip")),
+      ElevatedButton(
+              onPressed: gFFI.userModel.refreshCurrentUser,
+              child: Text(translate("Retry")))
+          .marginSymmetric(vertical: 16),
+      SelectableText(gFFI.userModel.networkError.value,
+          style: TextStyle(fontSize: 11, color: Colors.red)),
+    ],
+  ));
+}
+
 List<ResizeEdge>? get windowManagerEnableResizeEdges => isWindows
-    ? [ResizeEdge.topLeft, ResizeEdge.top, ResizeEdge.topRight]
+    ? [
+        ResizeEdge.topLeft,
+        ResizeEdge.top,
+        ResizeEdge.topRight,
+      ]
     : null;
 
 List<SubWindowResizeEdge>? get subWindowManagerEnableResizeEdges => isWindows
@@ -3731,6 +3905,23 @@ List<SubWindowResizeEdge>? get subWindowManagerEnableResizeEdges => isWindows
 
 void earlyAssert() {
   assert('\1' == '1');
+}
+
+void checkUpdate() {
+  if (!isWeb) {
+    if (!bind.isCustomClient()) {
+      platformFFI.registerEventHandler(
+          kCheckSoftwareUpdateFinish, kCheckSoftwareUpdateFinish,
+          (Map<String, dynamic> evt) async {
+        if (evt['url'] is String) {
+          stateGlobal.updateUrl.value = evt['url'];
+        }
+      });
+      Timer(const Duration(seconds: 1), () async {
+        bind.mainGetSoftwareUpdateUrl();
+      });
+    }
+  }
 }
 
 // https://github.com/flutter/flutter/issues/153560#issuecomment-2497160535
@@ -3757,45 +3948,53 @@ Widget workaroundWindowBorder(BuildContext context, Widget child) {
   final width = isLight ? 0.5 : 0.1;
 
   getBorderWidget(Widget child) {
-    return Obx(
-      () => (stateGlobal.isMaximized.isTrue || stateGlobal.fullscreen.isTrue)
-          ? Offstage()
-          : child,
-    );
+    return Obx(() =>
+        (stateGlobal.isMaximized.isTrue || stateGlobal.fullscreen.isTrue)
+            ? Offstage()
+            : child);
   }
 
   final List<Widget> borders = [
-    getBorderWidget(Container(color: borderColor, height: width + 0.1)),
+    getBorderWidget(Container(
+      color: borderColor,
+      height: width + 0.1,
+    ))
   ];
   if (kWindowType == WindowType.Main && !isLight) {
     borders.addAll([
-      getBorderWidget(
-        Align(
-          alignment: Alignment.topLeft,
-          child: Container(color: borderColor, width: width),
+      getBorderWidget(Align(
+        alignment: Alignment.topLeft,
+        child: Container(
+          color: borderColor,
+          width: width,
         ),
-      ),
-      getBorderWidget(
-        Align(
-          alignment: Alignment.topRight,
-          child: Container(color: borderColor, width: width),
+      )),
+      getBorderWidget(Align(
+        alignment: Alignment.topRight,
+        child: Container(
+          color: borderColor,
+          width: width,
         ),
-      ),
-      getBorderWidget(
-        Align(
-          alignment: Alignment.bottomCenter,
-          child: Container(color: borderColor, height: width),
+      )),
+      getBorderWidget(Align(
+        alignment: Alignment.bottomCenter,
+        child: Container(
+          color: borderColor,
+          height: width,
         ),
-      ),
+      )),
     ]);
   }
-  return Stack(children: [child, ...borders]);
+  return Stack(
+    children: [
+      child,
+      ...borders,
+    ],
+  );
 }
 
 void updateTextAndPreserveSelection(
-  TextEditingController controller,
-  String text,
-) {
+    TextEditingController controller, String text) {
   // Only care about select all for now.
   final isSelected = controller.selection.isValid &&
       controller.selection.end > controller.selection.start;
@@ -3805,28 +4004,70 @@ void updateTextAndPreserveSelection(
 
   if (isSelected) {
     controller.selection = TextSelection(
-      baseOffset: 0,
-      extentOffset: controller.value.text.length,
-    );
+        baseOffset: 0, extentOffset: controller.value.text.length);
+  }
+}
+
+List<String> getPrinterNames() {
+  final printerNamesJson = bind.mainGetPrinterNames();
+  if (printerNamesJson.isEmpty) {
+    return [];
+  }
+  try {
+    final List<dynamic> printerNamesList = jsonDecode(printerNamesJson);
+    final appPrinterName = '$appName Printer';
+    return printerNamesList
+        .map((e) => e.toString())
+        .where((name) => name != appPrinterName)
+        .toList();
+  } catch (e) {
+    debugPrint('failed to parse printer names, err: $e');
+    return [];
   }
 }
 
 String _appName = '';
 String get appName {
   if (_appName.isEmpty) {
-    final name = bind.mainGetAppNameSync();
-    _appName = (name == 'LocalDesk' || name == 'landesk') ? 'LanDesk' : name;
+    _appName = bind.mainGetAppNameSync();
   }
   return _appName;
 }
 
 String getConnectionText(bool secure, bool direct, String streamType) {
-  final connectionText = translate("Direct and encrypted connection");
+  String connectionText;
+  if (secure && direct) {
+    connectionText = translate("Direct and encrypted connection");
+  } else if (secure && !direct) {
+    connectionText = translate("Relayed and encrypted connection");
+  } else if (!secure && direct) {
+    connectionText = translate("Direct and unencrypted connection");
+  } else {
+    connectionText = translate("Relayed and unencrypted connection");
+  }
+  if (streamType == 'Relay') {
+    streamType = 'TCP';
+  }
   if (streamType.isEmpty) {
     return connectionText;
   } else {
     return '$connectionText ($streamType)';
   }
+}
+
+String decode_http_response(http.Response resp) {
+  try {
+    // https://github.com/rustdesk/rustdesk-server-pro/discussions/758
+    return utf8.decode(resp.bodyBytes, allowMalformed: true);
+  } catch (e) {
+    debugPrint('Failed to decode response as UTF-8: $e');
+    // Fallback to bodyString which handles encoding automatically
+    return resp.body;
+  }
+}
+
+bool peerTabShowNote(PeerTabIndex peerTabIndex) {
+  return peerTabIndex == PeerTabIndex.ab || peerTabIndex == PeerTabIndex.group;
 }
 
 // TODO: We should support individual bits combinations in the future.

@@ -1,11 +1,11 @@
 [Desktop Entry]
-Name=LocalDesk
+Name=LanDesk
 NoDisplay=true
-MimeType=x-scheme-handler/localdesk;
-TryExec=localdesk
-Exec=localdesk %u
-Icon=localdesk
+MimeType=x-scheme-handler/landesk;
+TryExec=landesk
+Exec=landesk %u
+Icon=landesk
 Terminal=false
 Type=Application
 StartupNotify=false
-StartupWMClass=localdesk
+StartupWMClass=landesk

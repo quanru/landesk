@@ -1,28 +1,9 @@
-name: LocalDesk Installers CI
+name: Full Flutter CI
 
 on:
   workflow_dispatch:
-    inputs:
-      build-mobile:
-        description: Include Android and iOS builds
-        type: boolean
-        default: true
-  pull_request:
-    paths-ignore:
-    - "docs/**"
-    - "README.md"
-    - ".github/workflows/ci.yml"
-
-concurrency:
-  group: localdesk-flutter-ci-${{ github.ref }}
-  cancel-in-progress: true
-
 jobs:
-  run-pr-ci:
-    permissions:
-      contents: read
+  run-ci:
     uses: ./.github/workflows/flutter-build.yml
     with:
-      upload-artifact: true
-      publish-release: false
-      build-mobile: ${{ github.event_name == 'workflow_dispatch' && inputs.build-mobile }}
+      upload-artifact: false

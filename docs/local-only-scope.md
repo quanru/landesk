@@ -1,42 +1,21 @@
-# Local-only product scope
+# LanDesk 原生迁移范围
 
-landesk has no cloud sign-in, registration, cloud address book/device sync,
-rendezvous/ID server, NAT punching or relay fallback. Public IP endpoints are
-rejected. Tailscale private addresses remain supported.
+本文描述 `migration/rustdesk-native` 分支；尚未发布。固定官方基线见 `tools/migration/native-baseline.json`。
 
-Removed from source, rather than hidden:
-- Native account management UI, Rust identity CRUD/keychain manager, session
-  identity lookup/default binding, shared identity configuration fields and FFI.
-- Online updater and downloadable plugin modules, startup/IPC/session hooks,
-  bridge methods, Cargo feature declarations and direct HTTP/update dependencies.
-- The obsolete Sciter frontend, which contained cloud login and public-server
-  configuration. Desktop builds require the Flutter feature.
-- Update manifest generation/publishing and legacy Web account bridge methods.
+## 连接与认证
 
-Keep these local functions:
-- LAN/private-VPN direct IP connections and LAN discovery.
-- Remote-host username/password authentication and fingerprint verification.
-- Credentials remembered per host, local recents/favorites and virtual-key layouts.
-- Remote desktop, input, clipboard, files, terminal and the LAN web gateway.
-- Built-in Flutter rendering/native integration plugins (not downloaded plugins).
+- 原生客户端只接受数值私网 IP（含回环、链路本地、Tailscale 使用的 CGNAT 段、IPv6 ULA），不解析公网 ID 或主机名，不走代理、会合、NAT 穿透或中继回退。
+- 原生 TCP 直连使用官方未加密传输；加密由 Tailscale／VPN 等外层提供。这不取消官方密码、被控端批准和会话权限。
+- HTTPS 浏览器网关保留 SubnetDesk 来源的 Web 访问实现，内部接入官方会话认证；浏览器密码响应遵循官方 Hash/LoginRequest，界面随官方 PermissionInfo 更新权限。
+- 端口转发目标同样只接受数值私网地址；`localhost` 仅映射到回环地址。
+- 局域网发现、最近连接、收藏、自定义虚拟按键与主题继续保留。
 
-Generated Rust/Dart/C bridges must be regenerated from src/flutter_ffi.rs before
-building; the removed account/updater/plugin methods are no longer generated.
-The lockfile can retain TLS dependencies needed by local encrypted transports;
-a dependency name alone is not evidence of an online service.
+## 配置与上游代码
 
-Existing retired account metadata is ignored and omitted on the next config save.
-The application no longer reads the retired account keychain namespace. This
-source cleanup does not delete credentials already stored in the OS keychain.
-Per-host remembered credentials remain supported.
+使用新的 LanDesk 配置命名空间，不读取或转换旧 LocalDesk 协议、账户、公钥、凭据或布局。macOS 配置位于 `~/Library/Preferences/dev.quanru.LanDesk/`。
 
-The residual check scans implementations, manifest and generated bridge symbols,
-not just UI entrypoints. Old protocol definitions, translation labels and
-configuration rejection rules can still name retired features without implementing
-them. This is not an exhaustive packet-capture proof. Tailscale's own networking
-and Apple platform certificate verification are outside landesk.
+本轮以官方源码为基础禁用线上服务启动和入口；部分未调用的上游实现仍留在源码中，不能声称它们已全部删除。AGPL 许可证与 RustDesk、SubnetDesk 的实际贡献致谢均保留。
 
-The transport constructor and authenticated forwarding destinations enforce the
-private-IP policy before connecting. Cloud address-book/group token storage and
-retired NAT/proxy config fields are removed. See validation/network-path-audit-2026-10-27.md
-for the call-path audit, test evidence and packet-capture limits.
+## 验证边界
+
+已通过的编译、测试和实测记录见 `docs/validation/native-migration-progress-2026-11-04.md`。本机监听成功或浏览器页面加载成功不代表真实桌面、输入、旋转及各平台均已验收。没有把第三方 TLS 依赖的存在当成公网连接证据，也没有宣称完成全进程抓包审计。

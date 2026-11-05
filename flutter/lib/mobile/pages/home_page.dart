@@ -48,7 +48,9 @@ class HomePageState extends State<HomePage> {
   void initPages() {
     _pages.clear();
     if (!bind.isIncomingOnly()) {
-      _pages.add(ConnectionPage(appBarActions: []));
+      _pages.add(ConnectionPage(
+        appBarActions: [],
+      ));
     }
     if (isAndroid && !bind.isOutgoingOnly()) {
       _chatPageTabIndex = _pages.length;
@@ -59,93 +61,49 @@ class HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    final wide = MediaQuery.sizeOf(context).width >= 900;
-    void selectPage(int index) {
-      setState(() {
-        if (_selectedIndex == index) return;
-        _selectedIndex = index;
-        if (isChatPageCurrentTab) {
-          gFFI.chatModel.hideChatIconOverlay();
-          gFFI.chatModel.hideChatWindowOverlay();
-          gFFI.chatModel.mobileClearClientUnread(
-            gFFI.chatModel.currentKey.connId,
-          );
-        }
-      });
-    }
-
     return WillPopScope(
-      onWillPop: () async {
-        if (_selectedIndex != 0) {
-          setState(() {
-            _selectedIndex = 0;
-          });
-        } else {
-          return true;
-        }
-        return false;
-      },
-      child: Scaffold(
-        // backgroundColor: MyTheme.grayBg,
-        appBar: AppBar(
-          centerTitle: false,
-          toolbarHeight: 64,
-          titleSpacing: 24,
-          title: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: Image.asset('assets/icon.png', width: 28, height: 28),
-              ),
-              const SizedBox(width: 10),
-              Flexible(child: appTitle()),
-            ],
+        onWillPop: () async {
+          if (_selectedIndex != 0) {
+            setState(() {
+              _selectedIndex = 0;
+            });
+          } else {
+            return true;
+          }
+          return false;
+        },
+        child: Scaffold(
+          // backgroundColor: MyTheme.grayBg,
+          appBar: AppBar(
+            centerTitle: true,
+            title: appTitle(),
+            actions: _pages.elementAt(_selectedIndex).appBarActions,
           ),
-          actions: _pages.elementAt(_selectedIndex).appBarActions,
-        ),
-        bottomNavigationBar: wide
-            ? null
-            : NavigationBar(
-                key: navigationBarKey,
-                height: 64,
-                selectedIndex: _selectedIndex,
-                onDestinationSelected: selectPage,
-                destinations: _pages
-                    .map(
-                      (page) => NavigationDestination(
-                        icon: page.icon,
-                        label: page.title,
-                      ),
-                    )
-                    .toList(),
-              ),
-        body: Row(
-          children: [
-            if (wide)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(12, 16, 8, 16),
-                child: NavigationRail(
-                  minWidth: 72,
-                  labelType: NavigationRailLabelType.all,
-                  groupAlignment: -1,
-                  selectedIndex: _selectedIndex,
-                  onDestinationSelected: selectPage,
-                  destinations: _pages
-                      .map(
-                        (page) => NavigationRailDestination(
-                          icon: page.icon,
-                          label: Text(page.title),
-                        ),
-                      )
-                      .toList(),
-                ),
-              ),
-            Expanded(child: _pages.elementAt(_selectedIndex)),
-          ],
-        ),
-      ),
-    );
+          bottomNavigationBar: BottomNavigationBar(
+            key: navigationBarKey,
+            items: _pages
+                .map((page) =>
+                    BottomNavigationBarItem(icon: page.icon, label: page.title))
+                .toList(),
+            currentIndex: _selectedIndex,
+            type: BottomNavigationBarType.fixed,
+            selectedItemColor: MyTheme.accent, //
+            unselectedItemColor: MyTheme.darkGray,
+            onTap: (index) => setState(() {
+              // close chat overlay when go chat page
+              if (_selectedIndex != index) {
+                _selectedIndex = index;
+                if (isChatPageCurrentTab) {
+                  gFFI.chatModel.hideChatIconOverlay();
+                  gFFI.chatModel.hideChatWindowOverlay();
+                  gFFI.chatModel.mobileClearClientUnread(
+                      gFFI.chatModel.currentKey.connId);
+                }
+              }
+            }),
+          ),
+          body: _pages.elementAt(_selectedIndex),
+        ));
   }
 
   Widget appTitle() {
@@ -154,9 +112,8 @@ class HomePageState extends State<HomePage> {
     if (isChatPageCurrentTab &&
         currentUser != null &&
         currentKey.peerId.isNotEmpty) {
-      final connected = gFFI.serverModel.clients.any(
-        (e) => e.id == currentKey.connId,
-      );
+      final connected =
+          gFFI.serverModel.clients.any((e) => e.id == currentKey.connId);
       return Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
@@ -173,24 +130,18 @@ class HomePageState extends State<HomePage> {
           Expanded(
             child: Center(
               child: Row(
-                mainAxisSize: MainAxisSize.min,
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Flexible(
-                    child: Text(
-                      "${currentUser.firstName}   ${currentUser.id}",
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
+                  Text(
+                    "${currentUser.firstName}   ${currentUser.id}",
                   ),
                   if (connected)
                     Container(
                       width: 10,
                       height: 10,
                       decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: Color.fromARGB(255, 133, 246, 199),
-                      ),
+                          shape: BoxShape.circle,
+                          color: Color.fromARGB(255, 133, 246, 199)),
                     ).marginSymmetric(horizontal: 2),
                 ],
               ),
@@ -199,14 +150,13 @@ class HomePageState extends State<HomePage> {
         ],
       );
     }
-    return Text(appName, maxLines: 1, overflow: TextOverflow.ellipsis);
+    return Text(bind.mainGetAppNameSync());
   }
 }
 
 class WebHomePage extends StatelessWidget {
-  final connectionPage = ConnectionPage(
-    appBarActions: <Widget>[const WebSettingsPage()],
-  );
+  final connectionPage =
+      ConnectionPage(appBarActions: <Widget>[const WebSettingsPage()]);
 
   @override
   Widget build(BuildContext context) {
@@ -216,7 +166,7 @@ class WebHomePage extends StatelessWidget {
       // backgroundColor: MyTheme.grayBg,
       appBar: AppBar(
         centerTitle: true,
-        title: Text("${appName} (Preview)"),
+        title: Text("${bind.mainGetAppNameSync()} (Preview)"),
         actions: connectionPage.appBarActions,
       ),
       body: connectionPage,
@@ -238,7 +188,7 @@ class WebHomePage extends StatelessWidget {
           return;
         }
         list.removeAt(0);
-        fakelink = "localdesk://${list.join(s)}";
+        fakelink = "rustdesk://${list.join(s)}";
         break;
       }
     }
@@ -257,6 +207,8 @@ class WebHomePage extends StatelessWidget {
     bool isViewCamera = false;
     bool isTerminal = false;
     String? id;
+    String? password;
+    var loginMethod = '';
     for (int i = 0; i < args.length; i++) {
       switch (args[i]) {
         case '--connect':
@@ -286,22 +238,23 @@ class WebHomePage extends StatelessWidget {
           i++;
           break;
         case '--password':
-          // LAN credentials must be entered interactively and are never accepted
-          // from command lines or deep links where they can leak via process state.
+          password = args[i + 1];
           i++;
+          break;
+        case '--request-approval':
+          loginMethod = 'request-approval';
           break;
         default:
           break;
       }
     }
     if (id != null) {
-      connect(
-        context,
-        id,
-        isFileTransfer: isFileTransfer,
-        isViewCamera: isViewCamera,
+      connect(context, id, 
+        isFileTransfer: isFileTransfer, 
+        isViewCamera: isViewCamera, 
         isTerminal: isTerminal,
-      );
+        loginMethod: loginMethod,
+        password: password);
     }
   }
 }

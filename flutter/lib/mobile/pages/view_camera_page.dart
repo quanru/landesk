@@ -40,11 +40,17 @@ class ViewCameraPage extends StatefulWidget {
   ViewCameraPage(
       {Key? key,
       required this.id,
-      this.password})
+      this.loginMethod = '',
+      this.password,
+      this.isSharedPassword,
+      this.forceRelay})
       : super(key: key);
 
   final String id;
+  final String loginMethod;
   final String? password;
+  final bool? isSharedPassword;
+  final bool? forceRelay;
 
   @override
   State<ViewCameraPage> createState() => _ViewCameraPageState(id);
@@ -86,7 +92,10 @@ class _ViewCameraPageState extends State<ViewCameraPage>
     gFFI.start(
       widget.id,
       isViewCamera: true,
+      loginMethod: widget.loginMethod,
       password: widget.password,
+      isSharedPassword: widget.isSharedPassword,
+      forceRelay: widget.forceRelay,
     );
     WidgetsBinding.instance.addPostFrameCallback((_) {
       SystemChrome.setEnabledSystemUIMode(SystemUiMode.manual, overlays: []);
@@ -135,7 +144,7 @@ class _ViewCameraPageState extends State<ViewCameraPage>
     // `on_voice_call_closed` should be called when the connection is ended.
     // The inner logic of `on_voice_call_closed` will check if the voice call is active.
     // Only one client is considered here for now.
-    gFFI.chatModel.onVoiceCallClosed("End connetion");
+    gFFI.chatModel.onVoiceCallClosed("End connection");
   }
 
   @override
@@ -202,9 +211,9 @@ class _ViewCameraPageState extends State<ViewCameraPage>
                     (keyboardIsVisible || _showGestureHelp)
                         ? Icons.expand_more
                         : Icons.expand_less,
-                    color: Theme.of(context).colorScheme.onPrimary,
+                    color: Colors.white,
                   ),
-                  backgroundColor: Theme.of(context).colorScheme.primary,
+                  backgroundColor: MyTheme.accent,
                   onPressed: () {
                     setState(() {
                       if (keyboardIsVisible) {
@@ -287,8 +296,8 @@ class _ViewCameraPageState extends State<ViewCameraPage>
 
   Widget getBottomAppBar() {
     return BottomAppBar(
-      elevation: 0,
-      color: Theme.of(context).colorScheme.surface,
+      elevation: 10,
+      color: MyTheme.accent,
       child: Row(
         mainAxisSize: MainAxisSize.max,
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -296,14 +305,14 @@ class _ViewCameraPageState extends State<ViewCameraPage>
           Row(
               children: <Widget>[
                     IconButton(
-                      color: Theme.of(context).colorScheme.onSurface,
+                      color: Colors.white,
                       icon: Icon(Icons.clear),
                       onPressed: () {
                         clientClose(sessionId, gFFI);
                       },
                     ),
                     IconButton(
-                      color: Theme.of(context).colorScheme.onSurface,
+                      color: Colors.white,
                       icon: Icon(Icons.tv),
                       onPressed: () {
                         setState(() => _showEdit = false);
@@ -318,11 +327,11 @@ class _ViewCameraPageState extends State<ViewCameraPage>
                               future: gFFI.invokeMethod(
                                   "get_value", "KEY_IS_SUPPORT_VOICE_CALL"),
                               hasData: (isSupportVoiceCall) => IconButton(
-                                    color: Theme.of(context).colorScheme.onSurface,
+                                    color: Colors.white,
                                     icon: isAndroid && isSupportVoiceCall
                                         ? SvgPicture.asset('assets/chat.svg',
                                             colorFilter: ColorFilter.mode(
-                                                Theme.of(context).colorScheme.onSurface, BlendMode.srcIn))
+                                                Colors.white, BlendMode.srcIn))
                                         : Icon(Icons.message),
                                     onPressed: () =>
                                         isAndroid && isSupportVoiceCall
@@ -332,7 +341,7 @@ class _ViewCameraPageState extends State<ViewCameraPage>
                         ]) +
                   [
                     IconButton(
-                      color: Theme.of(context).colorScheme.onSurface,
+                      color: Colors.white,
                       icon: Icon(Icons.more_vert),
                       onPressed: () {
                         setState(() => _showEdit = false);
@@ -341,7 +350,7 @@ class _ViewCameraPageState extends State<ViewCameraPage>
                     ),
                   ]),
           Obx(() => IconButton(
-                color: Theme.of(context).colorScheme.onSurface,
+                color: Colors.white,
                 icon: Icon(Icons.expand_more),
                 onPressed: gFFI.ffiModel.waitForFirstImage.isTrue
                     ? null
@@ -511,7 +520,7 @@ class _ViewCameraPageState extends State<ViewCameraPage>
       VoiceCallStatus.connected
     ].contains(gFFI.chatModel.voiceCallStatus.value);
     final menus = [
-      makeTextMenu('Text chat', Icon(Icons.message, color: Theme.of(context).colorScheme.primary),
+      makeTextMenu('Text chat', Icon(Icons.message, color: MyTheme.accent),
           () => onPressedTextChat(widget.id)),
       isInVoice
           ? makeTextMenu(
@@ -527,7 +536,7 @@ class _ViewCameraPageState extends State<ViewCameraPage>
               'Voice call',
               SvgPicture.asset(
                 'assets/call_wait.svg',
-                colorFilter: ColorFilter.mode(Theme.of(context).colorScheme.primary, BlendMode.srcIn),
+                colorFilter: ColorFilter.mode(MyTheme.accent, BlendMode.srcIn),
               ),
               onPressVoiceCall),
     ];
@@ -579,10 +588,14 @@ void showOptions(
   if (pi.displays.length > 1 && pi.currentDisplay != kAllDisplayValue) {
     final cur = pi.currentDisplay;
     final children = <Widget>[];
-    final colors = Theme.of(context).colorScheme;
-    final numColorSelected = colors.onPrimary;
-    final numColorUnselected = colors.onSurface;
-    final numBgSelected = colors.primary;
+    final isDarkTheme = MyTheme.currentThemeMode() == ThemeMode.dark;
+    final numColorSelected = Colors.white;
+    final numColorUnselected = isDarkTheme ? Colors.grey : Colors.black87;
+    // We can't use `Theme.of(context).primaryColor` here, the color is:
+    // - light theme: 0xff2196f3 (Colors.blue)
+    // - dark theme: 0xff212121 (the canvas color?)
+    final numBgSelected =
+        Theme.of(context).colorScheme.primary.withOpacity(0.6);
     for (var i = 0; i < pi.displays.length; ++i) {
       children.add(InkWell(
           onTap: () {
@@ -594,9 +607,9 @@ void showOptions(
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                  border: Border.all(color: colors.outlineVariant),
-                  borderRadius: BorderRadius.circular(10),
-                  color: i == cur ? numBgSelected : colors.surfaceContainer),
+                  border: Border.all(color: Theme.of(context).hintColor),
+                  borderRadius: BorderRadius.circular(2),
+                  color: i == cur ? numBgSelected : null),
               child: Center(
                   child: Text((i + 1).toString(),
                       style: TextStyle(

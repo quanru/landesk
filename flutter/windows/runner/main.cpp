@@ -1,7 +1,7 @@
-#include <app_links/app_links_plugin_c_api.h>
 #include <flutter/dart_project.h>
 #include <flutter/flutter_view_controller.h>
 #include <tchar.h>
+#include <uni_links_desktop/uni_links_desktop_plugin.h>
 #include <windows.h>
 
 #include <algorithm>
@@ -10,6 +10,7 @@
 #include "win32_desktop.h"
 #include "flutter_window.h"
 #include "utils.h"
+#include "service_control.h"
 
 typedef char** (*FUNC_RUSTDESK_CORE_MAIN)(int*);
 typedef void (*FUNC_RUSTDESK_FREE_ARGS)( char**, int);
@@ -23,6 +24,9 @@ const wchar_t* getWindowClassName();
 int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
                       _In_ wchar_t *command_line, _In_ int show_command)
 {
+  if (auto result = service_control::HandleCommand(command_line)) {
+    return static_cast<int>(*result);
+  }
   HINSTANCE hInstance = LoadLibraryA("librustdesk.dll");
   if (!hInstance)
   {
@@ -58,7 +62,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
     for (const auto& argument : command_line_arguments) {
       args_str += (argument + " ");
     }
-    // std::cout << "LocalDesk [" << args_str << "], core returns false, exiting without launching Flutter app." << std::endl;
+    // std::cout << "RustDesk [" << args_str << "], core returns false, exiting without launching Flutter app." << std::endl;
     return EXIT_SUCCESS;
   }
   std::vector<std::string> rust_args(c_args, c_args + args_len);
@@ -80,7 +84,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
         command_line_arguments.end());
   }
 
-  std::wstring app_name = L"LocalDesk";
+  std::wstring app_name = L"RustDesk";
   FUNC_RUSTDESK_GET_APP_NAME get_rustdesk_app_name = (FUNC_RUSTDESK_GET_APP_NAME)GetProcAddress(hInstance, "get_rustdesk_app_name");
   if (get_rustdesk_app_name) {
     wchar_t app_name_buffer[512] = {0};
@@ -104,8 +108,16 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
     }
     if (!allow_multiple_instances) {
       if (!command_line_arguments.empty()) {
+        // The process launched by the browser owns the foreground permission.
+        // Transfer it to the existing RustDesk process before dispatching the
+        // URI so that it can bring an existing session to the foreground.
+        DWORD pid = 0;
+        ::GetWindowThreadProcessId(hwnd, &pid);
+        if (pid != 0) {
+          ::AllowSetForegroundWindow(pid);
+        }
         // Dispatch command line arguments
-        SendAppLink(hwnd);
+        DispatchToUniLinksDesktop(hwnd);
       } else {
         // Not called with arguments, or just open the app shortcut on desktop.
         // So we just show the main window instead.
@@ -150,11 +162,11 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
 
   Win32Desktop::GetWorkArea(workarea_origin, workarea_size);
 
-  // Compute window bounds for default main window position: (10, 10) x(1100, 760)
+  // Compute window bounds for default main window position: (10, 10) x(800, 600)
   Win32Window::Point relative_origin(10, 10);
 
   Win32Window::Point origin(workarea_origin.x + relative_origin.x, workarea_origin.y + relative_origin.y);
-  Win32Window::Size size(1100u, 760u);
+  Win32Window::Size size(800u, 600u);
 
   // Fit the window to the monitor's work area.
   Win32Desktop::FitToWorkArea(origin, size);

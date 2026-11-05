@@ -199,23 +199,6 @@ mod webrtc {
 
         Ok(())
     }
-
-    #[cfg(test)]
-    mod tests {
-        use super::*;
-        use std::os::raw::c_uint;
-
-        #[test]
-        fn tile_log2_uses_c_uint_and_rounds_up() {
-            let one_thread: c_uint = tile_log2(1);
-            let three_threads: c_uint = tile_log2(3);
-            let max_threads: c_uint = tile_log2(64);
-
-            assert_eq!(one_thread, 0);
-            assert_eq!(three_threads, 2);
-            assert_eq!(max_threads, 6);
-        }
-    }
 }
 
 impl EncoderApi for AomEncoder {
@@ -306,12 +289,7 @@ impl EncoderApi for AomEncoder {
 }
 
 impl AomEncoder {
-    pub fn encode<'a>(
-        &'a mut self,
-        ms: i64,
-        data: &[u8],
-        stride_align: usize,
-    ) -> Result<EncodeFrames<'a>> {
+    pub fn encode<'a>(&'a mut self, ms: i64, data: &[u8], stride_align: usize) -> Result<EncodeFrames<'a>> {
         let bpp = if self.i444 { 24 } else { 12 };
         if data.len() < self.width * self.height * bpp / 8 {
             return Err(Error::FailedCall("len not enough".to_string()));

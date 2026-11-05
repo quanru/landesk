@@ -1,0 +1,202 @@
+{
+  "date": "2026-11-04",
+  "refs": {
+    "rustdesk_base": "5abf4e9724dc9a8c9b45dfe13e71af11616eb2c8",
+    "subnet_base": "cdde2030deb18dcc148c13063b52c747dd3b448e",
+    "landesk": "758fef56b0d9daf56c44b6bb43cf0e667a8ad262",
+    "rustdesk": "55786aaa5709ac0a450aabcf06f9d1fee3119908"
+  },
+  "upstream_release": {
+    "tag": "1.5.1",
+    "sha": "23e5bb471a040d62f0a6ad52591fb30784265b73",
+    "post_tag_commits": 12
+  },
+  "common_refs": {
+    "current": "2e7979e8bbd88b481457e012531d3e07017f9799",
+    "upstream": "fae47e024dd83cef6aaecde0aa7d11731df11649"
+  },
+  "diff_metrics": {
+    "subnet_layer": {
+      "all_paths": 559,
+      "filtered_source": {
+        "files": 217,
+        "added": 37592,
+        "deleted": 32683
+      }
+    },
+    "landesk_layer": {
+      "all_paths": 488,
+      "filtered_source": {
+        "files": 158,
+        "added": 9946,
+        "deleted": 11053
+      }
+    },
+    "current_gap": {
+      "all_paths": 901,
+      "filtered_source": {
+        "files": 340,
+        "added": 32306,
+        "deleted": 74122
+      }
+    }
+  },
+  "merge_preview": {
+    "exit": 1,
+    "conflict_messages": 234,
+    "types": {
+      "CONFLICT (modify/delete": 46,
+      "CONFLICT (content": 172,
+      "CONFLICT (add/add": 15,
+      "CONFLICT (submodule": 1
+    },
+    "unmerged_files": 234,
+    "filtered_source_unmerged_files": 103
+  },
+  "patch_checks": [
+    {
+      "path": "flutter/lib/common/widgets/connection_activity_line.dart",
+      "group": "new_product_module",
+      "applies_textually": true,
+      "detail": ""
+    },
+    {
+      "path": "flutter/lib/common/widgets/device_empty_state.dart",
+      "group": "new_product_module",
+      "applies_textually": true,
+      "detail": ""
+    },
+    {
+      "path": "flutter/lib/common/widgets/lan_connect_dialog.dart",
+      "group": "new_product_module",
+      "applies_textually": true,
+      "detail": ""
+    },
+    {
+      "path": "flutter/lib/common/widgets/quick_zoom_gesture.dart",
+      "group": "new_product_module",
+      "applies_textually": true,
+      "detail": ""
+    },
+    {
+      "path": "flutter/lib/common/widgets/settings_section_card.dart",
+      "group": "new_product_module",
+      "applies_textually": true,
+      "detail": ""
+    },
+    {
+      "path": "flutter/lib/common/widgets/source_license_section.dart",
+      "group": "new_product_module",
+      "applies_textually": true,
+      "detail": ""
+    },
+    {
+      "path": "flutter/lib/common/widgets/theme_mode_selector.dart",
+      "group": "new_product_module",
+      "applies_textually": true,
+      "detail": ""
+    },
+    {
+      "path": "flutter/lib/mobile/widgets/custom_key_overlay.dart",
+      "group": "new_product_module",
+      "applies_textually": true,
+      "detail": ""
+    },
+    {
+      "path": "flutter/lib/mobile/widgets/remote_input_stack.dart",
+      "group": "new_product_module",
+      "applies_textually": true,
+      "detail": ""
+    },
+    {
+      "path": "flutter/lib/mobile/widgets/remote_session_sidebar.dart",
+      "group": "new_product_module",
+      "applies_textually": true,
+      "detail": ""
+    },
+    {
+      "path": "flutter/lib/mobile/widgets/remote_shortcut.dart",
+      "group": "new_product_module",
+      "applies_textually": true,
+      "detail": ""
+    },
+    {
+      "path": "flutter/lib/mobile/widgets/virtual_key_editor.dart",
+      "group": "new_product_module",
+      "applies_textually": true,
+      "detail": ""
+    },
+    {
+      "path": "flutter/lib/mobile/widgets/virtual_mouse_controls.dart",
+      "group": "new_product_module",
+      "applies_textually": true,
+      "detail": ""
+    },
+    {
+      "path": "flutter/lib/mobile/widgets/window_overview.dart",
+      "group": "new_product_module",
+      "applies_textually": true,
+      "detail": ""
+    },
+    {
+      "path": "flutter/lib/models/connection_activity.dart",
+      "group": "new_product_module",
+      "applies_textually": true,
+      "detail": ""
+    },
+    {
+      "path": "flutter/lib/theme/landesk_theme.dart",
+      "group": "new_product_module",
+      "applies_textually": true,
+      "detail": ""
+    },
+    {
+      "path": "flutter/lib/mobile/pages/remote_page.dart",
+      "group": "integration_example",
+      "applies_textually": false,
+      "detail": "error: patch failed: flutter/lib/mobile/pages/remote_page.dart:521\nerror: flutter/lib/mobile/pages/remote_page.dart: patch does not apply"
+    },
+    {
+      "path": "flutter/lib/desktop/pages/remote_page.dart",
+      "group": "integration_example",
+      "applies_textually": false,
+      "detail": "error: patch failed: flutter/lib/desktop/pages/remote_page.dart:142\nerror: flutter/lib/desktop/pages/remote_page.dart: patch does not apply"
+    },
+    {
+      "path": "flutter/lib/models/model.dart",
+      "group": "integration_example",
+      "applies_textually": false,
+      "detail": "error: patch failed: flutter/lib/models/model.dart:21\nerror: flutter/lib/models/model.dart: patch does not apply"
+    },
+    {
+      "path": "flutter/lib/models/input_model.dart",
+      "group": "integration_example",
+      "applies_textually": false,
+      "detail": "error: patch failed: flutter/lib/models/input_model.dart:1106\nerror: flutter/lib/models/input_model.dart: patch does not apply"
+    },
+    {
+      "path": "src/client.rs",
+      "group": "integration_example",
+      "applies_textually": false,
+      "detail": "error: patch failed: src/client.rs:110\nerror: src/client.rs: patch does not apply"
+    },
+    {
+      "path": "src/server/connection.rs",
+      "group": "integration_example",
+      "applies_textually": false,
+      "detail": "error: patch failed: src/server/connection.rs:5\nerror: src/server/connection.rs: patch does not apply"
+    },
+    {
+      "path": "Cargo.toml",
+      "group": "integration_example",
+      "applies_textually": false,
+      "detail": "error: patch failed: Cargo.toml:1\nerror: Cargo.toml: patch does not apply"
+    }
+  ],
+  "limits": [
+    "Only static source review, textual patch checks, and merge-tree preview.",
+    "No application compilation or runtime validation in this reassessment.",
+    "No migration, source replacement, branch/worktree creation, push, or release.",
+    "Counts include additions, deletions and moves; they do not measure rewrite effort."
+  ]
+}

@@ -418,6 +418,13 @@ class _DesktopTabState extends State<DesktopTab>
     }
   }
 
+  // On Linux, GTK destroys the window on a close request unless prevent-close
+  // is on. It is off for the cm and install windows, and onActiveWindowChanged()
+  // turns it off to quit, so the window can no longer be saved or hidden.
+  // https://github.com/rustdesk/rustdesk/issues/16512
+  Future<bool> _isLinuxWindowClosed() async =>
+      isLinux && isMainWindow && !await windowManager.isPreventClose();
+
   @override
   void onWindowMoved() {
     _saveFrame();
@@ -465,6 +472,8 @@ class _DesktopTabState extends State<DesktopTab>
       });
     }
 
+    if (await _isLinuxWindowClosed()) return;
+
     await _saveFrame(flush: true);
 
     // hide window on close
@@ -472,6 +481,7 @@ class _DesktopTabState extends State<DesktopTab>
       if (rustDeskWinManager.getActiveWindows().contains(kMainWindowId)) {
         await rustDeskWinManager.unregisterActiveWindow(kMainWindowId);
       }
+      if (await _isLinuxWindowClosed()) return;
       // macOS specific workaround, the window is not hiding when in fullscreen.
       if (isMacOS && await windowManager.isFullScreen()) {
         await windowManager.setFullScreen(false);
@@ -512,7 +522,8 @@ class _DesktopTabState extends State<DesktopTab>
   Widget build(BuildContext context) {
     return Column(children: [
       Obx(() {
-        if (stateGlobal.showTabBar.isTrue) {
+        if (stateGlobal.showTabBar.isTrue &&
+            !(kUseCompatibleUiMode && isHideSingleItem())) {
           final showBottomDivider = _showTabBarBottomDivider(tabType);
           return SizedBox(
             height: _kTabBarHeight,
@@ -631,7 +642,7 @@ class _DesktopTabState extends State<DesktopTab>
                           width: 78,
                         )),
                     Offstage(
-                      offstage: isMacOS,
+                      offstage: kUseCompatibleUiMode || isMacOS,
                       child: Row(children: [
                         Offstage(
                           offstage: !showLogo,
@@ -639,8 +650,8 @@ class _DesktopTabState extends State<DesktopTab>
                         ),
                         Offstage(
                             offstage: !showTitle,
-                            child: Text(
-                              bind.mainGetAppNameSync(),
+                            child: const Text(
+                              "RustDesk",
                               style: TextStyle(fontSize: 13),
                             ).marginOnly(left: 2))
                       ]).marginOnly(
@@ -765,7 +776,8 @@ class WindowActionPanelState extends State<WindowActionPanel> {
           }
         }),
         if (widget.tail != null) widget.tail!,
-        Row(
+        if (!kUseCompatibleUiMode)
+          Row(
             children: [
               if (widget.showMinimize && !isMacOS)
                 ActionIcon(
@@ -1453,21 +1465,29 @@ class TabbarTheme extends ThemeExtension<TabbarTheme> {
       required this.closeHoverColor,
       required this.selectedTabBackgroundColor});
 
-  static final light = _suya(SuyaPalette.light);
-  static final dark = _suya(SuyaPalette.dark);
+  static const light = TabbarTheme(
+      selectedTabIconColor: MyTheme.accent,
+      unSelectedTabIconColor: Color.fromARGB(255, 162, 203, 241),
+      selectedTextColor: Colors.black,
+      unSelectedTextColor: Color.fromARGB(255, 112, 112, 112),
+      selectedIconColor: Color.fromARGB(255, 26, 26, 26),
+      unSelectedIconColor: Color.fromARGB(255, 96, 96, 96),
+      dividerColor: Color.fromARGB(255, 238, 238, 238),
+      hoverColor: Colors.white54,
+      closeHoverColor: Colors.white,
+      selectedTabBackgroundColor: Colors.white54);
 
-  static TabbarTheme _suya(SuyaPalette p) => TabbarTheme(
-    selectedTabIconColor: p.accent,
-    unSelectedTabIconColor: p.secondary,
-    selectedTextColor: p.text,
-    unSelectedTextColor: p.secondary,
-    selectedIconColor: p.accent,
-    unSelectedIconColor: p.secondary,
-    dividerColor: p.border,
-    hoverColor: p.inset,
-    closeHoverColor: p.selection,
-    selectedTabBackgroundColor: p.surface,
-  );
+  static const dark = TabbarTheme(
+      selectedTabIconColor: MyTheme.accent,
+      unSelectedTabIconColor: Color.fromARGB(255, 30, 65, 98),
+      selectedTextColor: Colors.white,
+      unSelectedTextColor: Color.fromARGB(255, 192, 192, 192),
+      selectedIconColor: Color.fromARGB(255, 192, 192, 192),
+      unSelectedIconColor: Color.fromARGB(255, 255, 255, 255),
+      dividerColor: Color.fromARGB(255, 64, 64, 64),
+      hoverColor: Colors.black26,
+      closeHoverColor: Colors.black,
+      selectedTabBackgroundColor: Colors.black26);
 
   @override
   ThemeExtension<TabbarTheme> copyWith({

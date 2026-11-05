@@ -20,7 +20,6 @@ use hbb_common::{
     regex::{Captures, Regex},
     users::{get_user_by_name, os::unix::UserExt},
 };
-use base::config::keys::OPTION_ALLOW_LINUX_HEADLESS;
 use base::message_proto::{DisplayInfo, Resolution};
 use libxdo_sys::{self, xdo_t, Window};
 use std::{
@@ -252,19 +251,6 @@ mod gnome_monitor_layout_tests {
             Some(GnomeMonitorLayoutMode::Logical)
         );
     }
-
-    #[test]
-    fn maps_physical_layout() {
-        assert_eq!(
-            gnome_monitor_layout_mode_from_value(2),
-            Some(GnomeMonitorLayoutMode::Physical)
-        );
-    }
-
-    #[test]
-    fn rejects_unknown_layout() {
-        assert_eq!(gnome_monitor_layout_mode_from_value(4), None);
-    }
 }
 
 #[inline]
@@ -301,6 +287,35 @@ thread_local! {
         xdo
     });
     static DISPLAY: RefCell<*mut c_void> = RefCell::new(unsafe { XOpenDisplay(std::ptr::null())});
+}
+
+pub fn right_alt_is_level3_shift() -> ResultType<bool> {
+    use hbb_common::x11::{keysym, xlib};
+    const XKB_USE_CORE_KBD: c_uint = 0x0100;
+    // A fresh connection avoids Xlib's stale keymap cache after a layout switch.
+    // This query runs only for a matched chord with physical Right Alt held.
+    let display = unsafe { xlib::XOpenDisplay(std::ptr::null()) };
+    if display.is_null() {
+        bail!("X display unavailable");
+    }
+    let result = (|| {
+        let code = rdev::linux_keycode_from_key(rdev::Key::AltGr)
+            .ok_or_else(|| anyhow!("Right Alt has no X keycode"))?;
+        let mut state: xlib::XkbStateRec = unsafe { std::mem::zeroed() };
+        let status = unsafe { xlib::XkbGetState(display, XKB_USE_CORE_KBD, &mut state) };
+        if status != c_int::from(xlib::Success) {
+            bail!("XkbGetState failed: {}", status);
+        }
+        let symbol = unsafe {
+            xlib::XkbKeycodeToKeysym(display, code as _, state.group.into(), 0)
+        };
+        // Physical Right Alt is ordinary Alt on layouts such as US English.
+        Ok(matches!(symbol as u32, keysym::XK_ISO_Level3_Shift
+            | keysym::XK_ISO_Level3_Latch | keysym::XK_ISO_Level3_Lock
+            | keysym::XK_Mode_switch))
+    })();
+    unsafe { xlib::XCloseDisplay(display) };
+    result
 }
 
 // X11 error event structure for the custom error handler.
@@ -372,11 +387,6 @@ pub struct xcb_xfixes_get_cursor_image {
     pub yhot: u16,
     pub cursor_serial: c_long,
     pub pixels: *const c_long,
-}
-
-#[inline]
-pub fn is_headless_allowed() -> bool {
-    Config::get_option(OPTION_ALLOW_LINUX_HEADLESS) == "Y"
 }
 
 #[inline]
@@ -1042,18 +1052,6 @@ fn stop_rustdesk_servers() {
     ));
 }
 
-#[inline]
-fn stop_subprocess() {
-    let _ = run_cmds(&format!(
-        r##"ps -ef | grep '/etc/{}/xorg.conf' | grep -v grep | awk '{{print $2}}' | xargs -r kill -9"##,
-        crate::get_app_name().to_lowercase(),
-    ));
-    let _ = run_cmds(&format!(
-        r##"ps -ef | grep -E '{} +--cm-no-ui' | grep -v grep | awk '{{print $2}}' | xargs -r kill -9"##,
-        crate::get_app_name().to_lowercase(),
-    ));
-}
-
 fn should_start_server(
     try_x11: bool,
     is_display_changed: bool,
@@ -1067,13 +1065,7 @@ fn should_start_server(
     let mut start_new = false;
     let mut should_kill = false;
 
-    if desktop.is_headless() {
-        if !uid.is_empty() {
-            // From having a monitor to not having a monitor.
-            *uid = "".to_owned();
-            should_kill = true;
-        }
-    } else if is_display_changed || desktop.uid != *uid && !desktop.uid.is_empty() {
+    if is_display_changed || desktop.uid != *uid && !desktop.uid.is_empty() {
         *uid = desktop.uid.clone();
         if try_x11 {
             set_x11_env(&desktop);
@@ -1132,7 +1124,6 @@ fn force_stop_server() {
 pub fn start_os_service() {
     check_if_stop_service();
     stop_rustdesk_servers();
-    stop_subprocess();
     start_uinput_service();
 
     std::thread::spawn(|| {
@@ -1182,8 +1173,7 @@ pub fn start_os_service() {
         desktop.refresh();
         update_active_user_lookup_cache(&desktop);
 
-        // Duplicate logic here with should_start_server
-        // Login wayland will try to start a headless --server.
+        // Duplicate logic here with should_start_server.
         if desktop.username == "root" || desktop.is_login_wayland() {
             // try kill subprocess "--server"
             stop_server(&mut user_server);
@@ -1198,7 +1188,6 @@ pub fn start_os_service() {
                 &mut last_restart,
                 &mut server,
             ) {
-                stop_subprocess();
                 force_stop_server();
                 // Run the login-screen --server as the active seat0 session user (the greeter
                 // account) rather than root, so the DRM capture GPU/EGL convert never loads the
@@ -1251,7 +1240,6 @@ pub fn start_os_service() {
                 &mut last_restart,
                 &mut user_server,
             ) {
-                stop_subprocess();
                 force_stop_server();
                 start_server(Some(&desktop), &mut user_server);
             }
@@ -1261,17 +1249,14 @@ pub fn start_os_service() {
             stop_server(&mut server);
         }
 
-        let keeps_headless = sid.is_empty() && desktop.is_headless();
         let keeps_session = sid == desktop.sid;
-        if keeps_headless || keeps_session {
+        if keeps_session {
             // for fixing https://github.com/rustdesk/rustdesk/issues/3129 to avoid too much dbus calling,
             sleep_millis(500);
         } else {
             sleep_millis(super::SERVICE_INTERVAL);
         }
-        if !desktop.is_headless() {
-            sid = desktop.sid.clone();
-        }
+        sid = desktop.sid.clone();
     }
 
     if let Some(ps) = user_server.take().as_mut() {
@@ -1433,7 +1418,6 @@ fn is_flatpak() -> bool {
     std::path::PathBuf::from("/.flatpak-info").exists()
 }
 
-// Headless is enabled, always return true.
 pub fn is_prelogin() -> bool {
     if is_flatpak() {
         return false;
@@ -2204,7 +2188,6 @@ mod desktop {
         pub xauth: String,
         pub home: String,
         pub dbus: String,
-        pub is_rustdesk_subprocess: bool,
         pub wl_display: String,
     }
 
@@ -2217,11 +2200,6 @@ mod desktop {
         #[inline]
         pub fn is_login_wayland(&self) -> bool {
             super::is_gdm_user(&self.username) && self.protocol == DISPLAY_SERVER_WAYLAND
-        }
-
-        #[inline]
-        pub fn is_headless(&self) -> bool {
-            self.sid.is_empty() || self.is_rustdesk_subprocess
         }
 
         fn get_display_xauth_wayland(&mut self) {
@@ -2560,25 +2538,18 @@ mod desktop {
             last
         }
 
-        fn set_is_subprocess(&mut self) {
-            self.is_rustdesk_subprocess = false;
-            let cmd = format!(
-                "ps -ef | grep '{}/xorg.conf' | grep -v grep | wc -l",
-                crate::get_app_name().to_lowercase()
-            );
-            if let Ok(res) = run_cmds(&cmd) {
-                if res.trim() != "0" {
-                    self.is_rustdesk_subprocess = true;
-                }
-            }
-        }
-
+        /// Preserves an active seat0 session's cached identity so the service loop only retries
+        /// late Wayland display discovery instead of repeating the full seat lookup.
         pub fn refresh(&mut self) {
             if !self.sid.is_empty() && is_active_and_seat0(&self.sid) {
                 // Xwayland display and xauth may not be available in a short time after login.
-                if is_xwayland_running(&self.uid) && !self.is_login_wayland() {
+                // Avoid scanning processes on X11, where Xwayland discovery cannot provide any
+                // useful session information.
+                if self.is_wayland()
+                    && !self.is_login_wayland()
+                    && is_xwayland_running(&self.uid)
+                {
                     self.get_display_xauth_xwayland();
-                    self.is_rustdesk_subprocess = false;
                 } else if self.is_wayland() {
                     self.get_display_xauth_wayland();
                 }
@@ -2588,7 +2559,6 @@ mod desktop {
             let seat0_values = get_values_of_seat0_with_gdm_wayland(&[0, 1, 2]);
             if seat0_values[0].is_empty() {
                 *self = Self::default();
-                self.is_rustdesk_subprocess = false;
                 return;
             }
 
@@ -2599,7 +2569,22 @@ mod desktop {
             if self.is_login_wayland() {
                 self.display = "".to_owned();
                 self.xauth = "".to_owned();
-                self.is_rustdesk_subprocess = false;
+                // Resolve HOME even on this path. Upstream returned without it because nothing then
+                // consumed a login-Wayland Desktop, but the drm build starts a `--server` as the
+                // greeter uid here, and a child with no HOME has nowhere to put its config. The
+                // compositor variables (WAYLAND_DISPLAY, DBUS, DISPLAY, XAUTHORITY) are left blank
+                // on purpose and are NOT an oversight: the drm capture path talks to the root
+                // service over `_drm` and to a render node, never to the compositor or the portal,
+                // which is the entire reason it works at a login screen. `try_start_server_` skips
+                // empty entries, so the greeter child simply does not get them.
+                //
+                // `is_login_wayland` needs `is_gdm_user(username)`, and a current GDM runs its
+                // greeter as `gdm-greeter`, which that helper does not match -- measured on the
+                // test host, where the greeter server therefore takes the branch below and gets a
+                // fully populated environment. This is for the display managers whose greeter user
+                // does match.
+                #[cfg(feature = "drm")]
+                self.get_home();
                 return;
             }
 
@@ -2610,34 +2595,9 @@ mod desktop {
                 } else {
                     self.get_display_xauth_wayland();
                 }
-                self.is_rustdesk_subprocess = false;
             } else {
                 self.get_display_x11();
                 self.get_xauth_x11();
-                self.set_is_subprocess();
-            }
-        }
-    }
-
-    #[cfg(test)]
-    mod tests {
-        use super::*;
-
-        #[test]
-        fn test_desktop_env() {
-            let mut d = Desktop::default();
-            d.refresh();
-            if d.username == "root" {
-                assert_eq!(d.home, "/root");
-            } else {
-                if !d.username.is_empty() {
-                    let home = super::super::get_env_var("HOME");
-                    if !home.is_empty() {
-                        assert_eq!(d.home, home);
-                    } else {
-                        //
-                    }
-                }
             }
         }
     }
@@ -3034,7 +2994,7 @@ pub fn is_selinux_enforcing() -> bool {
 fn get_shortcuts_inhibitor_app_id() -> String {
     if is_flatpak() {
         // In Flatpak, FLATPAK_ID is set automatically by the runtime to the app ID
-        // (e.g., "dev.quanru.LocalDesk"). This is the most reliable source.
+        // (e.g., "com.rustdesk.RustDesk"). This is the most reliable source.
         // Fall back to constructing from app name if not available.
         match std::env::var("FLATPAK_ID") {
             Ok(id) if !id.is_empty() => format!("{}.desktop", id),

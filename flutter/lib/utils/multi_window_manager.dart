@@ -1,4 +1,3 @@
-import '../models/connection_activity.dart';
 import 'dart:convert';
 
 import 'package:desktop_multi_window/desktop_multi_window.dart';
@@ -195,23 +194,7 @@ class RustDeskMultiWindowManager {
             type, remoteId, msg, windows, screenRect != null);
         return MultiWindowCallResult(windowId, null);
       } else {
-        // Reusing an existing tabbed window: `call` only pushes the new tab
-        // into that window's isolate over IPC, it never asks the window
-        // manager to show/focus it. Unlike the non-tabs branch below (which
-        // does call `.show()` for its reuse case), this path had no
-        // activation call at all, so a new tab silently landed in an
-        // already-open-but-backgrounded window until the user separately
-        // interacted with something else (e.g. the tray) to bring it
-        // forward -- reported as the tray favorites "lag" happening even
-        // when a session window is already open, not just on cold start.
-        final result = await call(type, methodName, msg);
-        if (result.windowId != kInvalidWindowId) {
-          final controller = WindowController.fromWindowId(result.windowId);
-          await controller.show();
-          await controller.focus();
-          await activateWindowWorkaroundLinux();
-        }
-        return result;
+        return call(type, methodName, msg);
       }
     } else {
       if (_inactiveWindows.isNotEmpty) {
@@ -242,15 +225,33 @@ class RustDeskMultiWindowManager {
     String remoteId,
     List<int> windows, {
     String? password,
+    String loginMethod = '',
+    bool? forceRelay,
+    String? switchUuid,
     bool? isRDP,
+    bool? isSharedPassword,
+    String? connToken,
   }) async {
     var params = {
       "type": type.index,
       "id": remoteId,
       "password": password,
+      "forceRelay": forceRelay
     };
+    if (switchUuid != null) {
+      params['switch_uuid'] = switchUuid;
+    }
     if (isRDP != null) {
       params['isRDP'] = isRDP;
+    }
+    if (isSharedPassword != null) {
+      params['isSharedPassword'] = isSharedPassword;
+    }
+    if (connToken != null) {
+      params['connToken'] = connToken;
+    }
+    if (loginMethod.isNotEmpty) {
+      params['loginMethod'] = loginMethod;
     }
     final msg = jsonEncode(params);
 
@@ -273,6 +274,10 @@ class RustDeskMultiWindowManager {
   Future<MultiWindowCallResult> newRemoteDesktop(
     String remoteId, {
     String? password,
+    String loginMethod = '',
+    bool? isSharedPassword,
+    String? switchUuid,
+    bool? forceRelay,
   }) async {
     return await newSession(
       WindowType.RemoteDesktop,
@@ -280,12 +285,20 @@ class RustDeskMultiWindowManager {
       remoteId,
       _remoteDesktopWindows,
       password: password,
+      loginMethod: loginMethod,
+      forceRelay: forceRelay,
+      switchUuid: switchUuid,
+      isSharedPassword: isSharedPassword,
     );
   }
 
   Future<MultiWindowCallResult> newFileTransfer(
     String remoteId, {
     String? password,
+    String loginMethod = '',
+    bool? isSharedPassword,
+    bool? forceRelay,
+    String? connToken,
   }) async {
     return await newSession(
       WindowType.FileTransfer,
@@ -293,12 +306,21 @@ class RustDeskMultiWindowManager {
       remoteId,
       _fileTransferWindows,
       password: password,
+      loginMethod: loginMethod,
+      forceRelay: forceRelay,
+      isSharedPassword: isSharedPassword,
+      connToken: connToken,
     );
   }
 
   Future<MultiWindowCallResult> newViewCamera(
     String remoteId, {
     String? password,
+    String loginMethod = '',
+    bool? isSharedPassword,
+    String? switchUuid,
+    bool? forceRelay,
+    String? connToken,
   }) async {
     return await newSession(
       WindowType.ViewCamera,
@@ -306,6 +328,11 @@ class RustDeskMultiWindowManager {
       remoteId,
       _viewCameraWindows,
       password: password,
+      loginMethod: loginMethod,
+      forceRelay: forceRelay,
+      switchUuid: switchUuid,
+      isSharedPassword: isSharedPassword,
+      connToken: connToken,
     );
   }
 
@@ -313,6 +340,10 @@ class RustDeskMultiWindowManager {
     String remoteId,
     bool isRDP, {
     String? password,
+    String loginMethod = '',
+    bool? isSharedPassword,
+    bool? forceRelay,
+    String? connToken,
   }) async {
     return await newSession(
       WindowType.PortForward,
@@ -320,13 +351,21 @@ class RustDeskMultiWindowManager {
       remoteId,
       _portForwardWindows,
       password: password,
+      loginMethod: loginMethod,
+      forceRelay: forceRelay,
       isRDP: isRDP,
+      isSharedPassword: isSharedPassword,
+      connToken: connToken,
     );
   }
 
   Future<MultiWindowCallResult> newTerminal(
     String remoteId, {
     String? password,
+    String loginMethod = '',
+    bool? isSharedPassword,
+    bool? forceRelay,
+    String? connToken,
   }) async {
     // Iterate through terminal windows in reverse order to prioritize
     // the most recently added or used windows, as they are more likely
@@ -345,7 +384,13 @@ class RustDeskMultiWindowManager {
       "type": WindowType.Terminal.index,
       "id": remoteId,
       "password": password,
+      "forceRelay": forceRelay,
+      "isSharedPassword": isSharedPassword,
+      "connToken": connToken,
     };
+    if (loginMethod.isNotEmpty) {
+      params['loginMethod'] = loginMethod;
+    }
     final msg = jsonEncode(params);
 
     // Always create a new window for terminal
@@ -417,12 +462,7 @@ class RustDeskMultiWindowManager {
 
   void setMethodHandler(
       Future<dynamic> Function(MethodCall call, int fromWindowId)? handler) {
-    DesktopMultiWindow.setMethodHandler(handler == null ? null : (call, fromWindowId) async {
-      if (call.method == connectionRetryMethod && call.arguments is String) {
-        return connectionActivities.retry(call.arguments);
-      }
-      return handler(call, fromWindowId);
-    });
+    DesktopMultiWindow.setMethodHandler(handler);
   }
 
   Future<void> closeAllSubWindows() async {

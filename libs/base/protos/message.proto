@@ -65,28 +65,6 @@ message OSLogin {
   string password = 2;
 }
 
-// LAN-only protocol messages. Version 1 clients and servers intentionally do
-// not negotiate or downgrade to the legacy rendezvous/direct protocol.
-message LanClientHello {
-  uint32 protocol_version = 1;
-  bytes client_nonce = 2;
-  uint64 client_capabilities = 3;
-}
-
-message LanServerHello {
-  uint32 protocol_version = 1;
-  bytes server_nonce = 2;
-  bytes device_public_key = 3;
-  bytes ephemeral_public_key = 4;
-  bytes signature = 5;
-}
-
-message LanLoginRequest {
-  string access_username = 1;
-  bytes access_password = 2;
-  uint64 credential_revision_hint = 3;
-}
-
 message LoginRequest {
   string username = 1;
   bytes password = 2;
@@ -106,7 +84,8 @@ message LoginRequest {
   string my_platform = 13;
   bytes hwid = 14;
   string avatar = 17;
-  LanLoginRequest lan_login = 18;
+  bytes trusted_device_v2_token = 18;
+  bool trusted_device_v2_supported = 19;
 }
 
 message Terminal {
@@ -116,6 +95,7 @@ message Terminal {
 message Auth2FA {
   string code = 1;
   bytes hwid = 2;
+  bool trust_this_device = 3;
 }
 
 message ChatMessage { string text = 1; }
@@ -170,8 +150,8 @@ message LoginResponse {
     PeerInfo peer_info = 2;
   }
   bool enable_trusted_devices = 3;
-  // Non-zero values prevent LAN clients from retrying authentication early.
-  uint32 retry_after_seconds = 4;
+  bool trusted_device_v2_supported = 4;
+  bytes trusted_device_v2_token = 5;
 }
 
 message TouchScaleUpdate {
@@ -732,6 +712,9 @@ message TestDelay {
 message PublicKey {
   bytes asymmetric_value = 1;
   bytes symmetric_value = 2;
+  // The key exchange version the controller picked, the highest both sides speak; absent,
+  // i.e. 0, is the original scheme.
+  uint32 kx_version = 3;
 }
 
 message SignedId { bytes id = 1; }
@@ -1051,10 +1034,8 @@ message Message {
     ScreenshotResponse screenshot_response= 30;
     TerminalAction terminal_action = 31;
     TerminalResponse terminal_response = 32;
-    LanClientHello lan_client_hello = 33;
-    LanServerHello lan_server_hello = 34;
-    PortForwardChannel port_forward_channel = 35;
-    // Auto Login: the peer checks its lock screen before typing.
-    OSLogin os_login = 36;
+    PortForwardChannel port_forward_channel = 33;
+    // Auto Login: the peer types the password only if it is at its logon or lock screen.
+    OSLogin os_login = 34;
   }
 }

@@ -1,15 +1,9 @@
 import 'dart:io';
-import 'dart:ui' as ui;
-
-import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
-import 'package:flutter/services.dart';
 
 import 'package:flutter_hbb/generated_bridge.dart';
 import 'package:flutter_hbb/models/file_model.dart';
 import 'package:flutter_hbb/models/model.dart';
 import 'package:flutter_hbb/models/platform_model.dart';
-import 'package:flutter_hbb/theme/landesk_theme.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:uuid/uuid.dart';
 
@@ -19,13 +13,6 @@ class _Binding extends Fake implements RustdeskImpl {
   final sent = <String>[];
   final created = <String>[];
   int nextId = 0;
-
-  @override
-  String translate({
-    required String name,
-    required String locale,
-    dynamic hint,
-  }) => name;
 
   @override
   String mainGetCommonSync({required String key, dynamic hint}) =>
@@ -86,10 +73,7 @@ class _Fetcher extends FileFetcher {
 
   @override
   Future<List<FileDirectory>> readEmptyDirs(
-    String path,
-    bool isLocal,
-    bool showHidden,
-  ) async =>
+          String path, bool isLocal, bool showHidden) async =>
       emptyDirectories.map((path) => FileDirectory()..path = path).toList();
 }
 
@@ -107,10 +91,8 @@ void main() {
     session = _Session();
     session.ffiModel.pi.version = '1.5.1';
     fetcher = _Fetcher();
-    destination = DirectoryData(
-      FileDirectory()..path = '/downloads',
-      DirectoryOptions(),
-    );
+    destination =
+        DirectoryData(FileDirectory()..path = '/downloads', DirectoryOptions());
     controller = FileController(
       isLocal: false,
       getSessionID: () => _sessionId,
@@ -133,60 +115,51 @@ void main() {
     await controller.sendFiles(items, destination);
   }
 
-  test(
-    'downloads refuse peer listing names that escape the local folder',
-    () async {
-      await download('report.txt');
-      expect(binding.sent, ['/downloads/report.txt']);
-      binding.sent.clear();
-      for (final windows in [false, true]) {
-        destination.options.isWindows = windows;
-        destination.directory.path = windows ? r'C:\downloads' : '/downloads';
-        for (final name in [
-          '../outside.txt',
-          '/outside.txt',
-          '.',
-          '..',
-          '',
-          'bad\x00name',
-          if (windows) ...[
-            r'..\outside.txt',
-            r'C:\outside.txt',
-            r'\\host\share',
-          ],
-        ]) {
-          await download(name);
-          expect(binding.sent, isEmpty, reason: name);
-          expect(controller.jobController.jobTable.last.state, JobState.error);
-        }
-      }
-      await controller.jobController.jobDone({
-        'id': '${controller.jobController.jobTable.last.id}',
-        'file_num': '0',
-      });
-      expect(controller.jobController.jobTable.last.state, JobState.error);
-    },
-  );
-
-  test(
-    'empty-directory downloads reject paths outside the selected folder',
-    () async {
-      for (final path in ['/remote/other/empty', '/remote/docs/../out']) {
-        fetcher.emptyDirectories = ['/remote/docs/ok', path];
-        await download('docs', directory: true);
-        expect(binding.created, isEmpty, reason: path);
+  test('downloads refuse peer listing names that escape the local folder',
+      () async {
+    await download('report.txt');
+    expect(binding.sent, ['/downloads/report.txt']);
+    binding.sent.clear();
+    for (final windows in [false, true]) {
+      destination.options.isWindows = windows;
+      destination.directory.path = windows ? r'C:\downloads' : '/downloads';
+      for (final name in [
+        '../outside.txt',
+        '/outside.txt',
+        '.',
+        '..',
+        '',
+        'bad\x00name',
+        if (windows) ...[r'..\outside.txt', r'C:\outside.txt', r'\\host\share'],
+      ]) {
+        await download(name);
+        expect(binding.sent, isEmpty, reason: name);
         expect(controller.jobController.jobTable.last.state, JobState.error);
       }
-      fetcher.emptyDirectories = ['/remote/docs', '/remote/docs/sub/empty'];
+    }
+    await controller.jobController.jobDone({
+      'id': '${controller.jobController.jobTable.last.id}',
+      'file_num': '0',
+    });
+    expect(controller.jobController.jobTable.last.state, JobState.error);
+  });
+
+  test('empty-directory downloads reject paths outside the selected folder',
+      () async {
+    for (final path in ['/remote/other/empty', '/remote/docs/../out']) {
+      fetcher.emptyDirectories = ['/remote/docs/ok', path];
       await download('docs', directory: true);
-      expect(binding.created, ['/downloads/docs', '/downloads/docs/sub/empty']);
-    },
-  );
+      expect(binding.created, isEmpty, reason: path);
+      expect(controller.jobController.jobTable.last.state, JobState.error);
+    }
+    fetcher.emptyDirectories = ['/remote/docs', '/remote/docs/sub/empty'];
+    await download('docs', directory: true);
+    expect(binding.created, ['/downloads/docs', '/downloads/docs/sub/empty']);
+  });
 
   test('empty-directory downloads refuse existing local links', () async {
-    final temporary = await Directory.systemTemp.createTemp(
-      'rustdesk_download_',
-    );
+    final temporary =
+        await Directory.systemTemp.createTemp('rustdesk_download_');
     addTearDown(() => temporary.delete(recursive: true));
     final outside = await Directory('${temporary.path}/outside').create();
     final downloads = await Directory('${temporary.path}/downloads').create();
@@ -198,96 +171,4 @@ void main() {
     expect(binding.created, isEmpty);
     expect(controller.jobController.jobTable.last.state, JobState.error);
   });
-
-  // Optional visual evidence of real model results, not a remote-session claim.
-  final preview = Platform.environment['LANDESK_DOWNLOAD_PREVIEW'];
-  if (preview != null) {
-    testWidgets('download model validation preview', (tester) async {
-      final font = Platform.environment['LANDESK_PREVIEW_FONT'];
-      await tester.runAsync(() async {
-        if (font != null) {
-          await (FontLoader('Preview')
-                ..addFont(File(font).readAsBytes().then(ByteData.sublistView)))
-              .load();
-        }
-        await download('report.txt');
-        await download('../outside.txt');
-        fetcher.emptyDirectories = ['/remote/docs/../outside'];
-        await download('docs', directory: true);
-      });
-      expect(binding.sent, ['/downloads/report.txt', '/downloads/docs']);
-      expect(binding.created, isEmpty);
-      tester.view.physicalSize = const Size(820, 480);
-      tester.view.devicePixelRatio = 1;
-      addTearDown(tester.view.resetPhysicalSize);
-      addTearDown(tester.view.resetDevicePixelRatio);
-      final key = GlobalKey();
-      await tester.pumpWidget(
-        RepaintBoundary(
-          key: key,
-          child: MaterialApp(
-            debugShowCheckedModeBanner: false,
-            theme: LandeskTheme.build(Brightness.light).copyWith(
-              textTheme: ThemeData.light().textTheme.apply(
-                fontFamily: 'Preview',
-              ),
-            ),
-            home: Scaffold(
-              appBar: AppBar(
-                title: const Text(
-                  'LanDesk · Download validation',
-                  style: TextStyle(fontFamily: 'Preview'),
-                ),
-              ),
-              body: ListView(
-                padding: const EdgeInsets.all(24),
-                children: [
-                  for (final job in controller.jobController.jobTable)
-                    Card(
-                      child: Padding(
-                        padding: const EdgeInsets.all(18),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              job.state == JobState.error
-                                  ? 'Blocked'
-                                  : 'Queued',
-                              style: TextStyle(
-                                fontWeight: FontWeight.w600,
-                                color: job.state == JobState.error
-                                    ? Colors.red.shade800
-                                    : Colors.black87,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              job.state == JobState.error
-                                  ? job.err
-                                  : binding.sent.first,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-      await tester.runAsync(() async {
-        final image =
-            await (key.currentContext!.findRenderObject()
-                    as RenderRepaintBoundary)
-                .toImage();
-        final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
-        final file = File(preview);
-        await file.parent.create(recursive: true);
-        await file.writeAsBytes(bytes!.buffer.asUint8List());
-        image.dispose();
-      });
-    });
-  }
 }

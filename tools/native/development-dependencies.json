@@ -1,0 +1,46 @@
+{
+  "purpose": "local development verification; not a release dependency attestation",
+  "targets": [
+    "aarch64-apple-ios-sim",
+    "aarch64-linux-android"
+  ],
+  "cpu_optimization": "generic software codecs",
+  "archives": [
+    {
+      "name": "opus",
+      "version": "1.5.2",
+      "url": "https://github.com/xiph/opus/archive/refs/tags/v1.5.2.tar.gz",
+      "archive_sha256": "9480e329e989f70d69886ded470c7f8cfe6c0667cc4196d4837ac9e668fb7404"
+    },
+    {
+      "name": "libvpx",
+      "version": "1.15.2",
+      "url": "https://github.com/webmproject/libvpx/archive/refs/tags/v1.15.2.tar.gz",
+      "archive_sha256": "26fcd3db88045dee380e581862a6ef106f49b74b6396ee95c2993a260b4636aa"
+    },
+    {
+      "name": "libaom",
+      "version": "3.14.1",
+      "url": "https://storage.googleapis.com/aom-releases/libaom-3.14.1.tar.gz",
+      "archive_sha256": "44bf90dbd23e734d50e70a8c41c285193922938bd0d3bc2ee56764d181d55ef5"
+    },
+    {
+      "name": "libsodium",
+      "version": "1.0.20",
+      "url": "https://download.libsodium.org/libsodium/releases/libsodium-1.0.20.tar.gz",
+      "archive_sha256": "ebb65ef6ca439333c2bb41a0c1990587288da07f6c7fd07cb3a18cc18d30ce19"
+    },
+    {
+      "name": "cpu_features",
+      "version": "0.11.0",
+      "url": "https://github.com/google/cpu_features/archive/refs/tags/v0.11.0.tar.gz",
+      "archive_sha256": "ab2463f2d38fcaff1ce806be8e4c91333449931f5e02009d543b2569a3fa471a"
+    },
+    {
+      "name": "libyuv",
+      "revision": "0faf8dd0e004520a61a603a4d2996d5ecc80dc3f",
+      "source": "https://chromium.googlesource.com/libyuv/libyuv",
+      "archive_sha256": "87c52f4b4c41f0058af97c5ad61bf0e70574ebcf0bb28a766847b10aa42ea78c"
+    }
+  ]
+}

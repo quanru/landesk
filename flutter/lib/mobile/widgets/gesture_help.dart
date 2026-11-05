@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_hbb/common.dart';
-import 'package:flutter_hbb/consts.dart';
 import 'package:flutter_hbb/models/input_model.dart';
 import 'package:flutter_hbb/models/model.dart';
 import 'package:get/get.dart';
@@ -76,11 +75,8 @@ class _GestureHelpState extends State<GestureHelp> {
 
   @override
   Widget build(BuildContext context) {
-    final oneHand = mainGetLocalBoolOptionSync(kOptionEnableOneHandGestures);
-    final chinese = Localizations.localeOf(context).languageCode == 'zh';
     final size = MediaQuery.of(context).size;
     final space = 12.0;
-    final compact = size.width < 360;
     var width = size.width - 2 * space;
     final minWidth = 90;
     if (size.width > minWidth + 2 * space) {
@@ -100,16 +96,14 @@ class _GestureHelpState extends State<GestureHelp> {
                     children: [
                       ToggleSwitch(
                         initialLabelIndex: _selectedIndex,
-                        activeFgColor: Theme.of(context).colorScheme.onPrimary,
-                        inactiveFgColor: Theme.of(context).colorScheme.onSurfaceVariant,
-                        activeBgColor: [Theme.of(context).colorScheme.primary],
-                        inactiveBgColor: Theme.of(context).colorScheme.surfaceContainer,
-                        minHeight: 48,
-                        cornerRadius: 14,
+                        activeFgColor: Colors.white,
+                        inactiveFgColor: Colors.white60,
+                        activeBgColor: [MyTheme.accent],
+                        inactiveBgColor: Theme.of(context).hintColor,
                         totalSwitches: 2,
-                        minWidth: ((size.width - 2 * space) / 2).clamp(0.0, 150.0),
-                        fontSize: compact ? 13 : 15,
-                        iconSize: compact ? 16 : 18,
+                        minWidth: 150,
+                        fontSize: 15,
+                        iconSize: 18,
                         labels: [
                           translate("Mouse mode"),
                           translate("Touch mode")
@@ -159,9 +153,9 @@ class _GestureHelpState extends State<GestureHelp> {
                       if (_touchMode && _virtualMouseMode.showVirtualMouse)
                         Padding(
                           // Indent "Virtual mouse size"
-                          padding: EdgeInsets.only(left: compact ? 8 : 24),
+                          padding: const EdgeInsets.only(left: 24.0),
                           child: SizedBox(
-                            width: compact ? size.width - 32 : 260,
+                            width: 260,
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               mainAxisSize: MainAxisSize.min,
@@ -311,13 +305,11 @@ class _GestureHelpState extends State<GestureHelp> {
                               width,
                               GestureIcons.iconGestureFDrag,
                               translate("Two-Finger Move"),
-                              translate(oneHand ? "Mouse Wheel" : "Canvas Move")),
+                              translate("Canvas Move")),
                           GestureInfo(
                               width,
                               GestureIcons.iconGesturePinch,
-                              oneHand
-                                  ? (chinese ? "双击按住后上下拖动" : "Double-tap, hold and drag vertically")
-                                  : translate("Pinch to Zoom"),
+                              translate("Pinch to Zoom"),
                               translate("Canvas Zoom")),
                         ]
                       : [
@@ -334,7 +326,7 @@ class _GestureHelpState extends State<GestureHelp> {
                           GestureInfo(
                               width,
                               GestureIcons.iconGestureFSwipeRight,
-                              oneHand ? translate("One-Finger Move") : translate("Double Tap & Move"),
+                              translate("Double Tap & Move"),
                               translate("Mouse Drag")),
                           GestureInfo(
                               width,
@@ -345,13 +337,11 @@ class _GestureHelpState extends State<GestureHelp> {
                               width,
                               GestureIcons.iconGestureFDrag,
                               translate("Two-Finger Move"),
-                              translate(oneHand ? "Mouse Wheel" : "Canvas Move")),
+                              translate("Canvas Move")),
                           GestureInfo(
                               width,
                               GestureIcons.iconGesturePinch,
-                              oneHand
-                                  ? (chinese ? "双击按住后上下拖动" : "Double-tap, hold and drag vertically")
-                                  : translate("Pinch to Zoom"),
+                              translate("Pinch to Zoom"),
                               translate("Canvas Zoom")),
                         ],
                 )),

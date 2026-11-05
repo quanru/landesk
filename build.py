@@ -188,8 +188,8 @@ def generate_build_script_for_docker():
             export CPATH="$(clang -v 2>&1 | grep "Selected GCC installation: " | cut -d' ' -f4-)/include"
             # flutter
             pushd /opt
-            wget https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_3.44.1-stable.tar.xz
-            tar -xvf flutter_linux_3.44.1-stable.tar.xz
+            wget https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_3.0.5-stable.tar.xz
+            tar -xvf flutter_linux_3.0.5-stable.tar.xz
             export PATH=`pwd`/flutter/bin:$PATH
             popd
             # flutter_rust_bridge
@@ -331,16 +331,14 @@ def get_features(args):
         # And only on the deb branch. The other three Linux paths (pacman/yum/zypper) package
         # straight from `target/release` without bundling libdrmtap, without the rename, without
         # Conflicts/Provides and without assert_staged_binary_is_drm() -- so they would emit a
-        # package NAMED `localdesk` carrying the consent-bypass backend and the root-side uinput
-        # injection. The separate package name is the informed consent this feature rests on
-        # (README "DRM capture" section), and it is the thing a `zypper install localdesk`-style
-        # install would silently skip. Refuse early and loudly instead.
-        if linux_packaging_branch() != 'deb':
+        # package NAMED `rustdesk` carrying the consent-bypass backend and the root-side uinput
+        # injection. The separate package name is the informed consent this feature rests on, so
+        # refuse rather than ship a stock-named build of it.
+        branch = linux_packaging_branch()
+        if branch != 'deb':
             raise Exception(
-                f"--drm builds only the .deb packaging path; this host packages via "
-                f"`{linux_packaging_branch()}`, which does not bundle libdrmtap.so or rename the "
-                f"package to {DRM_PACKAGE_NAME}. Build on a Debian/Ubuntu host (or the ubuntu18.04 "
-                f"packaging container) instead.")
+                f'--drm is only supported on the deb packaging path; this host would package via '
+                f'{branch}, which cannot bundle libdrmtap or name the package distinctly')
         features.append('drm')
         # The display wake is its own compile gate on top of `drm`, and the unattended package is
         # exactly where it belongs: that variant exists to reach a machine nobody is sitting at,
@@ -359,15 +357,15 @@ def generate_control_file(version):
     control_file_path = "../res/DEBIAN/control"
     system2('/bin/rm -rf %s' % control_file_path)
 
-    content = """Package: localdesk
+    content = """Package: rustdesk
 Section: net
 Priority: optional
 Version: %s
 Architecture: %s
-Maintainer: landesk contributors
-Homepage: https://github.com/quanru/landesk
-Depends: libgtk-3-0t64 | libgtk-3-0, libxcb-randr0, libxdo3 | libxdo4, libxfixes3, libxcb-shape0, libxcb-xfixes0, libasound2t64 | libasound2, libsystemd0, curl, libva2, libva-drm2, libva-x11-2, libgstreamer-plugins-base1.0-0, libpam0g, gstreamer1.0-pipewire%s
-Recommends: libayatana-appindicator3-1, xdotool
+Maintainer: rustdesk <info@rustdesk.com>
+Homepage: https://rustdesk.com
+Depends: libgtk-3-0t64 | libgtk-3-0, libxcb-randr0, libxdo3 | libxdo4, libxfixes3, libxcb-shape0, libxcb-xfixes0, libasound2t64 | libasound2, libsystemd0, curl, libva2, libva-drm2, libva-x11-2, libgstreamer-plugins-base1.0-0, gstreamer1.0-pipewire%s
+Recommends: libayatana-appindicator3-1
 Description: A remote control software.
 
 """ % (version, get_deb_arch(), get_deb_extra_depends())
@@ -392,9 +390,9 @@ def ffi_bindgen_function_refactor():
 # The commit is fetched directly by sha, so no branch or tag name takes part in the build: see
 # build_libdrmtap_so(). This is the SINGLE source of truth for the pin, deliberately not duplicated in
 # any workflow, so a bump is one edit here (plus the informational version comment in
-# libs/scrap/Cargo.toml). This commit is libdrmtap v0.5.4.
+# libs/scrap/Cargo.toml). This commit is libdrmtap v0.5.12.
 LIBDRMTAP_REPO_PINNED = 'https://github.com/rustdesk-org/libdrmtap'
-LIBDRMTAP_SHA_PINNED = '5da68a3a368db569716d0d0f11cefacbb11b2290'
+LIBDRMTAP_SHA_PINNED = '5936a7a88b94aa43516a3dd0eb509d2383f31e2d'
 LIBDRMTAP_REPO = os.environ.get('DRMTAP_REPO', LIBDRMTAP_REPO_PINNED)
 LIBDRMTAP_SHA = os.environ.get('DRMTAP_SHA', LIBDRMTAP_SHA_PINNED)
 # Every way of getting a different .so than the pin needs the same explicit opt-in. Otherwise the
@@ -491,8 +489,10 @@ def build_libdrmtap_so():
         # override of the three -- no fetch, no sha verification, an object built by something this
         # script cannot see -- so it is the likeliest to hand over a CPU-only build, and skipping the
         # assertion on exactly this path would leave the check guarding only the case that was
-        # already trustworthy.
+        # already trustworthy. The helper check rides along for the same reason, and it matters
+        # more here than anywhere: this is the branch the packaging workflow takes.
         _assert_so_has_egl(so)
+        _assert_so_has_no_helper(so)
         return so
     # Fetch the pinned source if it is not already present. third_party/libdrmtap is not a submodule
     # anymore; it is git-ignored. The commit is fetched BY SHA rather than by cloning a branch:
@@ -523,8 +523,22 @@ def build_libdrmtap_so():
                 f'libdrmtap at {src} is {got_sha}, expected {LIBDRMTAP_SHA} '
                 f'(stale checkout from a different pin; removed, re-run to re-fetch)')
     build_dir = os.path.join(src, 'build-pkg')
+    # Configure a fresh dir, or RE-configure one an earlier build left behind. Without the second
+    # branch a build-pkg created before this option was added keeps its old configuration, meson
+    # skips setup, and the compile produces a helper-enabled .so. The assertion below then fails
+    # the build rather than shipping it, so this is a developer-build correctness fix and not a
+    # security one -- but it turns a confusing failure into no failure at all.
     if not os.path.exists(os.path.join(build_dir, 'build.ninja')):
-        system2(f'meson setup "{build_dir}" "{src}" --buildtype=release')
+        # -Dhelper=disabled: rustdesk never uses the privileged helper. The capture context is
+        # opened only in the root service (every drmtap_open lives in src/ipc/drm.rs), which
+        # already has CAP_SYS_ADMIN, and the unprivileged side opens a render node instead. Without
+        # this the library still carries the fallback: a fork/exec that walks six hardcoded paths,
+        # two of them under /usr/local, and execs the first that passes access(X_OK) with no check
+        # of its owner or mode -- inside the ROOT process. The option compiles that path out
+        # entirely. Requested by the maintainer on rustdesk#16242.
+        system2(f'meson setup "{build_dir}" "{src}" --buildtype=release -Dhelper=disabled')
+    else:
+        system2(f'meson configure "{build_dir}" -Dhelper=disabled')
     # Build only the shared library, not the bundled helper binary or the static archive. Since
     # libdrmtap 0.4.11 the project is `both_libraries` (a version-scripted .so + a static .a), so the
     # bare `drmtap` target is ambiguous ("drmtap:shared_library" vs "drmtap:static_library"); ask for
@@ -535,7 +549,29 @@ def build_libdrmtap_so():
     # require exactly one so a stale object from an earlier build is never silently picked.
     so = _single_real_so(sos, f'the libdrmtap meson build dir {build_dir}')
     _assert_so_has_egl(so)
+    _assert_so_has_no_helper(so)
     return so
+
+
+def _assert_so_has_no_helper(so_path):
+    # Asserted on the ARTIFACT for the same reason the EGL check is: a build flag cannot notice a
+    # stale object left by an earlier build, or one substituted by hand, and `-Dhelper=disabled` is
+    # silently accepted by meson versions that predate the option. What the option removes is the
+    # whole fork/exec path, so the produced .so imports no socketpair and carries none of the
+    # helper search paths; both go to zero, measured on libdrmtap 0.5.6 (4 -> 0 and 3 -> 0).
+    #
+    # This matters because the object is loaded by the ROOT service. With the path compiled in, a
+    # caller that ever lost CAP_SYS_ADMIN would exec whatever sits at the first of six hardcoded
+    # locations that passes access(X_OK), without checking its owner or its mode.
+    with open(so_path, 'rb') as f:
+        blob = f.read()
+    found = [m.decode() for m in (b'socketpair', b'/usr/libexec/drmtap-helper') if m in blob]
+    if found:
+        raise Exception(
+            f'{so_path} still carries the privileged-helper fallback ({", ".join(found)}). '
+            f'It must be built with -Dhelper=disabled: rustdesk captures as root and never uses '
+            f'the helper, so this is a fork/exec path in the privileged process that nothing '
+            f'reaches. Delete third_party/libdrmtap/build-pkg and rebuild.')
 
 
 def _assert_so_has_egl(so_path):
@@ -568,7 +604,7 @@ def _assert_so_has_egl(so_path):
             'libgles2-mesa-dev; Arch: mesa libglvnd).')
 
 
-DRM_PACKAGE_NAME = 'localdesk-unattended-wayland'
+DRM_PACKAGE_NAME = 'rustdesk-unattended-wayland'
 
 
 def assert_so_satisfies_the_runtime_abi_gate(so_path):
@@ -655,8 +691,8 @@ def measured_glibc_floor():
     # libdrmtap is built on a newer base than the rest of the deb, so the floor is whichever staged
     # object is higher -- and it moves whenever either base does.
     paths = [p for p in glob.glob('tmpdeb/usr/lib/rustdesk/libdrmtap.so.0.*')
-             + glob.glob('tmpdeb/usr/share/localdesk/lib/librustdesk.so')
-             + glob.glob('tmpdeb/usr/share/localdesk/localdesk')
+             + glob.glob('tmpdeb/usr/share/rustdesk/lib/librustdesk.so')
+             + glob.glob('tmpdeb/usr/share/rustdesk/rustdesk')
              if os.path.isfile(p) and not os.path.islink(p)]
     minor = max((_max_glibc_minor(p) for p in paths), default=0)
     if not minor:
@@ -680,9 +716,9 @@ def retarget_control_to_drm_variant():
         lines = f.readlines()
     out = []
     for line in lines:
-        if line.startswith('Package: localdesk'):
+        if line.startswith('Package: rustdesk'):
             out.append(f'Package: {DRM_PACKAGE_NAME}\n')
-            out.append('Conflicts: localdesk\nReplaces: localdesk\nProvides: localdesk\n')
+            out.append('Conflicts: rustdesk\nReplaces: rustdesk\nProvides: rustdesk\n')
         elif line.startswith('Depends:'):
             # 2.4.101 is where drmModeGetFB2 landed; below it libdrmtap loads and can never capture.
             out.append(line.rstrip('\n') + ', libdrm2 (>= 2.4.101), libegl1, libgles2, '
@@ -690,9 +726,8 @@ def retarget_control_to_drm_variant():
         else:
             out.append(line)
     body = ''.join(out)
-    # Fail loudly rather than silently shipping a package that says `localdesk`: a stock control
-    # file that stopped matching either anchor would otherwise produce a variant deb wearing the
-    # stock name.
+    # Fail loudly rather than silently shipping a package that says `rustdesk`: a stock control file
+    # that stopped matching either anchor would otherwise produce a variant deb wearing the stock name.
     if f'Package: {DRM_PACKAGE_NAME}\n' not in body or 'libegl1' not in body:
         raise Exception(f'could not retarget {path} to the drm variant; upstream control layout changed')
     with open(path, 'w') as f:
@@ -706,35 +741,27 @@ def build_flutter_deb(version, features):
     os.chdir('flutter')
     system2('flutter build linux --release')
     system2('mkdir -p tmpdeb/usr/bin/')
-    system2('mkdir -p tmpdeb/usr/share/localdesk')
-    system2('mkdir -p tmpdeb/etc/localdesk/')
-    system2('mkdir -p tmpdeb/etc/pam.d/')
-    system2('mkdir -p tmpdeb/usr/share/localdesk/files/systemd/')
+    system2('mkdir -p tmpdeb/usr/share/rustdesk')
+    system2('mkdir -p tmpdeb/usr/share/rustdesk/files/systemd/')
     system2('mkdir -p tmpdeb/usr/share/icons/hicolor/256x256/apps/')
     system2('mkdir -p tmpdeb/usr/share/icons/hicolor/scalable/apps/')
     system2('mkdir -p tmpdeb/usr/share/applications/')
     system2('mkdir -p tmpdeb/usr/share/polkit-1/actions')
-    system2('rm tmpdeb/usr/bin/localdesk || true')
+    system2('rm tmpdeb/usr/bin/rustdesk || true')
     system2(
-        f'cp -r {flutter_build_dir}/* tmpdeb/usr/share/localdesk/')
+        f'cp -r {flutter_build_dir}/* tmpdeb/usr/share/rustdesk/')
     system2(
-        'cp ../res/localdesk.service tmpdeb/usr/share/localdesk/files/systemd/')
+        'cp ../res/rustdesk.service tmpdeb/usr/share/rustdesk/files/systemd/')
     system2(
-        'cp ../res/128x128@2x.png tmpdeb/usr/share/icons/hicolor/256x256/apps/localdesk.png')
+        'cp ../res/128x128@2x.png tmpdeb/usr/share/icons/hicolor/256x256/apps/rustdesk.png')
     system2(
-        'cp ../res/scalable.svg tmpdeb/usr/share/icons/hicolor/scalable/apps/localdesk.svg')
+        'cp ../res/scalable.svg tmpdeb/usr/share/icons/hicolor/scalable/apps/rustdesk.svg')
     system2(
-        'cp ../res/rustdesk.desktop tmpdeb/usr/share/applications/localdesk.desktop')
+        'cp ../res/rustdesk.desktop tmpdeb/usr/share/applications/rustdesk.desktop')
     system2(
-        'cp ../res/rustdesk-link.desktop tmpdeb/usr/share/applications/localdesk-link.desktop')
+        'cp ../res/rustdesk-link.desktop tmpdeb/usr/share/applications/rustdesk-link.desktop')
     system2(
-        'cp ../res/startwm.sh tmpdeb/etc/localdesk/')
-    system2(
-        'cp ../res/xorg.conf tmpdeb/etc/localdesk/')
-    system2(
-        'cp ../res/pam.d/rustdesk.debian tmpdeb/etc/pam.d/localdesk')
-    system2(
-        "echo \"#!/bin/sh\" >> tmpdeb/usr/share/localdesk/files/polkit && chmod a+x tmpdeb/usr/share/localdesk/files/polkit")
+        "echo \"#!/bin/sh\" >> tmpdeb/usr/share/rustdesk/files/polkit && chmod a+x tmpdeb/usr/share/rustdesk/files/polkit")
     # Bundle libdrmtap.so only when this build actually enabled the `drm` feature, so stock packages
     # stay exactly what they were. The root service dlopens it in-process by absolute path.
     # `features` is the comma-joined string, so split it: a bare substring test would also match any
@@ -753,14 +780,14 @@ def build_flutter_deb(version, features):
         retarget_control_to_drm_variant()
     system2('cp -a ../res/DEBIAN/* tmpdeb/DEBIAN/')
     md5_file_folder("tmpdeb/")
-    system2('dpkg-deb -b tmpdeb localdesk.deb;')
+    system2('dpkg-deb -b tmpdeb rustdesk.deb;')
 
     system2('/bin/rm -rf tmpdeb/')
     system2('/bin/rm -rf ../res/DEBIAN/control')
-    os.rename('localdesk.deb', '../localdesk-%s.deb' % version)
+    os.rename('rustdesk.deb', '../rustdesk-%s.deb' % version)
     if ships_so:
         # Named apart from the stock package so installing the consent-free variant is a deliberate act.
-        os.rename('../localdesk-%s.deb' % version, f'../{DRM_PACKAGE_NAME}-{version}.deb')
+        os.rename('../rustdesk-%s.deb' % version, f'../{DRM_PACKAGE_NAME}-{version}.deb')
     os.chdir("..")
 
 
@@ -797,8 +824,8 @@ def assert_staged_binary_is_drm():
     Called from BOTH packaging paths. It used to guard only one of them, and `--skip-cargo` (which
     is how CI packages) reaches the other, where nothing had rebuilt the binary at all.
     """
-    binaries = [p for p in glob.glob('tmpdeb/usr/share/localdesk/lib/librustdesk.so')
-                + glob.glob('tmpdeb/usr/share/localdesk/localdesk') if os.path.isfile(p)]
+    binaries = [p for p in glob.glob('tmpdeb/usr/share/rustdesk/lib/librustdesk.so')
+                + glob.glob('tmpdeb/usr/share/rustdesk/rustdesk') if os.path.isfile(p)]
     if not any(_carries_drmtap_marker(p) for p in binaries):
         raise Exception(
             f'--drm was requested but the staged bundle does not look like a drm build (no '
@@ -822,34 +849,34 @@ def assert_staged_binary_is_drm():
 def build_deb_from_folder(version, binary_folder, want_drm=False):
     os.chdir('flutter')
     system2('mkdir -p tmpdeb/usr/bin/')
-    system2('mkdir -p tmpdeb/usr/share/localdesk')
-    system2('mkdir -p tmpdeb/usr/share/localdesk/files/systemd/')
+    system2('mkdir -p tmpdeb/usr/share/rustdesk')
+    system2('mkdir -p tmpdeb/usr/share/rustdesk/files/systemd/')
     system2('mkdir -p tmpdeb/usr/share/icons/hicolor/256x256/apps/')
     system2('mkdir -p tmpdeb/usr/share/icons/hicolor/scalable/apps/')
     system2('mkdir -p tmpdeb/usr/share/applications/')
     system2('mkdir -p tmpdeb/usr/share/polkit-1/actions')
-    system2('rm tmpdeb/usr/bin/localdesk || true')
+    system2('rm tmpdeb/usr/bin/rustdesk || true')
     system2(
-        f'cp -r ../{binary_folder}/* tmpdeb/usr/share/localdesk/')
+        f'cp -r ../{binary_folder}/* tmpdeb/usr/share/rustdesk/')
     system2(
-        'cp ../res/localdesk.service tmpdeb/usr/share/localdesk/files/systemd/')
+        'cp ../res/rustdesk.service tmpdeb/usr/share/rustdesk/files/systemd/')
     system2(
-        'cp ../res/128x128@2x.png tmpdeb/usr/share/icons/hicolor/256x256/apps/localdesk.png')
+        'cp ../res/128x128@2x.png tmpdeb/usr/share/icons/hicolor/256x256/apps/rustdesk.png')
     system2(
-        'cp ../res/scalable.svg tmpdeb/usr/share/icons/hicolor/scalable/apps/localdesk.svg')
+        'cp ../res/scalable.svg tmpdeb/usr/share/icons/hicolor/scalable/apps/rustdesk.svg')
     system2(
-        'cp ../res/rustdesk.desktop tmpdeb/usr/share/applications/localdesk.desktop')
+        'cp ../res/rustdesk.desktop tmpdeb/usr/share/applications/rustdesk.desktop')
     system2(
-        'cp ../res/rustdesk-link.desktop tmpdeb/usr/share/applications/localdesk-link.desktop')
+        'cp ../res/rustdesk-link.desktop tmpdeb/usr/share/applications/rustdesk-link.desktop')
     system2(
-        "echo \"#!/bin/sh\" >> tmpdeb/usr/share/localdesk/files/polkit && chmod a+x tmpdeb/usr/share/localdesk/files/polkit")
+        "echo \"#!/bin/sh\" >> tmpdeb/usr/share/rustdesk/files/polkit && chmod a+x tmpdeb/usr/share/rustdesk/files/polkit")
     # Where the capture library comes from for a `--package <folder> --drm` build. Two shapes are
     # supported, because two exist in practice: a bundle that already carries libdrmtap.so.0.*
     # (someone staged it, e.g. a CI artifact), and a plain bundle, which is what every build path
     # here actually produces -- the flutter deb builds the library straight into the staged deb, so
     # nothing ever puts it inside the bundle folder. Demanding it in the bundle made this flag
     # combination impossible to satisfy.
-    bundled_glob = glob.glob('tmpdeb/usr/share/localdesk/libdrmtap.so.0.*')
+    bundled_glob = glob.glob('tmpdeb/usr/share/rustdesk/libdrmtap.so.0.*')
     bundle_carries_so = any(os.path.isfile(p) and not os.path.islink(p) for p in bundled_glob)
     # The variant must be decided by the EXPLICIT --drm request, not merely by what happens to be
     # staged: a bundle that carries the .so must NOT be shipped as the consent-bypass variant when
@@ -874,11 +901,13 @@ def build_deb_from_folder(version, binary_folder, want_drm=False):
             # takes the .so straight out of a bundle somebody else produced, so it has the same
             # exposure as DRMTAP_PREBUILT_DIR (see the comment on that branch). A CPU-only stub
             # would ship, the loader would accept it, and capture would degrade to PipeWire
-            # without a word.
+            # without a word. A bundle produced before the helper was disabled is caught here too,
+            # which is the point: it must not be repackaged into a deb.
             _assert_so_has_egl(so)
+            _assert_so_has_no_helper(so)
             stage_libdrmtap_into_deb(so)
             system2(f'rm -f "{so}"')
-            system2('rm -f tmpdeb/usr/share/localdesk/libdrmtap.so tmpdeb/usr/share/localdesk/libdrmtap.so.0')
+            system2('rm -f tmpdeb/usr/share/rustdesk/libdrmtap.so tmpdeb/usr/share/rustdesk/libdrmtap.so.0')
         else:
             # Build it here, exactly as the flutter deb path does (build_libdrmtap_so asserts the
             # EGL backend itself). The library is independent of the staged binary.
@@ -892,13 +921,13 @@ def build_deb_from_folder(version, binary_folder, want_drm=False):
         retarget_control_to_drm_variant()
     system2('cp -a ../res/DEBIAN/* tmpdeb/DEBIAN/')
     md5_file_folder("tmpdeb/")
-    system2('dpkg-deb -b tmpdeb localdesk.deb;')
+    system2('dpkg-deb -b tmpdeb rustdesk.deb;')
 
     system2('/bin/rm -rf tmpdeb/')
     system2('/bin/rm -rf ../res/DEBIAN/control')
-    os.rename('localdesk.deb', '../localdesk-%s.deb' % version)
+    os.rename('rustdesk.deb', '../rustdesk-%s.deb' % version)
     if want_drm:
-        os.rename('../localdesk-%s.deb' % version, f'../{DRM_PACKAGE_NAME}-{version}.deb')
+        os.rename('../rustdesk-%s.deb' % version, f'../{DRM_PACKAGE_NAME}-{version}.deb')
     os.chdir("..")
 
 
@@ -917,21 +946,11 @@ def build_flutter_dmg(version, features):
     mac_arch = 'arm64' if platform.machine().lower() in ('arm64', 'aarch64') else 'x86_64'
     system2(
         f'FLUTTER_XCODE_ARCHS={mac_arch} FLUTTER_XCODE_ONLY_ACTIVE_ARCH=YES flutter build macos --release')
-    system2('cp -rf ../target/release/service ./build/macos/Build/Products/Release/landesk.app/Contents/MacOS/')
-    # Flutter signs the app before the service binary is copied. Sign the new nested
-    # executable, refresh the outer ad-hoc signature, and fail before packaging if
-    # the resulting bundle seal is invalid. Release CI may replace this signature.
-    app_path = './build/macos/Build/Products/Release/landesk.app'
-    service_path = f'{app_path}/Contents/MacOS/service'
-    system2(f'codesign --force --sign - --options runtime "{service_path}"')
-    system2(
-        f'codesign --force --sign - --options runtime '
-        f'--entitlements macos/Runner/UnsignedRelease.entitlements "{app_path}"')
-    system2(f'codesign --verify --deep --strict --verbose=4 "{app_path}"')
+    system2('cp -rf ../target/release/service ./build/macos/Build/Products/Release/RustDesk.app/Contents/MacOS/')
     '''
     system2(
-        "create-dmg --volname \"landesk Installer\" --window-pos 200 120 --window-size 800 400 --icon-size 100 --app-drop-link 600 185 --icon landesk.app 200 190 --hide-extension landesk.app localdesk.dmg ./build/macos/Build/Products/Release/landesk.app")
-    os.rename("localdesk.dmg", f"../localdesk-{version}.dmg")
+        "create-dmg --volname \"RustDesk Installer\" --window-pos 200 120 --window-size 800 400 --icon-size 100 --app-drop-link 600 185 --icon RustDesk.app 200 190 --hide-extension RustDesk.app rustdesk.dmg ./build/macos/Build/Products/Release/RustDesk.app")
+    os.rename("rustdesk.dmg", f"../rustdesk-{version}.dmg")
     '''
     os.chdir("..")
 
@@ -973,9 +992,9 @@ def build_flutter_windows(version, features, skip_portable_pack):
                   './rustdesk_portable.exe')
     print(
         f'output location: {os.path.abspath(os.curdir)}/rustdesk_portable.exe')
-    os.rename('./rustdesk_portable.exe', f'./localdesk-{version}-install.exe')
+    os.rename('./rustdesk_portable.exe', f'./rustdesk-{version}-install.exe')
     print(
-        f'output location: {os.path.abspath(os.curdir)}/localdesk-{version}-install.exe')
+        f'output location: {os.path.abspath(os.curdir)}/rustdesk-{version}-install.exe')
 
 
 def main():
@@ -996,14 +1015,15 @@ def main():
         print(feats)
         return
 
-    if not args.flutter:
-        raise SystemExit('landesk requires --flutter; the legacy Sciter frontend was removed')
-
     if os.path.exists(exe_path):
         os.unlink(exe_path)
+    if os.path.isfile('/usr/bin/pacman'):
+        system2('git checkout src/ui/common.tis')
     version = get_version()
     features = ','.join(get_features(args))
     flutter = args.flutter
+    if not flutter:
+        system2('python3 res/inline-sciter.py')
     print(args.skip_cargo)
     if args.skip_cargo:
         skip_cargo = True
@@ -1040,13 +1060,20 @@ def main():
         os.chdir('libs/portable')
         system2('pip3 install -r requirements.txt')
         system2(
-            f'python3 ./generate.py -f ../../{res_dir} -o . -e ../../{res_dir}/rustdesk-{version}-install.exe')
-        system2(f'mv ../../{res_dir}/rustdesk-{version}-install.exe ../..')
+            f'python3 ./generate.py -f ../../{res_dir} -o . -e ../../{res_dir}/rustdesk-{version}-win7-install.exe')
+        system2(f'mv ../../{res_dir}/rustdesk-{version}-win7-install.exe ../..')
     elif os.path.isfile('/usr/bin/pacman'):
         # pacman -S -needed base-devel
         system2("sed -i 's/pkgver=.*/pkgver=%s/g' res/PKGBUILD" % version)
-        build_flutter_arch_manjaro(version, features)
-        system2('mv rustdesk-%s-0-x86_64.pkg.tar.zst localdesk-%s-manjaro-arch.pkg.tar.zst' % (
+        if flutter:
+            build_flutter_arch_manjaro(version, features)
+        else:
+            system2('cargo build --locked --release --features ' + features)
+            system2('git checkout src/ui/common.tis')
+            system2('strip target/release/rustdesk')
+            system2('ln -s res/pacman_install && ln -s res/PKGBUILD')
+            system2('HBB=`pwd` makepkg -f')
+        system2('mv rustdesk-%s-0-x86_64.pkg.tar.zst rustdesk-%s-manjaro-arch.pkg.tar.zst' % (
             version, version))
         # pacman -U ./rustdesk.pkg.tar.zst
     elif os.path.isfile('/usr/bin/yum'):
@@ -1056,7 +1083,7 @@ def main():
             "sed -i 's/Version:    .*/Version:    %s/g' res/rpm.spec" % version)
         system2('HBB=`pwd` rpmbuild -ba res/rpm.spec')
         system2(
-            'mv $HOME/rpmbuild/RPMS/x86_64/localdesk-%s-0.x86_64.rpm ./localdesk-%s-fedora28-centos8.rpm' % (
+            'mv $HOME/rpmbuild/RPMS/x86_64/rustdesk-%s-0.x86_64.rpm ./rustdesk-%s-fedora28-centos8.rpm' % (
                 version, version))
         # yum localinstall rustdesk.rpm
     elif os.path.isfile('/usr/bin/zypper'):
@@ -1066,7 +1093,7 @@ def main():
             "sed -i 's/Version:    .*/Version:    %s/g' res/rpm-suse.spec" % version)
         system2('HBB=`pwd` rpmbuild -ba res/rpm-suse.spec')
         system2(
-            'mv $HOME/rpmbuild/RPMS/x86_64/localdesk-%s-0.x86_64.rpm ./localdesk-%s-suse.rpm' % (
+            'mv $HOME/rpmbuild/RPMS/x86_64/rustdesk-%s-0.x86_64.rpm ./rustdesk-%s-suse.rpm' % (
                 version, version))
         # yum localinstall rustdesk.rpm
     else:
@@ -1082,9 +1109,9 @@ def main():
             system2('cargo --locked bundle --release --features ' + features)
             if osx:
                 system2(
-                    'strip target/release/bundle/osx/landesk.app/Contents/MacOS/rustdesk')
+                    'strip target/release/bundle/osx/RustDesk.app/Contents/MacOS/rustdesk')
                 system2(
-                    'cp libsciter.dylib target/release/bundle/osx/landesk.app/Contents/MacOS/')
+                    'cp libsciter.dylib target/release/bundle/osx/RustDesk.app/Contents/MacOS/')
                 # https://github.com/sindresorhus/create-dmg
                 system2('/bin/rm -rf *.dmg')
                 pa = os.environ.get('P')
@@ -1092,30 +1119,30 @@ def main():
                     system2('''
     # buggy: rcodesign sign ... path/*, have to sign one by one
     # install rcodesign via cargo install apple-codesign
-    #rcodesign sign --p12-file ~/.p12/localdesk-developer-id.p12 --p12-password-file ~/.p12/.cert-pass --code-signature-flags runtime ./target/release/bundle/osx/landesk.app/Contents/MacOS/rustdesk
-    #rcodesign sign --p12-file ~/.p12/localdesk-developer-id.p12 --p12-password-file ~/.p12/.cert-pass --code-signature-flags runtime ./target/release/bundle/osx/landesk.app/Contents/MacOS/libsciter.dylib
-    #rcodesign sign --p12-file ~/.p12/localdesk-developer-id.p12 --p12-password-file ~/.p12/.cert-pass --code-signature-flags runtime ./target/release/bundle/osx/landesk.app
+    #rcodesign sign --p12-file ~/.p12/rustdesk-developer-id.p12 --p12-password-file ~/.p12/.cert-pass --code-signature-flags runtime ./target/release/bundle/osx/RustDesk.app/Contents/MacOS/rustdesk
+    #rcodesign sign --p12-file ~/.p12/rustdesk-developer-id.p12 --p12-password-file ~/.p12/.cert-pass --code-signature-flags runtime ./target/release/bundle/osx/RustDesk.app/Contents/MacOS/libsciter.dylib
+    #rcodesign sign --p12-file ~/.p12/rustdesk-developer-id.p12 --p12-password-file ~/.p12/.cert-pass --code-signature-flags runtime ./target/release/bundle/osx/RustDesk.app
     # goto "Keychain Access" -> "My Certificates" for below id which starts with "Developer ID Application:"
-    codesign -s "Developer ID Application: {0}" --force --options runtime  ./target/release/bundle/osx/landesk.app/Contents/MacOS/*
-    codesign -s "Developer ID Application: {0}" --force --options runtime  ./target/release/bundle/osx/landesk.app
+    codesign -s "Developer ID Application: {0}" --force --options runtime  ./target/release/bundle/osx/RustDesk.app/Contents/MacOS/*
+    codesign -s "Developer ID Application: {0}" --force --options runtime  ./target/release/bundle/osx/RustDesk.app
     '''.format(pa))
                 system2(
-                    'create-dmg "landesk %s.dmg" "target/release/bundle/osx/landesk.app"' % version)
-                os.rename('landesk %s.dmg' %
-                          version, 'localdesk-%s.dmg' % version)
+                    'create-dmg "RustDesk %s.dmg" "target/release/bundle/osx/RustDesk.app"' % version)
+                os.rename('RustDesk %s.dmg' %
+                          version, 'rustdesk-%s.dmg' % version)
                 if pa:
                     system2('''
     # https://pyoxidizer.readthedocs.io/en/apple-codesign-0.14.0/apple_codesign.html
     # https://pyoxidizer.readthedocs.io/en/stable/tugger_code_signing.html
     # https://developer.apple.com/developer-id/
     # goto xcode and login with apple id, manager certificates (Developer ID Application and/or Developer ID Installer) online there (only download and double click (install) cer file can not export p12 because no private key)
-    #rcodesign sign --p12-file ~/.p12/localdesk-developer-id.p12 --p12-password-file ~/.p12/.cert-pass --code-signature-flags runtime ./localdesk-{1}.dmg
-    codesign -s "Developer ID Application: {0}" --force --options runtime ./localdesk-{1}.dmg
+    #rcodesign sign --p12-file ~/.p12/rustdesk-developer-id.p12 --p12-password-file ~/.p12/.cert-pass --code-signature-flags runtime ./rustdesk-{1}.dmg
+    codesign -s "Developer ID Application: {0}" --force --options runtime ./rustdesk-{1}.dmg
     # https://appstoreconnect.apple.com/access/api
     # https://gregoryszorc.com/docs/apple-codesign/stable/apple_codesign_getting_started.html#apple-codesign-app-store-connect-api-key
     # p8 file is generated when you generate api key (can download only once)
-    rcodesign notary-submit --api-key-path ../.p12/api-key.json  --staple localdesk-{1}.dmg
-    # verify:  spctl -a -t exec -v /Applications/landesk.app
+    rcodesign notary-submit --api-key-path ../.p12/api-key.json  --staple rustdesk-{1}.dmg
+    # verify:  spctl -a -t exec -v /Applications/RustDesk.app
     '''.format(pa, version))
                 else:
                     print('Not signed')
@@ -1124,35 +1151,27 @@ def main():
                 system2(
                     'mv target/release/bundle/deb/rustdesk*.deb ./rustdesk.deb')
                 system2('dpkg-deb -R rustdesk.deb tmpdeb')
-                system2("sed -i 's/^Package: .*/Package: localdesk/' tmpdeb/DEBIAN/control")
-                system2('mkdir -p tmpdeb/usr/share/localdesk/files/systemd/')
+                system2('mkdir -p tmpdeb/usr/share/rustdesk/files/systemd/')
                 system2('mkdir -p tmpdeb/usr/share/icons/hicolor/256x256/apps/')
                 system2('mkdir -p tmpdeb/usr/share/icons/hicolor/scalable/apps/')
                 system2(
-                    'cp res/localdesk.service tmpdeb/usr/share/localdesk/files/systemd/')
+                    'cp res/rustdesk.service tmpdeb/usr/share/rustdesk/files/systemd/')
                 system2(
-                    'cp res/128x128@2x.png tmpdeb/usr/share/icons/hicolor/256x256/apps/localdesk.png')
+                    'cp res/128x128@2x.png tmpdeb/usr/share/icons/hicolor/256x256/apps/rustdesk.png')
                 system2(
-                    'cp res/scalable.svg tmpdeb/usr/share/icons/hicolor/scalable/apps/localdesk.svg')
+                    'cp res/scalable.svg tmpdeb/usr/share/icons/hicolor/scalable/apps/rustdesk.svg')
                 system2(
-                    'cp res/rustdesk.desktop tmpdeb/usr/share/applications/localdesk.desktop')
+                    'cp res/rustdesk.desktop tmpdeb/usr/share/applications/rustdesk.desktop')
                 system2(
-                    'cp res/rustdesk-link.desktop tmpdeb/usr/share/applications/localdesk-link.desktop')
-                os.system('mkdir -p tmpdeb/etc/localdesk/')
-                os.system('cp -a res/startwm.sh tmpdeb/etc/localdesk/')
-                os.system('mkdir -p tmpdeb/etc/X11/localdesk/')
-                os.system('cp res/xorg.conf tmpdeb/etc/X11/localdesk/')
-                os.system('cp -a res/DEBIAN/* tmpdeb/DEBIAN/')
-                system2("sed -i 's/^Package: .*/Package: localdesk/' tmpdeb/DEBIAN/control")
-                os.system('mkdir -p tmpdeb/etc/pam.d/')
-                os.system('cp pam.d/rustdesk.debian tmpdeb/etc/pam.d/localdesk')
+                    'cp res/rustdesk-link.desktop tmpdeb/usr/share/applications/rustdesk-link.desktop')
+                os.system('cp -a DEBIAN/* tmpdeb/DEBIAN/')
                 system2('strip tmpdeb/usr/bin/rustdesk')
-                system2('mkdir -p tmpdeb/usr/share/localdesk')
-                system2('mv tmpdeb/usr/bin/rustdesk tmpdeb/usr/share/localdesk/localdesk')
-                system2('cp libsciter-gtk.so tmpdeb/usr/share/localdesk/')
+                system2('mkdir -p tmpdeb/usr/share/rustdesk')
+                system2('mv tmpdeb/usr/bin/rustdesk tmpdeb/usr/share/rustdesk/')
+                system2('cp libsciter-gtk.so tmpdeb/usr/share/rustdesk/')
                 md5_file_folder("tmpdeb/")
-                system2('dpkg-deb -b tmpdeb localdesk.deb; /bin/rm -rf tmpdeb/')
-                os.rename('localdesk.deb', 'localdesk-%s.deb' % version)
+                system2('dpkg-deb -b tmpdeb rustdesk.deb; /bin/rm -rf tmpdeb/')
+                os.rename('rustdesk.deb', 'rustdesk-%s.deb' % version)
 
 
 def md5_file(fn):

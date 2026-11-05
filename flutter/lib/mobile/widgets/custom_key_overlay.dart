@@ -8,18 +8,24 @@ import 'package:path_provider/path_provider.dart';
 import 'remote_shortcut.dart';
 import 'virtual_key_editor.dart';
 import 'virtual_mouse_controls.dart';
+import 'virtual_right_mouse_button.dart';
+
+part 'custom_key_storage.dart';
 
 class _KeySpot {
-  _KeySpot(this.config, this.x, this.y);
+  _KeySpot(this.config, this.x, this.y, {this.rightSlot, this.columnSlot});
+  int? rightSlot, columnSlot;
   VirtualKeyConfig config;
   double x, y; // normalized coordinates, 0..1
 
-  Map<String, dynamic> toJson() => {...config.toJson(), 'x': x, 'y': y};
+  Map<String, dynamic> toJson() => {...config.toJson(), 'x': x, 'y': y, if (rightSlot != null) 'rightSlot': rightSlot, if (columnSlot != null) 'columnSlot': columnSlot};
 
   factory _KeySpot.fromJson(Map<String, dynamic> j) => _KeySpot(
     VirtualKeyConfig.fromJson(j),
     (j['x'] as num?)?.toDouble() ?? .5,
     (j['y'] as num?)?.toDouble() ?? .5,
+    rightSlot: j['rightSlot'] as int?,
+    columnSlot: j['columnSlot'] as int?,
   );
 }
 
@@ -33,13 +39,17 @@ class CustomKeyOverlay extends StatefulWidget {
     this.active = true,
     this.write,
     this.mouseScroll,
+    this.rightClick,
     this.isMac = true,
     this.profileId = 'default',
     this.translate = virtualKeyText,
+    this.onVisibilityChanged,
   });
   final Future<void> Function(RemoteShortcut) send;
   final RemoteKeyWriter? write;
   final Future<void> Function(int)? mouseScroll;
+  final Future<void> Function()? rightClick;
+  final ValueChanged<bool>? onVisibilityChanged;
   final bool active;
   final bool isMac;
   final String profileId;
@@ -62,6 +72,7 @@ class CustomKeyOverlayState extends State<CustomKeyOverlay>
       _visible = value;
       _edit = false;
     });
+    widget.onVisibilityChanged?.call(_visible);
     _save();
   }
 
@@ -72,6 +83,7 @@ class CustomKeyOverlayState extends State<CustomKeyOverlay>
       _visible = true;
       _edit = true;
     });
+    widget.onVisibilityChanged?.call(_visible);
   }
 
   @override
@@ -117,7 +129,7 @@ class CustomKeyOverlayState extends State<CustomKeyOverlay>
   }
 
   String get _filename =>
-      'virtual_keys_v3/${base64Url.encode(utf8.encode(widget.profileId))}_${widget.isMac ? 'mac' : 'linux'}.json';
+      'landesk_native/virtual_keys/${base64Url.encode(utf8.encode(widget.profileId))}_${widget.isMac ? 'mac' : 'linux'}.json';
   final Map<String, Offset> _mousePositions = {};
   bool _sending = false;
   bool _sendingMacro = false;
@@ -133,6 +145,8 @@ class CustomKeyOverlayState extends State<CustomKeyOverlay>
       String code,
       double x,
       double y, {
+      int? rightSlot,
+      int? columnSlot,
       bool command = false,
       bool ctrl = false,
       bool alt = false,
@@ -145,17 +159,17 @@ class CustomKeyOverlayState extends State<CustomKeyOverlay>
       ),
       x,
       y,
+      rightSlot: rightSlot,
+      columnSlot: columnSlot,
     );
     return [
-      key('Esc', 'VK_ESCAPE', .02, .02),
-      key('Tab', 'VK_TAB', .98, .25),
-      key('C', 'VK_C', .98, .39),
-      key('V', 'VK_V', .98, .53),
-      key('↑', 'VK_UP', .10, .40),
-      key('↓', 'VK_DOWN', .10, .54),
-      key('Enter', 'VK_ENTER', .90, .85),
-      key('Space', 'VK_SPACE', .82, .85),
-      key('Back', 'VK_BACK', .98, .85),
+      key('Esc', 'VK_ESCAPE', .0, .0),
+      key('T', 'VK_T', .98, .26, columnSlot: 0),
+      key('C', 'VK_C', .98, .26, columnSlot: 1),
+      key('V', 'VK_V', .98, .26, columnSlot: 2),
+      key('Space', 'VK_SPACE', .98, .83, rightSlot: 2),
+      key('Enter', 'VK_ENTER', .98, .83, rightSlot: 1),
+      key('Back', 'VK_BACK', .98, .83, rightSlot: 0),
     ];
   }
 
@@ -206,111 +220,6 @@ class CustomKeyOverlayState extends State<CustomKeyOverlay>
     _releaseKeys();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
-  }
-
-  Future<File> _file() async {
-    final filename = _filename;
-    return File('${(await getApplicationSupportDirectory()).path}/$filename');
-  }
-
-  Future<void> _load() async {
-    final generation = ++_loadGeneration;
-    try {
-      var file = await _file();
-      if (!await file.exists()) {
-        file = File(
-          '${(await getApplicationSupportDirectory()).path}/rustdesk_mobile_virtual_keys_v2_${widget.isMac ? 'mac' : 'linux'}.json',
-        );
-      }
-      if (!await file.exists()) return;
-      final data =
-          jsonDecode(await file.readAsString()) as Map<String, dynamic>;
-      final rows = (data['spots'] as List).cast<Map<String, dynamic>>();
-      if (!mounted || generation != _loadGeneration || rows.length > 40) return;
-      setState(() {
-        _spots = rows.map(_KeySpot.fromJson).toList();
-        // Retire the old built-in chords while retaining user-created macros,
-        // key sizes and positions. The new defaults use physical-key semantics.
-        _spots.removeWhere(
-          (spot) =>
-              spot.config.steps.length == 1 &&
-              ((['⌘ Tab', 'Alt Tab'].contains(spot.config.title) &&
-                      spot.config.steps.first.key == 'VK_TAB') ||
-                  (['⌘ Space', 'Super Space'].contains(spot.config.title) &&
-                      spot.config.steps.first.key == 'VK_SPACE')),
-        );
-        for (final spot in _spots) {
-          final config = spot.config;
-          if (config.steps.length != 1) continue;
-          final code = config.steps.first.key;
-          final title = (code == 'VK_C' && ['Copy', 'C'].contains(config.title))
-              ? 'C'
-              : (code == 'VK_V' && ['Paste', 'V'].contains(config.title))
-              ? 'V'
-              : (code == 'VK_TAB' && config.title == 'T')
-              ? 'Tab'
-              : null;
-          if (title != null) {
-            spot.config = VirtualKeyConfig(
-              title,
-              [RemoteShortcut(title, code)],
-              size: config.size,
-              opacity: config.opacity,
-              delayMs: config.delayMs,
-            );
-          }
-        }
-        _visible = data['visible'] != false;
-        final positions = data['mousePositions'];
-        if (positions is Map) {
-          for (final id in ['mouse', 'wheel']) {
-            final p = positions[id];
-            if (p is List &&
-                p.length == 2 &&
-                p.every((v) => v is num && v.isFinite)) {
-              _mousePositions[id] = Offset(
-                (p[0] as num).toDouble().clamp(0, 1),
-                (p[1] as num).toDouble().clamp(0, 1),
-              );
-            }
-          }
-        }
-      });
-    } catch (e) {
-      debugPrint('CustomKeyOverlay using default layout: $e');
-    } finally {
-      if (mounted && generation == _loadGeneration) setState(() => _loaded = true);
-    }
-  }
-
-  Future<void> _save() {
-    final destination = _file();
-    final data = jsonEncode({
-      'spots': _spots.map((s) => s.toJson()).toList(),
-      'visible': _visible,
-      'mousePositions': _mousePositions.map(
-        (id, p) => MapEntry(id, [p.dx, p.dy]),
-      ),
-    });
-    _pendingSave = _pendingSave.then((_) async {
-      try {
-        final file = await destination;
-        await file.parent.create(recursive: true);
-        final temporary = File('${file.path}.tmp');
-        await temporary.writeAsString(data, flush: true);
-        await temporary.rename(file.path);
-      } catch (e) {
-        debugPrint('CustomKeyOverlay layout save failed: $e');
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(widget.translate('Could not save key layout')),
-            ),
-          );
-        }
-      }
-    });
-    return _pendingSave;
   }
 
   Future<void> _send(VirtualKeyConfig config) async {
@@ -376,7 +285,8 @@ class CustomKeyOverlayState extends State<CustomKeyOverlay>
       final controlSize = MediaQuery.sizeOf(context).shortestSide < 600
           ? 48.0
           : 64.0;
-      final bottomRowTop = math.max(0.0, bounds.maxHeight - controlSize) * .85;
+      final bottomRowTop = math.max(0.0, bounds.maxHeight - controlSize) *
+          (bounds.maxWidth > bounds.maxHeight ? .83 : .96);
       return Stack(
         children: [
           if (_visible && widget.mouseScroll != null)
@@ -392,6 +302,11 @@ class CustomKeyOverlayState extends State<CustomKeyOverlay>
                 },
               ),
             ),
+          if (_visible && widget.rightClick != null)
+            VirtualRightMouseButton(onTap: widget.rightClick!, editing: _edit,
+              position: _mousePositions['mouse'],
+              onPosition: (position) => setState(() => _mousePositions['mouse'] = position),
+              onPositionEnd: _save),
           // Editing retains a Done control; visibility lives in Operations.
           if (_edit) Positioned(
             top: bottomRowTop,
@@ -417,6 +332,7 @@ class CustomKeyOverlayState extends State<CustomKeyOverlay>
                             _visible = !_visible;
                           }
                         });
+                        widget.onVisibilityChanged?.call(_visible);
                         _save();
                       },
                 onLongPress: _sending
@@ -427,6 +343,7 @@ class CustomKeyOverlayState extends State<CustomKeyOverlay>
                           _visible = true;
                           _edit = !_edit;
                         });
+                        widget.onVisibilityChanged?.call(_visible);
                       },
                 child: Semantics(
                   label: _edit
@@ -479,7 +396,7 @@ class CustomKeyOverlayState extends State<CustomKeyOverlay>
             ),
           if (_visible && !_edit)
             Positioned(
-              left: 12 + controlSize + 10,
+              left: math.max(0.0, bounds.maxWidth - controlSize) * .035,
               top: bottomRowTop,
               child: Row(
                 children: ['Ctrl', 'Opt', 'Cmd'].map((name) {
@@ -489,7 +406,7 @@ class CustomKeyOverlayState extends State<CustomKeyOverlay>
                     'Cmd': 'Meta',
                   }[name]!;
                   return Padding(
-                    padding: const EdgeInsets.only(right: 10),
+                    padding: EdgeInsets.only(right: name == 'Cmd' ? 0 : 10),
                     child: Semantics(
                       button: true,
                       selected: _touches.containsValue(code),
@@ -566,9 +483,14 @@ class CustomKeyOverlayState extends State<CustomKeyOverlay>
               );
               final width = math.max(0.0, bounds.maxWidth - size);
               final height = math.max(0.0, bounds.maxHeight - size);
+              final left = spot.rightSlot == null
+                  ? spot.x.clamp(0.0, 1.0).toDouble() * width
+                  : math.max(0.0, width * .98 - spot.rightSlot! * (size + 10));
+              final top = spot.y.clamp(0.0, 1.0).toDouble() * height +
+                  (spot.columnSlot ?? 0) * (size + 4);
               return Positioned(
-                left: spot.x.clamp(0.0, 1.0).toDouble() * width,
-                top: spot.y.clamp(0.0, 1.0).toDouble() * height,
+                left: left,
+                top: top,
                 child: GestureDetector(
                   key: ValueKey('virtual-key-$i'),
                   behavior: HitTestBehavior.opaque,
@@ -578,13 +500,15 @@ class CustomKeyOverlayState extends State<CustomKeyOverlay>
                   onPanUpdate: _edit
                       ? (details) {
                           setState(() {
+                            spot.rightSlot = null;
+                            spot.columnSlot = null;
                             spot.x =
-                                ((spot.x * width + details.delta.dx) /
+                                ((left + details.delta.dx) /
                                         math.max(width, 1))
                                     .clamp(0.0, 1.0)
                                     .toDouble();
                             spot.y =
-                                ((spot.y * height + details.delta.dy) /
+                                ((top + details.delta.dy) /
                                         math.max(height, 1))
                                     .clamp(0.0, 1.0)
                                     .toDouble();

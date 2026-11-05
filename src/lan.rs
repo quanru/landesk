@@ -4,7 +4,7 @@ use hbb_common::{
     allow_err,
     anyhow::bail,
     config::Config,
-    config::{self},
+    config::{self, RENDEZVOUS_PORT},
     log,
     protobuf::Message as _,
     rendezvous_proto::*,
@@ -16,109 +16,15 @@ use hbb_common::{
 };
 
 use std::{
-    collections::{BTreeSet, HashMap, HashSet},
+    collections::{HashMap, HashSet},
     net::{IpAddr, Ipv4Addr, SocketAddr, ToSocketAddrs, UdpSocket},
-    sync::atomic::{AtomicBool, Ordering},
     time::Instant,
 };
 
-const LAN_DISCOVERY_PORT: u16 = 21_119;
-pub(crate) const LAN_DEVICE_NAME_OPTION: &str = "lan-device-name";
-
-static DISCOVERY_RUNNING: AtomicBool = AtomicBool::new(false);
-
-struct DiscoveryGuard;
-
-impl Drop for DiscoveryGuard {
-    fn drop(&mut self) {
-        DISCOVERY_RUNNING.store(false, Ordering::Release);
-    }
-}
-
 type Message = RendezvousMessage;
-
-pub(crate) fn connectable_local_address(address: IpAddr) -> bool {
-    if !hbb_common::lan::allowed_ip(address)
-        || address.is_loopback()
-        || address.is_unspecified()
-        || address.is_multicast()
-    {
-        return false;
-    }
-    match address {
-        IpAddr::V4(_) => true,
-        IpAddr::V6(address) => (address.segments()[0] & 0xffc0) != 0xfe80,
-    }
-}
-
-#[cfg(not(target_os = "ios"))]
-pub(crate) fn local_connectable_addresses() -> Vec<IpAddr> {
-    let addresses = default_net::get_interfaces()
-        .into_iter()
-        .flat_map(|interface| {
-            interface
-                .ipv4
-                .into_iter()
-                .map(|network| IpAddr::V4(network.addr))
-                .chain(
-                    interface
-                        .ipv6
-                        .into_iter()
-                        .map(|network| IpAddr::V6(network.addr)),
-                )
-        })
-        .filter(|address| connectable_local_address(*address))
-        .collect::<BTreeSet<_>>();
-    addresses.into_iter().collect()
-}
-
-#[cfg(target_os = "ios")]
-pub(crate) fn local_connectable_addresses() -> Vec<IpAddr> {
-    Vec::new()
-}
-
-fn directed_broadcast(address: Ipv4Addr, netmask: Ipv4Addr) -> Ipv4Addr {
-    Ipv4Addr::from(u32::from(address) | !u32::from(netmask))
-}
-
-pub(crate) fn sanitize_lan_device_name(value: &str) -> String {
-    value
-        .trim()
-        .chars()
-        .filter(|character| !character.is_control())
-        .take(64)
-        .collect()
-}
-
-fn select_device_display_name(custom_name: &str, system_hostname: &str) -> String {
-    let custom_name = sanitize_lan_device_name(custom_name);
-    if !custom_name.is_empty() {
-        return custom_name;
-    }
-    let system_hostname = sanitize_lan_device_name(system_hostname);
-    if system_hostname.is_empty() {
-        "LocalDesk".to_owned()
-    } else {
-        system_hostname
-    }
-}
-
-pub(crate) fn device_display_name() -> String {
-    select_device_display_name(
-        &Config::get_option(LAN_DEVICE_NAME_OPTION),
-        &crate::hostname(),
-    )
-}
 
 #[cfg(not(target_os = "ios"))]
 pub(super) fn start_listening() -> ResultType<()> {
-    #[cfg(not(any(target_os = "android", target_os = "ios")))]
-    std::thread::spawn(|| {
-        if let Err(err) = crate::lan_mdns::start_publisher() {
-            log::warn!("mDNS publisher stopped: {err}");
-        }
-    });
-
     let addr = SocketAddr::from(([0, 0, 0, 0], get_broadcast_port()));
     let socket = std::net::UdpSocket::bind(addr)?;
     socket.set_read_timeout(Some(std::time::Duration::from_millis(1000)))?;
@@ -126,38 +32,34 @@ pub(super) fn start_listening() -> ResultType<()> {
     loop {
         let mut buf = [0; 2048];
         if let Ok((len, addr)) = socket.recv_from(&mut buf) {
+            if !crate::landesk_native_policy::allowed_ip(addr.ip()) { continue; }
             if let Ok(msg_in) = Message::parse_from_bytes(&buf[0..len]) {
                 match msg_in.union {
                     Some(rendezvous_message::Union::PeerDiscovery(p)) => {
                         if p.cmd == "ping"
-                            && Config::get_option("lan-discovery-enabled") != "N"
-                            && crate::lan_server::LanServer::is_discoverable()
-                            && crate::lan_server::source_allowed(addr.ip())
+                            && config::option2bool(
+                                "enable-lan-discovery",
+                                &Config::get_option("enable-lan-discovery"),
+                            )
                         {
-                            let fingerprint =
-                                crate::lan_protocol::fingerprint(&Config::get_key_pair().1);
-                            if p.id == fingerprint {
+                            let id = Config::get_id();
+                            if p.id == id {
                                 continue;
                             }
                             if let Some(self_addr) = get_ipaddr_by_peer(&addr) {
                                 let mut msg_out = Message::new();
+                                let mut hostname = crate::whoami_hostname();
+                                // The default hostname is "localhost" which is a bit confusing
+                                if hostname == "localhost" {
+                                    hostname = "unknown".to_owned();
+                                }
                                 let peer = PeerDiscovery {
                                     cmd: "pong".to_owned(),
                                     mac: get_mac(&self_addr),
-                                    id: fingerprint.clone(),
-                                    hostname: device_display_name(),
-                                    username: String::new(),
+                                    id: SocketAddr::new(self_addr, crate::landesk::direct_port()).to_string(),
+                                    hostname,
+                                    username: crate::platform::get_active_username(),
                                     platform: whoami::platform().to_string(),
-                                    misc: serde_json::json!({
-                                        "protocol_version": hbb_common::lan::PROTOCOL_VERSION,
-                                        "port": Config::get_option("lan-listen-port")
-                                            .parse::<u16>()
-                                            .ok()
-                                            .filter(|port| *port > 0)
-                                            .unwrap_or(hbb_common::lan::DEFAULT_PORT),
-                                        "fingerprint": fingerprint,
-                                    })
-                                    .to_string(),
                                     ..Default::default()
                                 };
                                 msg_out.set_peer_discovery(peer);
@@ -172,131 +74,28 @@ pub(super) fn start_listening() -> ResultType<()> {
     }
 }
 
-pub(crate) async fn discover_async() -> ResultType<()> {
-    if DISCOVERY_RUNNING
-        .compare_exchange(false, true, Ordering::Acquire, Ordering::Relaxed)
-        .is_err()
-    {
-        return Ok(());
-    }
-    let _guard = DiscoveryGuard;
-    let (tx, rx) = unbounded_channel::<_>();
-    let mut worker_started = false;
-    match send_query() {
-        Ok(sockets) if !sockets.is_empty() => {
-            spawn_wait_responses(sockets, tx.clone());
-            worker_started = true;
-        }
-        Ok(_) => log::warn!("No UDP LAN discovery interfaces are available"),
-        Err(err) => log::warn!("UDP LAN discovery unavailable: {err}"),
-    }
-    #[cfg(not(any(target_os = "android", target_os = "ios")))]
-    match crate::lan_mdns::spawn_browse(tx.clone()) {
-        Ok(()) => worker_started = true,
-        Err(err) => log::warn!("mDNS discovery unavailable: {err}"),
-    }
-    drop(tx);
-    if !worker_started {
-        let mut peers = config::LanPeers::load().peers;
-        for peer in &mut peers {
-            peer.last_checked = 0;
-        }
-        config::LanPeers::store(&peers);
-        publish_discovery();
-        bail!("No LAN discovery transport is available");
-    }
+#[tokio::main(flavor = "current_thread")]
+pub async fn discover() -> ResultType<()> {
+    let sockets = send_query()?;
+    let rx = spawn_wait_responses(sockets);
     handle_received_peers(rx).await?;
 
     log::info!("discover ping done");
     Ok(())
 }
 
-#[tokio::main(flavor = "current_thread")]
-pub async fn discover() -> ResultType<()> {
-    discover_async().await
-}
-
-pub(crate) fn connection_candidates(endpoint: &str) -> (Option<String>, Vec<String>) {
-    let recent = config::LocalConfig::get_recent_lan_endpoints();
-    let peers = config::LanPeers::load().peers;
-    connection_candidates_from(endpoint, &recent, &peers)
-}
-
-fn connection_candidates_from(
-    endpoint: &str,
-    recent: &[config::RecentLanEndpoint],
-    peers: &[config::DiscoveryPeer],
-) -> (Option<String>, Vec<String>) {
-    let Ok(requested) = hbb_common::lan::Endpoint::parse(endpoint) else {
-        return (None, vec![endpoint.to_owned()]);
-    };
-    let requested = requested.authority().to_owned();
-    let mut fingerprint = recent
-        .iter()
-        .find(|recent| recent.endpoint == requested)
-        .map(|recent| recent.fingerprint.to_ascii_lowercase());
-
-    if fingerprint.is_none() {
-        fingerprint = peers.iter().find_map(|peer| {
-            if peer.endpoint == requested {
-                return Some(peer.fingerprint.to_ascii_lowercase());
-            }
-            let requested_endpoint = hbb_common::lan::Endpoint::parse(&requested).ok()?;
-            if peer.ip_mac.contains_key(requested_endpoint.host()) {
-                Some(peer.fingerprint.to_ascii_lowercase())
-            } else {
-                None
-            }
-        });
-    }
-    let fingerprint = fingerprint
-        .filter(|value| value.len() == 64 && value.bytes().all(|byte| byte.is_ascii_hexdigit()));
-
-    let mut candidates = Vec::new();
-    push_unique(&mut candidates, requested);
-    if let Some(fingerprint) = fingerprint.as_ref() {
-        for recent in recent
-            .iter()
-            .filter(|recent| recent.fingerprint.eq_ignore_ascii_case(fingerprint))
-        {
-            push_unique(&mut candidates, recent.endpoint.clone());
-        }
-        for peer in peers
-            .iter()
-            .filter(|peer| peer.fingerprint.eq_ignore_ascii_case(fingerprint))
-        {
-            push_unique(&mut candidates, peer.endpoint.clone());
-            let port = hbb_common::lan::Endpoint::parse(&peer.endpoint)
-                .map(|endpoint| endpoint.port())
-                .unwrap_or(hbb_common::lan::DEFAULT_PORT);
-            let mut addresses = peer.ip_mac.keys().collect::<Vec<_>>();
-            addresses.sort();
-            for address in addresses {
-                if let Ok(address) = address.parse::<IpAddr>() {
-                    let endpoint = match address {
-                        IpAddr::V4(address) => format!("{address}:{port}"),
-                        IpAddr::V6(address) => format!("[{address}]:{port}"),
-                    };
-                    push_unique(&mut candidates, endpoint);
-                }
-            }
-        }
-    }
-    (fingerprint, candidates)
-}
-
-fn push_unique(values: &mut Vec<String>, value: String) {
-    if !value.is_empty() && !values.contains(&value) {
-        values.push(value);
-    }
-}
-
 pub fn send_wol(id: String) {
+    #[cfg(not(target_os = "ios"))]
     let interfaces = default_net::get_interfaces();
     for peer in &config::LanPeers::load().peers {
         if peer.id == id {
             for (_, mac) in peer.ip_mac.iter() {
                 if let Ok(mac_addr) = mac.parse() {
+                    // iOS cannot enumerate interfaces through macOS SystemConfiguration.
+                    // Let the UDP socket select its interface, as LAN discovery does.
+                    #[cfg(target_os = "ios")]
+                    allow_err!(wol::send_wol(mac_addr, None, None));
+                    #[cfg(not(target_os = "ios"))]
                     for interface in &interfaces {
                         for ipv4 in &interface.ipv4 {
                             // remove below mask check to avoid unexpected bug
@@ -314,7 +113,7 @@ pub fn send_wol(id: String) {
 
 #[inline]
 fn get_broadcast_port() -> u16 {
-    LAN_DISCOVERY_PORT
+    (RENDEZVOUS_PORT + 3) as _
 }
 
 fn get_mac(_ip: &IpAddr) -> String {
@@ -369,7 +168,7 @@ fn get_ipaddr_by_peer<A: ToSocketAddrs>(peer: A) -> Option<IpAddr> {
     };
 }
 
-fn create_broadcast_sockets() -> Vec<(UdpSocket, Ipv4Addr)> {
+fn create_broadcast_sockets() -> Vec<UdpSocket> {
     let mut ipv4s = Vec::new();
     // TODO: maybe we should use a better way to get ipv4 addresses.
     // But currently, it's ok to use `[Ipv4Addr::UNSPECIFIED]` for discovery.
@@ -377,17 +176,16 @@ fn create_broadcast_sockets() -> Vec<(UdpSocket, Ipv4Addr)> {
     #[cfg(not(any(target_os = "ios")))]
     for interface in default_net::get_interfaces() {
         for ipv4 in &interface.ipv4 {
-            if connectable_local_address(IpAddr::V4(ipv4.addr)) {
-                ipv4s.push((ipv4.addr, directed_broadcast(ipv4.addr, ipv4.netmask)));
-            }
+            ipv4s.push(ipv4.addr.clone());
         }
     }
-    ipv4s.push((Ipv4Addr::UNSPECIFIED, Ipv4Addr::BROADCAST)); // for robustness
+    ipv4s.push(Ipv4Addr::UNSPECIFIED); // for robustness
     let mut sockets = Vec::new();
-    for (v4_addr, broadcast) in ipv4s {
+    for v4_addr in ipv4s {
+        // removing v4_addr.is_private() check, https://github.com/rustdesk/rustdesk/issues/4663
         if let Ok(s) = UdpSocket::bind(SocketAddr::from((v4_addr, 0))) {
             if s.set_broadcast(true).is_ok() {
-                sockets.push((s, broadcast));
+                sockets.push(s);
             }
         }
     }
@@ -401,7 +199,17 @@ fn send_query() -> ResultType<Vec<UdpSocket>> {
     }
 
     let mut msg_out = Message::new();
-    let id = crate::lan_protocol::fingerprint(&Config::get_key_pair().1);
+    // We may not be able to get the mac address on mobile platforms.
+    // So we need to use the id to avoid discovering ourselves.
+    #[cfg(any(target_os = "android", target_os = "ios"))]
+    let id = crate::ui_interface::get_id();
+    // `crate::ui_interface::get_id()` will cause error:
+    // `get_id()` uses async code with `current_thread`, which is not allowed in this context.
+    //
+    // No need to get id for desktop platforms.
+    // We can use the mac address to identify the device.
+    #[cfg(not(any(target_os = "android", target_os = "ios")))]
+    let id = "".to_owned();
     let peer = PeerDiscovery {
         cmd: "ping".to_owned(),
         id,
@@ -410,15 +218,11 @@ fn send_query() -> ResultType<Vec<UdpSocket>> {
     msg_out.set_peer_discovery(peer);
     let out = msg_out.write_to_bytes()?;
     let maddr = SocketAddr::from(([255, 255, 255, 255], get_broadcast_port()));
-    for (socket, broadcast) in &sockets {
-        let directed = SocketAddr::from((*broadcast, get_broadcast_port()));
-        allow_err!(socket.send_to(&out, directed));
-        if *broadcast != Ipv4Addr::BROADCAST {
-            allow_err!(socket.send_to(&out, maddr));
-        }
+    for socket in &sockets {
+        allow_err!(socket.send_to(&out, maddr));
     }
     log::info!("discover ping sent");
-    Ok(sockets.into_iter().map(|(socket, _)| socket).collect())
+    Ok(sockets)
 }
 
 fn wait_response(
@@ -426,7 +230,7 @@ fn wait_response(
     timeout: Option<std::time::Duration>,
     tx: UnboundedSender<config::DiscoveryPeer>,
 ) -> ResultType<()> {
-    let start = Instant::now();
+    let mut last_recv_time = Instant::now();
 
     let local_addr = socket.local_addr();
     let try_get_ip_by_peer = match local_addr.as_ref() {
@@ -439,33 +243,19 @@ fn wait_response(
     loop {
         let mut buf = [0; 2048];
         if let Ok((len, addr)) = socket.recv_from(&mut buf) {
+            if !crate::landesk_native_policy::allowed_ip(addr.ip()) { continue; }
             if let Ok(msg_in) = Message::parse_from_bytes(&buf[0..len]) {
                 match msg_in.union {
                     Some(rendezvous_message::Union::PeerDiscovery(p)) => {
-                        if p.cmd == "pong" && hbb_common::lan::allowed_ip(addr.ip()) {
-                            if p.id.len() != 64
-                                || !p.id.bytes().all(|value| value.is_ascii_hexdigit())
-                            {
+                        last_recv_time = Instant::now();
+                        if p.cmd == "pong" {
+                            if !crate::common::is_valid_untrusted_peer_id(&p.id) {
                                 log::warn!(
-                                    "Ignoring LAN discovery response from {} with invalid fingerprint",
+                                    "Ignoring LAN discovery response from {} with invalid peer id",
                                     addr
                                 );
                                 continue;
                             }
-
-                            let misc = serde_json::from_str::<serde_json::Value>(&p.misc)
-                                .unwrap_or_default();
-                            let port = misc
-                                .get("port")
-                                .and_then(|value| value.as_u64())
-                                .and_then(|value| u16::try_from(value).ok())
-                                .filter(|value| *value > 0)
-                                .unwrap_or(hbb_common::lan::DEFAULT_PORT);
-                            let endpoint = if addr.ip().is_ipv6() {
-                                format!("[{}]:{}", addr.ip(), port)
-                            } else {
-                                format!("{}:{}", addr.ip(), port)
-                            };
 
                             let local_mac = if try_get_ip_by_peer {
                                 if let Some(self_addr) = get_ipaddr_by_peer(&addr) {
@@ -490,9 +280,8 @@ fn wait_response(
 
                             if local_mac.is_empty() && p.mac.is_empty() || local_mac != p.mac {
                                 allow_err!(tx.send(config::DiscoveryPeer {
-                                    id: endpoint.clone(),
-                                    endpoint,
-                                    fingerprint: p.id.clone(),
+                                    id: SocketAddr::new(addr.ip(), p.id.parse::<SocketAddr>()
+                                        .map(|endpoint| endpoint.port()).unwrap_or(21118)).to_string(),
                                     ip_mac: HashMap::from([
                                         (addr.ip().to_string(), p.mac.clone(),)
                                     ]),
@@ -500,7 +289,6 @@ fn wait_response(
                                     hostname: p.hostname.clone(),
                                     platform: p.platform.clone(),
                                     online: true,
-                                    ..Default::default()
                                 }));
                             }
                         }
@@ -509,14 +297,15 @@ fn wait_response(
                 }
             }
         }
-        if start.elapsed().as_millis() > 3_000 {
+        if last_recv_time.elapsed().as_millis() > 3_000 {
             break;
         }
     }
     Ok(())
 }
 
-fn spawn_wait_responses(sockets: Vec<UdpSocket>, tx: UnboundedSender<config::DiscoveryPeer>) {
+fn spawn_wait_responses(sockets: Vec<UdpSocket>) -> UnboundedReceiver<config::DiscoveryPeer> {
+    let (tx, rx) = unbounded_channel::<_>();
     for socket in sockets {
         let tx_clone = tx.clone();
         std::thread::spawn(move || {
@@ -527,30 +316,36 @@ fn spawn_wait_responses(sockets: Vec<UdpSocket>, tx: UnboundedSender<config::Dis
             ));
         });
     }
+    rx
 }
 
 async fn handle_received_peers(mut rx: UnboundedReceiver<config::DiscoveryPeer>) -> ResultType<()> {
     let mut peers = config::LanPeers::load().peers;
-    let mut seen = HashSet::new();
+    peers.iter_mut().for_each(|peer| {
+        peer.online = false;
+    });
 
+    let mut response_set = HashSet::new();
+    let mut last_write_time: Option<Instant> = None;
     loop {
         tokio::select! {
             data = rx.recv() => match data {
                 Some(mut peer) => {
-                    peer.mark_seen(hbb_common::get_time());
-                    seen.insert(discovery_key(&peer));
+                    let in_response_set = !response_set.insert(peer.id.clone());
                     if let Some(pos) = peers.iter().position(|x| x.is_same_peer(&peer) ) {
                         let peer1 = peers.remove(pos);
-                        if let Ok(endpoint) = hbb_common::lan::Endpoint::parse(&peer1.endpoint) {
-                            if endpoint.host().parse::<IpAddr>().is_ok() {
-                                peer.ip_mac
-                                    .entry(endpoint.host().to_owned())
-                                    .or_default();
-                            }
+                        if in_response_set {
+                            peer.ip_mac.extend(peer1.ip_mac);
+                            peer.online = true;
                         }
-                        peer.ip_mac.extend(peer1.ip_mac);
                     }
                     peers.insert(0, peer);
+                    if last_write_time.map(|t| t.elapsed().as_millis() > 300).unwrap_or(true)  {
+                        config::LanPeers::store(&peers);
+                        #[cfg(feature = "flutter")]
+                        crate::flutter_ffi::main_load_lan_peers();
+                        last_write_time = Some(Instant::now());
+                    }
                 }
                 None => {
                     break
@@ -559,161 +354,8 @@ async fn handle_received_peers(mut rx: UnboundedReceiver<config::DiscoveryPeer>)
         }
     }
 
-    // Publish a complete scan, never a partially reset list of offline peers.
-    let now = hbb_common::get_time();
-    for peer in &mut peers {
-        if !seen.contains(&discovery_key(peer)) {
-            peer.mark_missed(now);
-        }
-    }
     config::LanPeers::store(&peers);
-    publish_discovery();
+    #[cfg(feature = "flutter")]
+    crate::flutter_ffi::main_load_lan_peers();
     Ok(())
-}
-
-fn discovery_key(peer: &config::DiscoveryPeer) -> String {
-    if peer.fingerprint.is_empty() {
-        peer.id.clone()
-    } else {
-        peer.fingerprint.to_ascii_lowercase()
-    }
-}
-
-fn publish_discovery() {
-    #[cfg(any(feature = "flutter", target_os = "android", target_os = "ios"))]
-    {
-        crate::flutter_ffi::main_load_lan_peers();
-        crate::flutter_ffi::main_load_recent_peers();
-        crate::flutter_ffi::main_load_fav_peers();
-    }
-}
-
-pub(crate) fn find_discovered_peer<'a>(
-    peers: &'a [config::DiscoveryPeer],
-    fingerprint: &str,
-    endpoint: &str,
-) -> Option<&'a config::DiscoveryPeer> {
-    peers.iter().find(|peer| {
-        if !fingerprint.is_empty() {
-            peer.fingerprint.eq_ignore_ascii_case(fingerprint)
-        } else {
-            peer.endpoint == endpoint || peer.id == endpoint
-        }
-    })
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn discovery_presence_follows_identity_not_reassigned_address() {
-        let peers = vec![config::DiscoveryPeer {
-            id: "192.168.1.22:21118".to_owned(),
-            endpoint: "192.168.1.22:21118".to_owned(),
-            fingerprint: "a".repeat(64),
-            ..Default::default()
-        }];
-        assert!(find_discovered_peer(&peers, &"A".repeat(64), "old.lan:21118").is_some());
-        assert!(find_discovered_peer(&peers, &"b".repeat(64), &peers[0].endpoint).is_none());
-        assert!(find_discovered_peer(&peers, "", &peers[0].endpoint).is_some());
-        assert!(find_discovered_peer(&peers, "", "vpn.lan:21118").is_none());
-    }
-
-    #[test]
-    fn custom_device_name_is_trimmed_filtered_and_bounded() {
-        assert_eq!(sanitize_lan_device_name("  Meeting Room  "), "Meeting Room");
-        assert_eq!(sanitize_lan_device_name("会议\n室"), "会议室");
-        assert_eq!(sanitize_lan_device_name(&"a".repeat(80)).len(), 64);
-    }
-
-    #[test]
-    fn custom_device_name_overrides_hostname_and_empty_value_restores_it() {
-        assert_eq!(
-            select_device_display_name("Studio Mac", "host.local"),
-            "Studio Mac"
-        );
-        assert_eq!(select_device_display_name("", "host.local"), "host.local");
-        assert_eq!(select_device_display_name("", "\n"), "LocalDesk");
-    }
-
-    #[test]
-    fn connection_candidates_keep_vpn_endpoint_and_add_discovered_addresses() {
-        let fingerprint = "a".repeat(64);
-        let recent = config::RecentLanEndpoint {
-            endpoint: "10.8.0.15:21118".to_owned(),
-            fingerprint: fingerprint.clone(),
-            ..Default::default()
-        };
-        let peers = vec![config::DiscoveryPeer {
-            endpoint: "192.168.1.99:21118".to_owned(),
-            fingerprint: fingerprint.clone(),
-            ip_mac: HashMap::from([
-                ("192.168.1.99".to_owned(), String::new()),
-                ("10.8.0.15".to_owned(), String::new()),
-            ]),
-            ..Default::default()
-        }];
-
-        let (resolved_fingerprint, candidates) =
-            connection_candidates_from(&recent.endpoint, &[recent.clone()], &peers);
-
-        assert_eq!(resolved_fingerprint, Some(fingerprint));
-        assert_eq!(candidates[0], "10.8.0.15:21118");
-        assert!(candidates.contains(&"192.168.1.99:21118".to_owned()));
-        assert_eq!(
-            candidates
-                .iter()
-                .filter(|endpoint| endpoint.as_str() == "10.8.0.15:21118")
-                .count(),
-            1
-        );
-    }
-
-    #[test]
-    fn connection_candidates_can_identify_device_from_discovery_cache() {
-        let fingerprint = "b".repeat(64);
-        let peers = vec![config::DiscoveryPeer {
-            endpoint: "192.168.1.20:21118".to_owned(),
-            fingerprint: fingerprint.clone(),
-            ip_mac: HashMap::from([("10.9.0.20".to_owned(), String::new())]),
-            ..Default::default()
-        }];
-
-        let (resolved_fingerprint, candidates) =
-            connection_candidates_from("10.9.0.20:21118", &[], &peers);
-
-        assert_eq!(resolved_fingerprint, Some(fingerprint));
-        assert_eq!(candidates[0], "10.9.0.20:21118");
-        assert!(candidates.contains(&"192.168.1.20:21118".to_owned()));
-    }
-
-    #[test]
-    fn calculates_interface_directed_broadcast() {
-        assert_eq!(
-            directed_broadcast(
-                "192.168.42.19".parse().unwrap(),
-                "255.255.255.0".parse().unwrap()
-            ),
-            "192.168.42.255".parse::<Ipv4Addr>().unwrap()
-        );
-        assert_eq!(
-            directed_broadcast("10.12.3.4".parse().unwrap(), "255.255.0.0".parse().unwrap()),
-            "10.12.255.255".parse::<Ipv4Addr>().unwrap()
-        );
-    }
-
-    #[test]
-    fn excludes_unscoped_or_unusable_local_addresses() {
-        assert!(connectable_local_address("192.168.1.20".parse().unwrap()));
-        assert!(connectable_local_address("fd00::20".parse().unwrap()));
-        assert!(!connectable_local_address("8.8.8.8".parse().unwrap()));
-        assert!(!connectable_local_address(
-            "2001:4860:4860::8888".parse().unwrap()
-        ));
-        assert!(!connectable_local_address("0.0.0.0".parse().unwrap()));
-        assert!(!connectable_local_address("127.0.0.1".parse().unwrap()));
-        assert!(!connectable_local_address("fe80::20".parse().unwrap()));
-        assert!(!connectable_local_address("ff02::fb".parse().unwrap()));
-    }
 }

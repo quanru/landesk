@@ -1,19 +1,19 @@
 [Desktop Entry]
 Name=LanDesk
 GenericName=Remote Desktop
-Comment=LAN/VPN Remote Desktop
-Exec=localdesk %u
-Icon=localdesk
+Comment=Remote Desktop
+Exec=landesk %u
+Icon=landesk
 Terminal=false
 Type=Application
 StartupNotify=true
 Categories=Network;RemoteAccess;GTK;
-Keywords=lan;vpn;linux;dart;rust;remote-control;rust-lang;rdp;remote-desktop;vnc;
+Keywords=internet;linux;dart;rust;remote-control;p2p;teamviewer;rust-lang;rdp;remote-desktop;vnc;
 Actions=new-window;
-StartupWMClass=localdesk
+StartupWMClass=landesk
 
 X-Desktop-File-Install-Version=0.23
 
 [Desktop Action new-window]
 Name=Open a New Window
-Exec=localdesk %u
+Exec=landesk %u

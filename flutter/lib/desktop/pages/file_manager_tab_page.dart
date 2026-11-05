@@ -54,7 +54,11 @@ class _FileManagerTabPageState extends State<FileManagerTabPage> {
           key: ValueKey(params['id']),
           id: params['id'],
           password: params['password'],
+          loginMethod: params['loginMethod'] ?? '',
+          isSharedPassword: params['isSharedPassword'],
           tabController: tabController,
+          forceRelay: params['forceRelay'],
+          connToken: params['connToken'],
         )));
   }
 
@@ -64,7 +68,7 @@ class _FileManagerTabPageState extends State<FileManagerTabPage> {
 
     rustDeskWinManager.setMethodHandler((call, fromWindowId) async {
       debugPrint(
-          "[FileTransfer] call ${call.method} from window $fromWindowId to ${windowId()}");
+          "[FileTransfer] call ${call.method} with args ${call.arguments} from window $fromWindowId to ${windowId()}");
       // for simplify, just replace connectionId
       if (call.method == kWindowEventNewFileTransfer) {
         final args = jsonDecode(call.arguments);
@@ -88,7 +92,11 @@ class _FileManagerTabPageState extends State<FileManagerTabPage> {
               key: ValueKey(id),
               id: id,
               password: args['password'],
+              loginMethod: args['loginMethod'] ?? '',
+              isSharedPassword: args['isSharedPassword'],
               tabController: tabController,
+              forceRelay: args['forceRelay'],
+              connToken: args['connToken'],
             )));
       } else if (call.method == "onDestroy") {
         tabController.clear();
@@ -121,7 +129,7 @@ class _FileManagerTabPageState extends State<FileManagerTabPage> {
                   border: Border.all(color: MyTheme.color(context).border!)),
               child: child,
             ));
-    return isMacOS
+    return isMacOS || kUseCompatibleUiMode
         ? tabWidget
         : SubWindowDragToResizeArea(
             child: tabWidget,

@@ -1,8 +1,6 @@
 import Cocoa
 import AVFoundation
 import FlutterMacOS
-import Network
-import app_links
 import desktop_multi_window
 // import bitsdojo_window_macos
 
@@ -12,8 +10,9 @@ import flutter_custom_cursor
 import package_info_plus
 import path_provider_foundation
 import screen_retriever
-import sqflite_darwin
+import sqflite
 // import tray_manager
+import uni_links_desktop
 import url_launcher_macos
 import wakelock_plus
 import window_manager
@@ -23,7 +22,7 @@ import texture_rgba_renderer
 // Global state for relative mouse mode
 // All properties and methods must be accessed on the main thread since they
 // interact with NSEvent monitors, CoreGraphics APIs, and Flutter channels.
-// Note: We avoid @MainActor because the plugin callback APIs are not actor-isolated.
+// Note: We avoid @MainActor to maintain macOS 10.14 compatibility.
 class RelativeMouseState {
     static let shared = RelativeMouseState()
 
@@ -36,132 +35,7 @@ class RelativeMouseState {
     private init() {}
 }
 
-private final class LocalNetworkPermissionProbe {
-    private let queue = DispatchQueue(label: "dev.quanru.localdesk.local-network-permission")
-    private let serviceName = "LocalDesk-\(UUID().uuidString)"
-    private var browser: NWBrowser?
-    private var listener: NWListener?
-    private var completion: ((String) -> Void)?
-    private var timeoutWorkItem: DispatchWorkItem?
-    private var finished = false
-    private var browserStarted = false
-
-    func start(completion: @escaping (String) -> Void) {
-        queue.async {
-            self.completion = completion
-            do {
-                let parameters = NWParameters.tcp
-                parameters.includePeerToPeer = true
-
-                let listener = try NWListener(using: parameters)
-                listener.service = NWListener.Service(
-                    name: self.serviceName,
-                    type: "_localdesk._tcp"
-                )
-                listener.newConnectionHandler = { connection in
-                    connection.cancel()
-                }
-                listener.stateUpdateHandler = { [weak self] state in
-                    self?.handleListenerState(state)
-                }
-                self.listener = listener
-
-                let browser = NWBrowser(
-                    for: .bonjour(type: "_localdesk._tcp", domain: nil),
-                    using: parameters
-                )
-                browser.stateUpdateHandler = { [weak self] state in
-                    self?.handleBrowserState(state)
-                }
-                browser.browseResultsChangedHandler = { [weak self] results, _ in
-                    guard let self = self else { return }
-                    let foundOwnService = results.contains { result in
-                        guard case .service(let name, _, _, _) = result.endpoint else {
-                            return false
-                        }
-                        return name == self.serviceName
-                    }
-                    if foundOwnService {
-                        self.finish("authorized")
-                    }
-                }
-                self.browser = browser
-
-                listener.start(queue: self.queue)
-
-                let timeout = DispatchWorkItem { [weak self] in
-                    self?.finish("unknown")
-                }
-                self.timeoutWorkItem = timeout
-                self.queue.asyncAfter(deadline: .now() + 30, execute: timeout)
-            } catch {
-                NSLog("[LocalDesk] Failed to start the local-network permission probe: %@", error.localizedDescription)
-                self.finish("unknown")
-            }
-        }
-    }
-
-    private func handleListenerState(_ state: NWListener.State) {
-        switch state {
-        case .ready:
-            if !browserStarted {
-                browserStarted = true
-                browser?.start(queue: queue)
-            }
-        case .waiting(let error), .failed(let error):
-            handle(error)
-        default:
-            break
-        }
-    }
-
-    private func handleBrowserState(_ state: NWBrowser.State) {
-        switch state {
-        case .waiting(let error), .failed(let error):
-            handle(error)
-        default:
-            break
-        }
-    }
-
-    private func handle(_ error: NWError) {
-        if Self.isPermissionDenied(error) {
-            finish("denied")
-        } else {
-            NSLog("[LocalDesk] Local-network permission probe failed: %@", error.debugDescription)
-            finish("unknown")
-        }
-    }
-
-    private static func isPermissionDenied(_ error: NWError) -> Bool {
-        switch error {
-        case .dns(let code):
-            return code == -65570 || code == -65571
-        case .posix(let code):
-            return code == .EPERM || code == .EACCES
-        default:
-            return false
-        }
-    }
-
-    private func finish(_ status: String) {
-        guard !finished else { return }
-        finished = true
-        timeoutWorkItem?.cancel()
-        browser?.cancel()
-        listener?.cancel()
-        browser = nil
-        listener = nil
-        let callback = completion
-        completion = nil
-        DispatchQueue.main.async {
-            callback?(status)
-        }
-    }
-}
-
 class MainFlutterWindow: NSWindow {
-    private var localNetworkPermissionProbe: LocalNetworkPermissionProbe?
     private static let fullscreenWorkAreaSizes = NSMapTable<NSWindow, NSValue>(
         keyOptions: [.weakMemory, .objectPointerPersonality],
         valueOptions: .strongMemory
@@ -206,7 +80,7 @@ class MainFlutterWindow: NSWindow {
             PathProviderPlugin.register(with: controller.registrar(forPlugin: "PathProviderPlugin"))
             SqflitePlugin.register(with: controller.registrar(forPlugin: "SqflitePlugin"))
             // TrayManagerPlugin.register(with: controller.registrar(forPlugin: "TrayManagerPlugin"))
-            AppLinksMacosPlugin.register(with: controller.registrar(forPlugin: "AppLinksMacosPlugin"))
+            UniLinksDesktopPlugin.register(with: controller.registrar(forPlugin: "UniLinksDesktopPlugin"))
             UrlLauncherPlugin.register(with: controller.registrar(forPlugin: "UrlLauncherPlugin"))
             WakelockPlusMacosPlugin.register(with: controller.registrar(forPlugin: "WakelockPlusMacosPlugin"))
             WindowSizePlugin.register(with: controller.registrar(forPlugin: "WindowSizePlugin"))
@@ -239,7 +113,7 @@ class MainFlutterWindow: NSWindow {
         // Do this FIRST before setting any state
         let result = CGAssociateMouseAndMouseCursorPosition(0)
         if result != CGError.success {
-            NSLog("[LocalDesk] Failed to dissociate mouse from cursor position: %d", result.rawValue)
+            NSLog("[RustDesk] Failed to dissociate mouse from cursor position: %d", result.rawValue)
             return false
         }
 
@@ -281,7 +155,7 @@ class MainFlutterWindow: NSWindow {
 
         // Check if monitor was created successfully
         if state.eventMonitor == nil {
-            NSLog("[LocalDesk] Failed to create event monitor for relative mouse mode")
+            NSLog("[RustDesk] Failed to create event monitor for relative mouse mode")
             // Re-associate mouse since we failed
             CGAssociateMouseAndMouseCursorPosition(1)
             state.deltaChannel = nil
@@ -313,12 +187,12 @@ class MainFlutterWindow: NSWindow {
         // Re-associate mouse with cursor position (non-blocking with async retry)
         let result = CGAssociateMouseAndMouseCursorPosition(1)
         if result != CGError.success {
-            NSLog("[LocalDesk] Failed to re-associate mouse with cursor position: %d, scheduling retry...", result.rawValue)
+            NSLog("[RustDesk] Failed to re-associate mouse with cursor position: %d, scheduling retry...", result.rawValue)
             // Non-blocking retry after 50ms
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
                 let retryResult = CGAssociateMouseAndMouseCursorPosition(1)
                 if retryResult != CGError.success {
-                    NSLog("[LocalDesk] Retry failed to re-associate mouse: %d. Cursor may remain locked.", retryResult.rawValue)
+                    NSLog("[RustDesk] Retry failed to re-associate mouse: %d. Cursor may remain locked.", retryResult.rawValue)
                 }
             }
         }
@@ -361,26 +235,6 @@ class MainFlutterWindow: NSWindow {
                         }
                     })
                     break
-                case "checkLocalNetworkPermission":
-                    if self.localNetworkPermissionProbe != nil {
-                        result("checking")
-                        break
-                    }
-                    let probe = LocalNetworkPermissionProbe()
-                    self.localNetworkPermissionProbe = probe
-                    probe.start { [weak self] status in
-                        self?.localNetworkPermissionProbe = nil
-                        result(status)
-                    }
-                case "openLocalNetworkSettings":
-                    let urls = [
-                        "x-apple.systempreferences:com.apple.preference.security?Privacy_LocalNetwork",
-                        "x-apple.systempreferences:com.apple.settings.PrivacySecurity.extension?Privacy_LocalNetwork"
-                    ]
-                    let opened = urls.compactMap(URL.init(string:)).contains {
-                        NSWorkspace.shared.open($0)
-                    }
-                    result(opened)
                 case "bumpMouse":
                     var dx = 0
                     var dy = 0

@@ -5,18 +5,25 @@ use std::{
     time::Duration,
 };
 
+use bytes::Bytes;
+
 pub use connection::*;
 #[cfg(not(any(target_os = "android", target_os = "ios")))]
 use hbb_common::config::Config2;
+use hbb_common::tcp::{self, new_listener};
 use hbb_common::{
     allow_err,
     anyhow::Context,
     bail,
-    bytes::Bytes,
-    config::Config,
+    config::{Config, CONNECT_TIMEOUT, RELAY_PORT},
     log,
     protobuf::{Enum, Message as _},
-    timeout, tokio, ResultType, Stream,
+    rendezvous_proto::*,
+    socket_client,
+    sodiumoxide::crypto::{box_, sign},
+    timeout, tokio,
+    websocket::{check_ws, is_ws_endpoint},
+    ResultType, Stream,
 };
 use base::message_proto::*;
 use scrap::camera;
@@ -64,21 +71,25 @@ pub mod input_service {
 }
 
 mod connection;
-mod admission;
-pub mod display_service;
 mod login_failure_check;
+pub(crate) mod port_forward_mux;
+pub mod display_service;
 #[cfg(windows)]
 pub mod portable_service;
 mod service;
 mod video_qos;
 pub mod video_service;
 
+#[cfg(all(target_os = "windows", feature = "flutter"))]
+pub mod printer_service;
+
 pub type Childs = Arc<Mutex<Vec<std::process::Child>>>;
 type ConnMap = HashMap<i32, ConnInner>;
 
 #[derive(Clone, Default)]
 pub struct ConnectionMeta {
-    pub web_client: bool,
+    pub control_permissions: Option<ControlPermissions>,
+    pub controlled_context: Option<ControlledContext>,
 }
 
 #[cfg(any(target_os = "macos", target_os = "linux"))]
@@ -104,23 +115,25 @@ pub struct Server {
     connections: ConnMap,
     services: HashMap<String, Box<dyn Service>>,
     id_count: i32,
-    // Which connection ids were added as screen/monitor viewers (as opposed
-    // to camera-only connections), so `remove_connection` can tell whether a
-    // disconnecting connection should affect display power-save state at all.
-    #[cfg(target_os = "linux")]
-    monitor_conn_ids: std::collections::HashSet<i32>,
 }
 
 pub type ServerPtr = Arc<RwLock<Server>>;
 pub type ServerPtrWeak = Weak<RwLock<Server>>;
+
+#[cfg(test)]
+pub fn new_for_test() -> ServerPtr {
+    Arc::new(RwLock::new(Server {
+        connections: HashMap::new(),
+        services: HashMap::new(),
+        id_count: 1000,
+    }))
+}
 
 pub fn new() -> ServerPtr {
     let mut server = Server {
         connections: HashMap::new(),
         services: HashMap::new(),
         id_count: hbb_common::rand::random::<i32>() % 1000 + 1000, // ensure positive
-        #[cfg(target_os = "linux")]
-        monitor_conn_ids: Default::default(),
     };
     server.add_service(Box::new(audio_service::new()));
     #[cfg(not(target_os = "ios"))]
@@ -148,31 +161,80 @@ pub fn new() -> ServerPtr {
             server.add_service(Box::new(input_service::new_window_focus()));
         }
     }
+    #[cfg(all(target_os = "windows", feature = "flutter"))]
+    {
+        match printer_service::init(&crate::get_app_name()) {
+            Ok(()) => {
+                log::info!("printer service initialized");
+                server.add_service(Box::new(printer_service::new(
+                    printer_service::NAME.to_owned(),
+                )));
+            }
+            Err(e) => {
+                log::error!("printer service init failed: {}", e);
+            }
+        }
+    }
     // Terminal service is created per connection, not globally
     Arc::new(RwLock::new(server))
 }
 
-pub async fn create_lan_connection(
+async fn accept_connection_(
     server: ServerPtr,
-    mut stream: Stream,
-    addr: SocketAddr,
-    web_client: bool,
+    socket: Stream,
+    secure: bool,
+    meta: ConnectionMeta,
+    slot: crate::rendezvous_mediator::PunchSlot,
 ) -> ResultType<()> {
+    let local_addr = socket.local_addr();
+    drop(socket);
+    // even we drop socket, below still may fail if not use reuse_addr,
+    // there is TIME_WAIT before socket really released, so sometimes we
+    // see "Only one usage of each socket address is normally permitted" on windows sometimes,
+    let listener = new_listener(local_addr, true).await?;
+    log::info!("Server listening on: {}", &listener.local_addr()?);
+    if let Ok((stream, addr)) = timeout(CONNECT_TIMEOUT, listener.accept()).await? {
+        // The peer is in: the place goes back before the session runs, as every punch's does.
+        drop(slot);
+        stream.set_nodelay(true).ok();
+        let stream_addr = stream.local_addr()?;
+        create_tcp_connection(
+            server,
+            Stream::from(stream, stream_addr),
+            addr,
+            secure,
+            meta,
+        )
+        .await?;
+    }
+    Ok(())
+}
+
+pub async fn create_tcp_connection(
+    server: ServerPtr,
+    stream: Stream,
+    addr: SocketAddr,
+    secure: bool,
+    meta: ConnectionMeta,
+) -> ResultType<()> {
+    let mut stream = stream;
+    // The address the connection layer keys on, whitelist and admission alike.
     let addr = hbb_common::try_into_v4(addr);
     let id = server.write().unwrap().get_new_id();
-    let Some(unauthorized) = admission::admit_unauthorized(id, addr.ip()) else {
-        bail!("too many unauthenticated LAN connections from {}", addr.ip());
+    // Admitted before the identity handshake, so a peer that stalls in it, or after it without
+    // logging in, holds its place the whole time; an address over its share is turned away.
+    let Some(unauthorized) = admit_unauthorized(id, addr.ip()) else {
+        bail!("too many unauthenticated connections from {}", addr.ip());
     };
-    stream.set_max_packet_length(admission::MAX_UNAUTHORIZED_MESSAGE);
-    let pending = Some(unauthorized);
+    // Before the handshake, so its read is bounded too; lifted again at authorization.
+    stream.set_max_packet_length(MAX_UNAUTHORIZED_MESSAGE);
     tokio::select! {
-        result = crate::lan_protocol::server_handshake(&mut stream) => result?,
-        _ = admission::unauthorized_evicted(&pending) => bail!("unauthenticated LAN connection evicted"),
-        _ = admission::login_deadline(&pending) => bail!("LAN login timed out"),
+        handshake = identity_handshake(&mut stream, secure) => handshake?,
+        _ = unauthorized.evicted() => {
+            bail!("evicted to make room for a newer unauthenticated connection");
+        }
     }
-    let Some(unauthorized) = pending else {
-        bail!("LAN admission guard missing");
-    };
+
     #[cfg(target_os = "macos")]
     {
         use std::process::Command;
@@ -181,18 +243,184 @@ pub async fn create_lan_connection(
             .arg("-t 5")
             .spawn()
         {
-            CHILD_PROCESS.lock().unwrap().push(task);
+            super::CHILD_PROCESS.lock().unwrap().push(task);
         }
+        log::info!("wake up macos");
     }
     Connection::start(
         addr,
         stream,
         id,
         Arc::downgrade(&server),
-        ConnectionMeta { web_client },
+        meta,
         unauthorized,
     )
     .await;
+    Ok(())
+}
+
+/// Our signed identity goes out and, when `secure`, the controller's reply keys `stream`.
+/// Separate so it can be raced against the connection's eviction.
+async fn identity_handshake(stream: &mut Stream, secure: bool) -> ResultType<()> {
+    let (sk, pk) = Config::get_key_pair();
+    if secure && pk.len() == sign::PUBLICKEYBYTES && sk.len() == sign::SECRETKEYBYTES {
+        let mut sk_ = [0u8; sign::SECRETKEYBYTES];
+        sk_[..].copy_from_slice(&sk);
+        let sk = sign::SecretKey(sk_);
+        let mut msg_out = Message::new();
+        let (our_pk_b, our_sk_b) = box_::gen_keypair();
+        // On a WebRTC transport, bind our DTLS certificate fingerprint to our signed identity so
+        // the controller can verify the DTLS channel it negotiated actually terminates at us
+        // (not a rendezvous/relay that swapped the SDP fingerprint). Empty on other transports.
+        // Fail immediately on WebRTC if the local fingerprint is unavailable: signing "" would
+        // only make the client fail-closed after a wasted round-trip.
+        let dtls_fingerprint = stream.dtls_fingerprint(true).await.unwrap_or_default();
+        if stream.is_webrtc() && dtls_fingerprint.is_empty() {
+            bail!("WebRTC local DTLS fingerprint unavailable");
+        }
+        // A WebRTC stream is encrypted by DTLS and takes no stream key of its own, split or
+        // not, so what it advertises is what it runs: 0. Saying 1 there would have a future
+        // controller that splits keys on WebRTC agree on a version this side never applies.
+        let advertised = if stream.is_webrtc() {
+            0
+        } else {
+            tcp::KX_VERSION_LATEST
+        };
+        msg_out.set_signed_id(SignedId {
+            id: sign::sign(
+                &IdPk {
+                    id: Config::get_id(),
+                    pk: Bytes::from(our_pk_b.0.to_vec()),
+                    dtls_fingerprint,
+                    kx_version: advertised,
+                    ..Default::default()
+                }
+                .write_to_bytes()
+                .unwrap_or_default(),
+                &sk,
+            )
+            .into(),
+            ..Default::default()
+        });
+        timeout(CONNECT_TIMEOUT, stream.send(&msg_out)).await??;
+        match timeout(CONNECT_TIMEOUT, stream.next()).await? {
+            Some(res) => {
+                let bytes = res?;
+                if let Ok(msg_in) = Message::parse_from_bytes(&bytes) {
+                    if let Some(message::Union::PublicKey(pk)) = msg_in.union {
+                        if pk.asymmetric_value.len() == box_::PUBLICKEYBYTES {
+                            let key = tcp::Encrypt::decode(
+                                &pk.symmetric_value,
+                                &pk.asymmetric_value,
+                                &our_sk_b,
+                            )?;
+                            if pk.kx_version > advertised {
+                                bail!(
+                                    "Handshake failed: key exchange version {} not offered, {} was",
+                                    pk.kx_version,
+                                    advertised
+                                );
+                            }
+                            stream.set_negotiated_key(
+                                key,
+                                false,
+                                &tcp::KxTranscript {
+                                    initiator_pk: &pk.asymmetric_value,
+                                    responder_pk: &our_pk_b.0,
+                                    advertised,
+                                    picked: pk.kx_version,
+                                },
+                            )?;
+                        } else if pk.asymmetric_value.is_empty() {
+                            Config::set_key_confirmed(false);
+                            log::info!("Force to update pk");
+                        } else {
+                            bail!("Handshake failed: invalid public sign key length from peer");
+                        }
+                    } else {
+                        log::error!("Handshake failed: invalid message type");
+                    }
+                } else {
+                    bail!("Handshake failed: invalid message format");
+                }
+            }
+            None => {
+                bail!("Failed to receive public key");
+            }
+        }
+    }
+
+    Ok(())
+}
+
+pub(crate) async fn accept_connection(
+    server: ServerPtr,
+    socket: Stream,
+    peer_addr: SocketAddr,
+    secure: bool,
+    meta: ConnectionMeta,
+    slot: crate::rendezvous_mediator::PunchSlot,
+) {
+    if let Err(err) = accept_connection_(server, socket, secure, meta, slot).await {
+        log::warn!("Failed to accept connection from {}: {}", peer_addr, err);
+    }
+}
+
+pub async fn create_relay_connection(
+    server: ServerPtr,
+    relay_server: String,
+    uuid: String,
+    peer_addr: SocketAddr,
+    secure: bool,
+    ipv4: bool,
+    meta: ConnectionMeta,
+) {
+    if let Err(err) = create_relay_connection_(
+        server,
+        relay_server,
+        uuid.clone(),
+        peer_addr,
+        secure,
+        ipv4,
+        meta,
+    )
+    .await
+    {
+        log::error!(
+            "Failed to create relay connection for {} with uuid {}: {}",
+            peer_addr,
+            uuid,
+            err
+        );
+    }
+}
+
+async fn create_relay_connection_(
+    server: ServerPtr,
+    relay_server: String,
+    uuid: String,
+    peer_addr: SocketAddr,
+    secure: bool,
+    ipv4: bool,
+    meta: ConnectionMeta,
+) -> ResultType<()> {
+    // The proxy's address family does not constrain the relay target.
+    let relay_server = crate::check_port(relay_server, RELAY_PORT);
+    let use_ws_proxy = Config::is_proxy() && is_ws_endpoint(&check_ws(&relay_server));
+    let mut stream = socket_client::connect_tcp(
+        socket_client::ipv4_to_ipv6(relay_server, ipv4 || use_ws_proxy),
+        CONNECT_TIMEOUT,
+    )
+    .await?;
+    let mut msg_out = RendezvousMessage::new();
+    let licence_key = crate::get_key(true).await;
+    msg_out.set_request_relay(RequestRelay {
+        licence_key,
+        uuid,
+        ..Default::default()
+    });
+    stream.send(&msg_out).await?;
+    create_tcp_connection(server, stream, peer_addr, secure, meta).await?;
     Ok(())
 }
 
@@ -257,16 +485,6 @@ impl Server {
         }
         #[cfg(target_os = "macos")]
         self.update_enable_retina();
-        // A locked-and-powered-down screen (e.g. a user's own power-save
-        // script) has no frames to capture; wake it so this connection
-        // actually gets an image instead of hanging on "waiting for
-        // image..." forever. See dbus::wake_display_if_locked for details.
-        #[cfg(target_os = "linux")]
-        {
-            self.monitor_conn_ids.insert(conn.id());
-            dbus::note_monitor_connected();
-            dbus::wake_display_if_locked();
-        }
         self.connections.insert(conn.id(), conn);
     }
 
@@ -277,14 +495,6 @@ impl Server {
         self.connections.remove(&conn.id());
         #[cfg(target_os = "macos")]
         self.update_enable_retina();
-        // Restore the power-saving behavior once no monitor viewers remain
-        // (a camera-only connection never wakes the display, so it should
-        // never trigger a re-blank either), if the screen is still locked.
-        // See dbus::reblank_display_if_still_locked.
-        #[cfg(target_os = "linux")]
-        if self.monitor_conn_ids.remove(&conn.id()) && dbus::note_monitor_disconnected() <= 0 {
-            dbus::reblank_display_if_still_locked();
-        }
     }
 
     pub fn close_connections(&mut self) {
@@ -397,10 +607,7 @@ impl Server {
                 video_service_count += 1;
             }
         }
-        // Capture at logical desktop size by default; this does not change the
-        // physical display mode. Full Retina capture remains an explicit host option.
-        *scrap::quartz::ENABLE_RETINA.lock().unwrap() =
-            Config::get_option("enable-retina") == "Y" && video_service_count < 2;
+        *scrap::quartz::ENABLE_RETINA.lock().unwrap() = video_service_count < 2;
     }
 }
 
@@ -441,7 +648,8 @@ pub fn check_zombie() {
 #[cfg(any(target_os = "android", target_os = "ios"))]
 #[tokio::main]
 pub async fn start_server(_is_server: bool) {
-    crate::lan_server::LanServer::start().await;
+    allow_err!(crate::trusted_devices::initialize());
+    crate::RendezvousMediator::start_all().await;
 }
 
 /// Start the host server that allows the remote peer to control the current machine.
@@ -505,11 +713,12 @@ pub async fn start_server(is_server: bool, no_server: bool) {
         }
         #[cfg(any(target_os = "macos", target_os = "linux"))]
         wait_initial_config_sync().await;
+        allow_err!(crate::trusted_devices::initialize());
         #[cfg(target_os = "windows")]
         crate::platform::try_kill_broker();
         #[cfg(feature = "hwcodec")]
         scrap::hwcodec::start_check_process();
-        crate::lan_server::LanServer::start().await;
+        crate::RendezvousMediator::start_all().await;
     } else {
         match crate::ipc::connect(1000, "").await {
             Ok(mut conn) => {
@@ -518,11 +727,21 @@ pub async fn start_server(is_server: bool, no_server: bool) {
                         match data {
                             Data::SyncConfig(Some(configs)) => {
                                 let (config, config2) = *configs;
-                                if Config::set(config) {
-                                    log::info!("config synced");
-                                }
-                                if Config2::set(config2) {
-                                    log::info!("config2 synced");
+                                #[cfg(target_os = "windows")]
+                                allow_err!(
+                                    crate::trusted_devices::config::update(move || {
+                                        crate::trusted_devices::config::sync_config(config, config2)
+                                    })
+                                    .await
+                                );
+                                #[cfg(not(target_os = "windows"))]
+                                {
+                                    if Config::set(config) {
+                                        log::info!("config synced");
+                                    }
+                                    if Config2::set(config2) {
+                                        log::info!("config2 synced");
+                                    }
                                 }
                             }
                             _ => {}
@@ -631,7 +850,7 @@ async fn sync_and_watch_config_dir(sync_done_tx: Option<tokio::sync::oneshot::Se
     use hbb_common::sleep;
     for i in 1..=tries {
         sleep(i as f32 * CONFIG_SYNC_INTERVAL_SECS).await;
-        match crate::ipc::connect_service(1000).await {
+        match crate::ipc::connect_trusted_device_service(1000).await {
             Ok(mut conn) => {
                 if !synced {
                     if conn.send(&Data::SyncConfig(None)).await.is_ok() {
@@ -640,17 +859,28 @@ async fn sync_and_watch_config_dir(sync_done_tx: Option<tokio::sync::oneshot::Se
                                 Data::SyncConfig(Some(configs)) => {
                                     let (config, config2) = *configs;
                                     let _chk = crate::ipc::CheckIfRestart::new();
+                                    #[cfg(target_os = "macos")]
+                                    let _chk_pk = crate::CheckIfResendPk::new();
                                     if !config.is_empty() {
-                                        if cfg0.0 != config {
-                                            cfg0.0 = config.clone();
-                                            Config::set(config);
-                                            log::info!("sync config from root");
+                                        let result =
+                                            crate::trusted_devices::config::update(move || {
+                                                crate::trusted_devices::config::sync_config(
+                                                    config.clone(),
+                                                    config2.clone(),
+                                                )?;
+                                                Ok((config, config2))
+                                            })
+                                            .await;
+                                        match result {
+                                            Ok(configs) => cfg0 = configs,
+                                            Err(error) => {
+                                                crate::trusted_devices::config::log_sync_error(
+                                                    error,
+                                                );
+                                                continue;
+                                            }
                                         }
-                                        if cfg0.1 != config2 {
-                                            cfg0.1 = config2.clone();
-                                            Config2::set(config2);
-                                            log::info!("sync config2 from root");
-                                        }
+                                        log::info!("sync config from root");
                                     } else {
                                         // only on macos, because this issue was only reproduced on macos
                                         #[cfg(target_os = "macos")]
@@ -691,7 +921,7 @@ async fn sync_and_watch_config_dir(sync_done_tx: Option<tokio::sync::oneshot::Se
                         match conn.send(&Data::SyncConfig(Some(cfg.clone().into()))).await {
                             Err(e) => {
                                 log::error!("sync config to root failed: {}", e);
-                                match crate::ipc::connect_service(1000).await {
+                                match crate::ipc::connect_trusted_device_service(1000).await {
                                     Ok(mut _conn) => {
                                         conn = _conn;
                                         log::info!("reconnected to ipc_service");
@@ -700,9 +930,18 @@ async fn sync_and_watch_config_dir(sync_done_tx: Option<tokio::sync::oneshot::Se
                                 }
                             }
                             _ => {
-                                cfg0 = cfg;
-                                conn.next_timeout(1000).await.ok();
-                                is_root_config_empty = false;
+                                match conn.next_timeout(1000).await {
+                                    Ok(Some(Data::SyncConfig(None))) => {
+                                        cfg0 = cfg;
+                                        is_root_config_empty = false;
+                                    }
+                                    Ok(Some(Data::SecurityConfigError(error))) => {
+                                        crate::trusted_devices::config::log_sync_error(error)
+                                    }
+                                    _ => crate::trusted_devices::config::log_sync_error(
+                                        "Host did not confirm configuration sync",
+                                    ),
+                                }
                             }
                         }
                     }

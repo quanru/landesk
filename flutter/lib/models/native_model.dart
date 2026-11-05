@@ -1,9 +1,9 @@
 import 'dart:convert';
 import 'dart:ffi';
 import 'dart:io';
+import 'dart:ui' as ui;
 
 import 'package:device_info_plus/device_info_plus.dart';
-import 'package:external_path/external_path.dart';
 import 'package:ffi/ffi.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
@@ -23,8 +23,6 @@ final class RgbaFrame extends Struct {
 
 typedef F3 = Pointer<Uint8> Function(Pointer<Utf8>, int);
 typedef F3Dart = Pointer<Uint8> Function(Pointer<Utf8>, Int32);
-typedef UnregisterTexture = Void Function(Pointer<Utf8>, UintPtr, UintPtr);
-typedef UnregisterTextureDart = void Function(Pointer<Utf8>, int, int);
 typedef HandleEvent = Future<void> Function(Map<String, dynamic> evt);
 
 /// The Linux bundle keeps the core library at lib/librustdesk.so next to the
@@ -63,9 +61,8 @@ class PlatformFFI {
   RustdeskImpl get ffiBind => _ffiBind;
   @visibleForTesting
   void setBindingForTesting(RustdeskImpl binding) => _ffiBind = binding;
+
   F3? _session_get_rgba;
-  UnregisterTextureDart? _session_unregister_pixelbuffer_texture;
-  UnregisterTextureDart? _session_unregister_gpu_texture;
 
   static get localeName => Platform.localeName;
 
@@ -83,8 +80,7 @@ class PlatformFFI {
   }
 
   bool registerEventHandler(
-      String eventName, String handlerName, HandleEvent handler,
-      {bool replace = false}) {
+      String eventName, String handlerName, HandleEvent handler, {bool replace = false}) {
     debugPrint('registerEventHandler $eventName $handlerName');
     var handlers = _eventHandlers[eventName];
     if (handlers == null) {
@@ -137,28 +133,6 @@ class PlatformFFI {
   void registerGpuTexture(SessionID sessionId, int display, int ptr) =>
       _ffiBind.sessionRegisterGpuTexture(
           sessionId: sessionId, display: display, ptr: ptr);
-  void unregisterPixelbufferTexture(
-      SessionID sessionId, int display, int ptr) {
-    final unregister = _session_unregister_pixelbuffer_texture;
-    if (unregister == null) return;
-    final sessionIdStr = sessionId.toString().toNativeUtf8();
-    try {
-      unregister(sessionIdStr, display, ptr);
-    } finally {
-      malloc.free(sessionIdStr);
-    }
-  }
-
-  void unregisterGpuTexture(SessionID sessionId, int display, int ptr) {
-    final unregister = _session_unregister_gpu_texture;
-    if (unregister == null) return;
-    final sessionIdStr = sessionId.toString().toNativeUtf8();
-    try {
-      unregister(sessionIdStr, display, ptr);
-    } finally {
-      malloc.free(sessionIdStr);
-    }
-  }
 
   /// Init the FFI class, loads the native Rust core library.
   Future<void> init(String appType) async {
@@ -179,12 +153,6 @@ class PlatformFFI {
     debugPrint('initializing FFI $_appType');
     try {
       _session_get_rgba = dylib.lookupFunction<F3Dart, F3>("session_get_rgba");
-      _session_unregister_pixelbuffer_texture = dylib.lookupFunction<
-          UnregisterTexture, UnregisterTextureDart>(
-        "session_unregister_pixelbuffer_texture",
-      );
-      _session_unregister_gpu_texture = dylib.lookupFunction<UnregisterTexture,
-          UnregisterTextureDart>("session_unregister_gpu_texture");
       try {
         // SYSTEM user failed
         _dir = (await getApplicationDocumentsDirectory()).path;
@@ -205,12 +173,10 @@ class PlatformFFI {
       _startListenEvent(_ffiBind); // global event
       try {
         if (isAndroid) {
-          // only support for android
-          final directories =
-              await ExternalPath.getExternalStorageDirectories();
-          if (directories != null && directories.isNotEmpty) {
-            _homeDir = directories.first;
-          }
+          // Android file transfer uses app-specific storage. User-selected
+          // files enter and leave this workspace through the system picker.
+          _homeDir = (await getExternalStorageDirectory())?.path ??
+              (await getApplicationSupportDirectory()).path;
         } else if (isIOS) {
           // The previous code was `_homeDir = (await getDownloadsDirectory())?.path ?? '';`,
           // which provided the `downloads` path in the sandbox.
@@ -240,7 +206,7 @@ class PlatformFFI {
         id = linuxInfo.machineId ?? linuxInfo.id;
       } else if (isWindows) {
         try {
-          // Windows 10 needs a thin border around custom window chrome.
+          // request windows build number to fix overflow on win7
           windowsBuildNumber = getWindowsTargetBuildNumber();
           WindowsDeviceInfo winInfo = await deviceInfo.windowsInfo;
           name = winInfo.computerName;
@@ -265,6 +231,7 @@ class PlatformFFI {
       if (desktopType == DesktopType.cm) {
         await _ffiBind.cmInit();
       }
+      await _ffiBind.mainDeviceId(id: id);
       await _ffiBind.mainDeviceName(name: name);
       await _ffiBind.mainSetHomeDir(home: _homeDir);
       await _ffiBind.mainInit(
@@ -325,6 +292,12 @@ class PlatformFFI {
   void setCursorDataCallback(
       void Function(String, int, int, int, int, Uint8List) fun) async {}
 
+  // web only, decoded WebCodecs frames arriving as ready-made images
+  void setVideoFrameCallback(
+      Future<void> Function(int, ui.Image, bool Function()) fun) {}
+
+  void clearVideoFrameCallback() {}
+
   void startDesktopWebListener() {}
 
   void stopDesktopWebListener() {}
@@ -339,6 +312,12 @@ class PlatformFFI {
   invokeMethod(String method, [dynamic arguments]) async {
     if (!isAndroid) return Future<bool>(() => false);
     return await _toAndroidChannel.invokeMethod(method, arguments);
+  }
+
+  Future<T?> invokeMethodWithResult<T>(String method,
+      [dynamic arguments]) async {
+    if (!isAndroid) return null;
+    return await _toAndroidChannel.invokeMethod<T>(method, arguments);
   }
 
   void syncAndroidServiceAppDirConfigPath() {

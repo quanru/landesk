@@ -1,3 +1,5 @@
+> 历史文档：以下记录适用于迁移前的 LocalDesk/SubnetDesk 实现，不能作为当前分支的构建或认证说明。当前范围见 [local-only-scope.md](local-only-scope.md)，进度见 [原生迁移记录](validation/native-migration-progress-2026-11-04.md)。
+
 # LocalDesk cross-platform migration
 
 Base: SubnetDesk cdde2030deb18dcc148c13063b52c747dd3b448e

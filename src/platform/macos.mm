@@ -116,6 +116,22 @@ extern "C" bool MacCheckAdminAuthorization() {
     return Elevate(NULL, NULL);
 }
 
+// https://gist.github.com/briankc/025415e25900750f402235dbf1b74e42
+extern "C" float BackingScaleFactor(uint32_t display) {
+    @autoreleasepool {
+        NSArray<NSScreen *> *screens = [NSScreen screens];
+        for (NSScreen *screen in screens) {
+            NSDictionary *deviceDescription = [screen deviceDescription];
+            NSNumber *screenNumber = [deviceDescription objectForKey:@"NSScreenNumber"];
+            CGDirectDisplayID screenDisplayID = [screenNumber unsignedIntValue];
+            if (screenDisplayID == display) {
+                return [screen backingScaleFactor];
+            }
+        }
+        return 1;
+    }
+}
+
 // https://github.com/jhford/screenresolution/blob/master/cg_utils.c
 // https://github.com/jdoupe/screenres/blob/master/setgetscreen.m
 
@@ -192,8 +208,8 @@ extern "C" bool MacGetModes(CGDirectDisplayID display, uint32_t *widths, uint32_
         CGDisplayModeRef mode = (CGDisplayModeRef)CFArrayGetValueAtIndex(allModes, i);
         if (CGDisplayModeGetRefreshRate(currentMode) == CGDisplayModeGetRefreshRate(mode) &&
             bitDepth(currentMode) == bitDepth(mode)) {
-            widths[realNum] = (uint32_t)CGDisplayModeGetPixelWidth(mode);
-            heights[realNum] = (uint32_t)CGDisplayModeGetPixelHeight(mode);
+            widths[realNum] = (uint32_t)CGDisplayModeGetWidth(mode);
+            heights[realNum] = (uint32_t)CGDisplayModeGetHeight(mode);
             hidpis[realNum] = isHiDPIMode(mode);
             realNum++;
         }
@@ -209,8 +225,8 @@ extern "C" bool MacGetMode(CGDirectDisplayID display, uint32_t *width, uint32_t 
     if (mode == NULL) {
         return false;
     }
-    *width = (uint32_t)CGDisplayModeGetPixelWidth(mode);
-    *height = (uint32_t)CGDisplayModeGetPixelHeight(mode);
+    *width = (uint32_t)CGDisplayModeGetWidth(mode);
+    *height = (uint32_t)CGDisplayModeGetHeight(mode);
     CGDisplayModeRelease(mode);
     return true;
 }
@@ -224,7 +240,6 @@ static bool setDisplayToMode(CGDirectDisplayID display, CGDisplayModeRef mode) {
     }
     rc = CGConfigureDisplayWithDisplayMode(config, display, mode, NULL);
     if (rc != kCGErrorSuccess) {
-        CGCancelDisplayConfiguration(config);
         return false;
     }
     rc = CGCompleteDisplayConfiguration(config, kCGConfigureForSession);
@@ -234,13 +249,10 @@ static bool setDisplayToMode(CGDirectDisplayID display, CGDisplayModeRef mode) {
     return true;
 }
 
-// Resolution requests describe framebuffer pixels, not macOS logical points.
-// A 1920x1080 HiDPI desktop has a 3840x2160 framebuffer.
-// Set the display to a specific mode based on pixel width and height.
+// Set the display to a specific mode based on width and height.
 // Returns true if the display mode was successfully changed, false otherwise.
 // If no such mode is available, it will not change the display mode.
 //
-// Prefer a matching logical layout at the requested pixel size. Otherwise:
 // If `tryHiDPI` is true, it will try to set the display to a HiDPI mode if available.
 // If no HiDPI mode is available, it will fall back to a non-HiDPI mode with the same resolution.
 // If `tryHiDPI` is false, it sets the display to the first mode with the same resolution, no matter if it's HiDPI or not.
@@ -258,25 +270,18 @@ extern "C" bool MacSetMode(CGDirectDisplayID display, uint32_t width, uint32_t h
         return ret;
     }
     int numModes = CFArrayGetCount(allModes);
-    CGDisplayModeRef sameLayoutMode = NULL;
     CGDisplayModeRef preferredHiDPIMode = NULL;
     CGDisplayModeRef fallbackMode = NULL;
     for (int i = 0; i < numModes; i++) {
         CGDisplayModeRef mode = (CGDisplayModeRef)CFArrayGetValueAtIndex(allModes, i);
-        if (width == CGDisplayModeGetPixelWidth(mode) &&
-            height == CGDisplayModeGetPixelHeight(mode) &&
+        if (width == CGDisplayModeGetWidth(mode) &&
+            height == CGDisplayModeGetHeight(mode) && 
             CGDisplayModeGetRefreshRate(currentMode) == CGDisplayModeGetRefreshRate(mode) &&
             bitDepth(currentMode) == bitDepth(mode)) {
 
-            // Preserve the desktop's logical layout when reducing framebuffer size.
-            // Otherwise 1080p can select a 960x540 HiDPI mode and enlarge every UI element.
-            if (CGDisplayModeGetWidth(mode) == CGDisplayModeGetWidth(currentMode) &&
-                CGDisplayModeGetHeight(mode) == CGDisplayModeGetHeight(currentMode)) {
-                sameLayoutMode = mode;
-                break;
-            }
             if (isHiDPIMode(mode)) {
                 preferredHiDPIMode = mode;
+                break;
             } else {
                 fallbackMode = mode;
                 if (!tryHiDPI) {
@@ -286,9 +291,7 @@ extern "C" bool MacSetMode(CGDirectDisplayID display, uint32_t width, uint32_t h
         }
     }
 
-    if (sameLayoutMode) {
-        ret = setDisplayToMode(display, sameLayoutMode);
-    } else if (preferredHiDPIMode) {
+    if (preferredHiDPIMode) {
         ret = setDisplayToMode(display, preferredHiDPIMode);
     } else if (fallbackMode) {
         ret = setDisplayToMode(display, fallbackMode);

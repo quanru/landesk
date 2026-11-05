@@ -2,7 +2,7 @@ export type WebLocale = "zh" | "en";
 
 const messages = {
   zh: {
-    title: "LocalDesk Web",
+    title: "LanDesk Web",
     remoteAccess: "远程访问",
     username: "访问用户名",
     password: "访问密码",
@@ -10,7 +10,7 @@ const messages = {
     initializing: "正在初始化…",
     fingerprint: "设备指纹：",
     firstTrust: "首次访问需要信任本机证书",
-    trustHelp: "请核对下方设备指纹，并将本机 CA 安装到受信任证书存储。",
+    trustHelp: "仅在确认这是目标电脑后信任其本机 CA，或使用你自己的 HTTPS 证书。",
     downloadCa: "下载本机 CA 证书",
     fullscreen: "全屏",
     disconnect: "断开",
@@ -52,7 +52,7 @@ const messages = {
     unknownError: "未知错误",
   },
   en: {
-    title: "LocalDesk Web",
+    title: "LanDesk Web",
     remoteAccess: "Remote access to",
     username: "Access username",
     password: "Access password",
@@ -61,7 +61,7 @@ const messages = {
     fingerprint: "Device fingerprint:",
     firstTrust: "Trust this computer before first use",
     trustHelp:
-      "Verify the device fingerprint below, then install the local CA in your trusted certificate store.",
+      "Trust this local CA only after verifying the host, or configure your own HTTPS certificate.",
     downloadCa: "Download local CA certificate",
     fullscreen: "Fullscreen",
     disconnect: "Disconnect",

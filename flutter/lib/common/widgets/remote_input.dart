@@ -12,7 +12,6 @@ import 'package:flutter_hbb/models/model.dart';
 import 'package:flutter_hbb/models/input_model.dart';
 
 import './gestures.dart';
-import './quick_zoom_gesture.dart';
 
 class RawKeyFocusScope extends StatelessWidget {
   final FocusNode? focusNode;
@@ -88,10 +87,6 @@ class RawTouchGestureDetectorRegion extends StatefulWidget {
 ///   HoldDrag -> left drag
 class _RawTouchGestureDetectorRegionState
     extends State<RawTouchGestureDetectorRegion> {
-  late final bool _oneHandGestures = isMobile &&
-      mainGetLocalBoolOptionSync(kOptionEnableOneHandGestures);
-  Future<void> _scrollQueue = Future.value();
-
   Offset _cacheLongPressPosition = Offset(0, 0);
   // Timestamp of the last long press event.
   int _cacheLongPressPositionTs = 0;
@@ -120,6 +115,7 @@ class _RawTouchGestureDetectorRegionState
   InputModel get inputModel => widget.inputModel;
   bool get handleTouch => (isDesktop || isWebDesktop) || ffiModel.touchMode;
   SessionID get sessionId => ffi.sessionId;
+  bool get canvasLocked => isMobile && ffi.canvasModel.locked;
 
   @override
   Widget build(BuildContext context) {
@@ -316,17 +312,6 @@ class _RawTouchGestureDetectorRegionState
       return;
     }
 
-    if (!inputModel.keyboardPerm || inputModel.isViewOnly || widget.isCamera) {
-      return;
-    }
-    // In direct-touch mode, right-click where the two-finger tap landed.
-    if (isMobile && ffiModel.touchMode) {
-      if (await ffi.cursorModel.move(
-          _doubleFinerTapPosition.dx, _doubleFinerTapPosition.dy)) {
-        await inputModel.tap(MouseButtons.right);
-      }
-      return;
-    }
     // mobile mouse mode or desktop touch screen
     final isMobileMouseMode = isMobile && !ffiModel.touchMode;
     // We can't use `d.localPosition` here because it's always (0, 0) on desktop.
@@ -463,7 +448,6 @@ class _RawTouchGestureDetectorRegionState
 
   // scale + pan event
   onTwoFingerScaleStart(ScaleStartDetails d) {
-    _mouseScrollIntegral = 0;
     _lastTapDownDetails = null;
     if (isNotTouchBasedDevice()) {
       return;
@@ -488,26 +472,7 @@ class _RawTouchGestureDetectorRegionState
       return;
     }
 
-    if (_oneHandGestures) {
-      if (widget.isCamera || !inputModel.keyboardPerm || inputModel.isViewOnly) return;
-      _mouseScrollIntegral += d.focalPointDelta.dy / 4;
-      final steps = _mouseScrollIntegral.truncate();
-      if (steps != 0) {
-        _mouseScrollIntegral -= steps;
-        _scrollQueue = _scrollQueue.then((_) async {
-          if (ffi.closed) return;
-          if (handleTouch) {
-            final moved = await ffi.cursorModel.move(
-                d.localFocalPoint.dx, d.localFocalPoint.dy);
-            if (!moved) return;
-          }
-          await inputModel.scroll(steps);
-        }).catchError((Object error) {
-          debugPrint('Two-finger scroll failed: $error');
-        });
-      }
-      return;
-    }
+    if (canvasLocked) return;
 
     if ((isDesktop || isWebDesktop)) {
       final scale = ((d.scale - _scale) * 1000).toInt();
@@ -576,24 +541,6 @@ class _RawTouchGestureDetectorRegionState
           ..onTapUp = onTapUp
           ..onTap = onTap;
       }),
-      if (_oneHandGestures)
-        QuickZoomGestureRecognizer:
-            GestureRecognizerFactoryWithHandlers<QuickZoomGestureRecognizer>(
-                () => QuickZoomGestureRecognizer(), (instance) {
-          instance
-            ..onZoom = (dy, anchor) {
-              _lastTapDownDetails = null;
-              ffi.canvasModel.updateScale(exp(-dy / 180), anchor);
-            }
-            ..onDoubleTap = (position) async {
-              final box = context.findRenderObject() as RenderBox;
-              await onDoubleTapDown(TapDownDetails(
-                  globalPosition: position,
-                  localPosition: box.globalToLocal(position),
-                  kind: PointerDeviceKind.touch));
-              await onDoubleTap();
-            };
-        }),
       DoubleTapGestureRecognizer:
           GestureRecognizerFactoryWithHandlers<DoubleTapGestureRecognizer>(
               () => DoubleTapGestureRecognizer(), (instance) {

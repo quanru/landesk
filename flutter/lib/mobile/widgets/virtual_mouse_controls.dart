@@ -90,7 +90,7 @@ class _VirtualMouseControlsState extends State<VirtualMouseControls>
     builder: (context, bounds) {
       final phone = MediaQuery.sizeOf(context).shortestSide < 600;
       final size = phone ? 48.0 : 64.0;
-      final position = widget.positions['wheel'] ?? const Offset(.02, .45);
+      final position = widget.positions['wheel'] ?? const Offset(.0, .44);
       final width = (bounds.maxWidth - size).clamp(1.0, double.infinity);
       final height = (bounds.maxHeight - size).clamp(1.0, double.infinity);
       return Stack(
