@@ -10,6 +10,11 @@ on:
         description: Exact commit built by that run
         required: true
         type: string
+      platform:
+        description: Platform to verify
+        type: choice
+        default: all
+        options: [all, windows, linux]
 permissions:
   actions: read
   contents: read
@@ -40,6 +45,7 @@ jobs:
               }
             }
   windows:
+    if: inputs.platform != 'linux'
     needs: provenance
     runs-on: windows-2022
     timeout-minutes: 15
@@ -81,6 +87,7 @@ jobs:
             windows-desktop.png
             windows-verification.json
   linux:
+    if: inputs.platform != 'windows'
     needs: provenance
     runs-on: ubuntu-22.04
     timeout-minutes: 15
@@ -93,7 +100,7 @@ jobs:
       - name: Install runtime dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libgtk-3-0 libayatana-appindicator3-1 libasound2 libpulse0 libxdo3 libxcb-randr0 libxcb-shape0 libxcb-xfixes0 libva2 libvdpau1 libgstreamer1.0-0 libgstreamer-plugins-base1.0-0 libunwind8 xvfb imagemagick
+          sudo apt-get install -y libgtk-3-0 libayatana-appindicator3-1 libasound2 libpulse0 libxdo3 libxcb-randr0 libxcb-shape0 libxcb-xfixes0 libva2 libvdpau1 libgstreamer1.0-0 libgstreamer-plugins-base1.0-0 libunwind8 libegl1 libgl1-mesa-dri xvfb imagemagick
       - name: Open a real X11 window
         env:
           SOURCE_SHA: ${{ inputs.source-sha }}
