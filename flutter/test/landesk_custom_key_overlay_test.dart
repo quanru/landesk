@@ -82,6 +82,11 @@ void main() {
     });
     await tester.pumpAndSettle();
     expect(find.text('Space'), findsOneWidget);
+    expect(find.text('Tab'), findsOneWidget);
+    await tester.tap(find.text('Tab'));
+    await tester.pumpAndSettle();
+    expect(sent.single.key, 'VK_TAB');
+    sent.clear();
     await tester.tap(find.text('Space'));
     await tester.pumpAndSettle();
     expect(sent.single.key, 'VK_SPACE');
@@ -233,7 +238,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('⌘ Space'), findsNothing);
     expect(find.text('⌘ Tab'), findsNothing);
-    expect(find.text('T'), findsOneWidget);
+    expect(find.text('Tab'), findsOneWidget);
     final cmd = await tester.startGesture(tester.getCenter(find.text('Cmd')), pointer: 1);
     await flushInput();
     expect(events, ['Meta:true:true']);
@@ -249,11 +254,11 @@ void main() {
     await cmd.up();
     await flushInput();
     expect(events.last, 'Meta:false:false');
-    final tab = await tester.startGesture(tester.getCenter(find.text('T')), pointer: 3);
+    final tab = await tester.startGesture(tester.getCenter(find.text('Tab')), pointer: 3);
     await flushInput();
     await tab.cancel();
     await flushInput();
-    expect(events.sublist(events.length - 2), ['VK_T:true:false', 'VK_T:false:false']);
+    expect(events.sublist(events.length - 2), ['VK_TAB:true:false', 'VK_TAB:false:false']);
     await tester.pumpWidget(const SizedBox.shrink());
   });
 

@@ -12,7 +12,7 @@ void main() {
     ],
   );
 
-  testWidgets('collapsed and keyboard controls reserve edge space', (tester) async {
+  testWidgets('collapsed control overlays full-width canvas with one button', (tester) async {
     await tester.binding.setSurfaceSize(const Size(852, 393));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     var taps = 0;
@@ -21,8 +21,10 @@ void main() {
       rail: RemoteEdgeControl(label: 'Hide keyboard', icon: Icons.keyboard_hide,
         onPressed: () { taps++; }),
     ))));
-    expect(tester.getRect(find.byKey(const ValueKey('desktop'))).right, 804);
+    expect(tester.getRect(find.byKey(const ValueKey('desktop'))).right, 852);
     expect(tester.getRect(find.byType(RemoteEdgeControl)).left, 804);
+    expect(tester.getSize(find.byType(RemoteEdgeControl)), const Size(48, 48));
+    expect(find.byType(IconButton), findsOneWidget);
     await tester.tap(find.byTooltip('Hide keyboard'));
     expect(taps, 1);
     expect(tester.takeException(), isNull);
@@ -58,10 +60,15 @@ void main() {
           ),
         );
         final desktop = tester.getRect(find.byKey(const ValueKey('desktop')));
+        final backdrop = tester.widget<ColoredBox>(find.descendant(
+          of: find.byType(RemoteSessionLayout), matching: find.byType(ColoredBox)).first);
+        expect(backdrop.color, Colors.black);
         expect(desktop.height, size.height);
         final railContext = tester.element(find.byType(RemoteActionRail));
         expect(Theme.of(railContext).brightness, Brightness.dark);
         expect(desktop.right, size.width - RemoteActionRail.width);
+        expect(desktop.left, size.width > size.height ? RemoteActionRail.width : 0);
+        if (size.width > size.height) expect(desktop.center.dx, size.width / 2);
         expect(tester.getRect(find.byType(RemoteActionRail)).right, size.width);
         expect(tester.takeException(), isNull);
       }
@@ -101,7 +108,7 @@ void main() {
       await tester.tap(find.text('Action'));
       expect(panelTaps, 1);
       expect(desktopTaps, 0);
-      await tester.tapAt(const Offset(40, 100));
+      await tester.tapAt(const Offset(100, 100));
       expect(desktopTaps, 1);
       expect(tester.takeException(), isNull);
     },

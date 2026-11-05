@@ -19,12 +19,13 @@ import 'window_overview.dart';
 class LandeskRemoteControls extends StatefulWidget {
   const LandeskRemoteControls({super.key, required this.ffi, required this.child,
     required this.onKeyboard, required this.onOptions, required this.onActions,
-    required this.onChat, required this.onClose, required this.keyboardOpen});
+    required this.onChat, required this.onClose, required this.keyboardOpen,
+    required this.onHideKeyboard});
 
   final FFI ffi;
   final bool keyboardOpen;
   final Widget child;
-  final VoidCallback onKeyboard, onOptions, onActions, onChat, onClose;
+  final VoidCallback onKeyboard, onHideKeyboard, onOptions, onActions, onChat, onClose;
 
   @override
   State<LandeskRemoteControls> createState() => _LandeskRemoteControlsState();
@@ -94,8 +95,10 @@ class _LandeskRemoteControlsState extends State<LandeskRemoteControls> {
       label: landeskText(context, translate(label)), onPressed: action, selected: selected);
     return RemoteSessionLayout(
       rail: !ready ? null : !expanded || keyboardOpen
-        ? RemoteEdgeControl(label: translate('Control Actions'),
-            icon: Icons.chevron_left, onPressed: () => setState(() => expanded = true))
+        ? RemoteEdgeControl(label: translate(keyboardOpen ? 'Hide' : 'Control Actions'),
+            icon: keyboardOpen ? Icons.keyboard_hide_outlined : Icons.chevron_left,
+            onPressed: keyboardOpen ? widget.onHideKeyboard
+                : () => setState(() => expanded = true))
         : RemoteActionRail(collapseLabel: translate('Hide'),
             onCollapse: () => setState(() => expanded = false), children: [
           button(Icons.keyboard_outlined, 'Keyboard', enabled ? widget.onKeyboard : null),

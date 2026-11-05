@@ -18,6 +18,21 @@ extension _CustomKeyStorage on CustomKeyOverlayState {
       if (!mounted || generation != _loadGeneration || rows.length > 40) return;
       setState(() {
         _spots = rows.map(_KeySpot.fromJson).toList();
+        // Repair only the unedited inherited default T slot. Keep custom keys.
+        if (!_spots.any((s) => s.config.steps.any((k) => k.key == 'VK_TAB'))) {
+          for (final spot in _spots) {
+            final steps = spot.config.steps;
+            if (spot.config.title == 'T' && spot.columnSlot == 0 &&
+                steps.length == 1 && steps.first.key == 'VK_T' &&
+                !steps.first.ctrl && !steps.first.alt && !steps.first.shift &&
+                !steps.first.command) {
+              spot.config = VirtualKeyConfig('Tab', [const RemoteShortcut('Tab', 'VK_TAB')],
+                size: spot.config.size, opacity: spot.config.opacity,
+                delayMs: spot.config.delayMs);
+              break;
+            }
+          }
+        }
         _visible = data['visible'] != false;
         final positions = data['mousePositions'];
         if (positions is Map) {

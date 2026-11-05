@@ -15,22 +15,42 @@ class RemoteSessionLayout extends StatelessWidget {
   final Widget? panel;
 
   @override
-  Widget build(BuildContext context) => Row(
-    children: [
-      Expanded(
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            child,
-            if (panel != null)
-              Align(alignment: Alignment.centerRight, child: panel),
-          ],
-        ),
+  Widget build(BuildContext context) {
+    final landscape =
+        MediaQuery.sizeOf(context).width > MediaQuery.sizeOf(context).height;
+    final expanded = rail is RemoteActionRail;
+    final gutter = expanded ? RemoteActionRail.width : 0.0;
+    return ColoredBox(
+      color: Colors.black,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          Padding(
+            padding: EdgeInsets.only(
+              left: landscape ? gutter : 0,
+              right: gutter,
+            ),
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                child,
+                if (panel != null)
+                  Align(alignment: Alignment.centerRight, child: panel),
+              ],
+            ),
+          ),
+          if (rail != null)
+            Align(
+              alignment: Alignment.centerRight,
+              child: Theme(
+                data: LandeskTheme.build(Brightness.dark),
+                child: rail!,
+              ),
+            ),
+        ],
       ),
-      if (rail != null) Theme(
-        data: LandeskTheme.build(Brightness.dark), child: rail!),
-    ],
-  );
+    );
+  }
 }
 
 class RemoteActionRail extends StatelessWidget {
@@ -224,6 +244,7 @@ class RemoteEdgeControl extends StatelessWidget {
       left: false,
       child: SizedBox(
         width: 48,
+        height: 48,
         child: Center(
           child: IconButton(
             tooltip: label,

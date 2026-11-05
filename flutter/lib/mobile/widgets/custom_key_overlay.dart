@@ -164,7 +164,7 @@ class CustomKeyOverlayState extends State<CustomKeyOverlay>
     );
     return [
       key('Esc', 'VK_ESCAPE', .0, .0),
-      key('T', 'VK_T', .98, .26, columnSlot: 0),
+      key('Tab', 'VK_TAB', .98, .26, columnSlot: 0),
       key('C', 'VK_C', .98, .26, columnSlot: 1),
       key('V', 'VK_V', .98, .26, columnSlot: 2),
       key('Space', 'VK_SPACE', .98, .83, rightSlot: 2),

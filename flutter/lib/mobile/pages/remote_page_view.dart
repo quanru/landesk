@@ -7,7 +7,7 @@ extension _RemotePageView on _RemotePageState {
   Widget buildRemoteView(BuildContext context) {
     final keyboardIsVisible =
         keyboardVisibilityController.isVisible && _showEdit;
-    final showActionButton = keyboardIsVisible || _showGestureHelp;
+    final showActionButton = _showGestureHelp && !keyboardIsVisible;
 
     return WillPopScope(
       onWillPop: () async {
@@ -111,6 +111,12 @@ extension _RemotePageView on _RemotePageState {
     return LandeskRemoteControls(ffi: gFFI,
       keyboardOpen: keyboardVisibilityController.isVisible && _showEdit,
       onKeyboard: openKeyboard,
+      onHideKeyboard: () {
+        setState(() => _showEdit = false);
+        gFFI.invokeMethod("enable_soft_keyboard", false);
+        _mobileFocusNode.unfocus();
+        _physicalFocusNode.requestFocus();
+      },
       onOptions: () => showOptions(context, widget.id, gFFI.dialogManager),
       onActions: () => showActions(widget.id),
       onChat: () => onPressedTextChat(widget.id),
