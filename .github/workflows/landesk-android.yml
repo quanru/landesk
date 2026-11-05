@@ -278,7 +278,7 @@ jobs:
           exit 1
         fi
         actual=$("$ANDROID_HOME/build-tools/$ANDROID_SIGN_TOOL_VERSION/apksigner" verify --print-certs "$SIGNED_APK" \
-          | sed -n -E 's/^.*certificate SHA-256 digest:[[:space:]]*([0-9A-Fa-f]{64})[[:space:]]*$//p' | head -n 1 \
+          | sed -n -E 's/^.*certificate SHA-256 digest:[[:space:]]*([0-9A-Fa-f]{64})[[:space:]]*$/\1/p' | head -n 1 \
           | tr '[:lower:]' '[:upper:]' \
           | tr -d ': ')
         if [ "$actual" != "$expected" ]; then
