@@ -12,18 +12,24 @@ void main() {
     ],
   );
 
-  testWidgets('collapsed control overlays full-width canvas with one button', (tester) async {
+  testWidgets('collapsed control stays compact within the phone safe area', (tester) async {
     await tester.binding.setSurfaceSize(const Size(852, 393));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     var taps = 0;
-    await tester.pumpWidget(MaterialApp(home: Scaffold(body: RemoteSessionLayout(
+    await tester.pumpWidget(MaterialApp(home: MediaQuery(
+      data: const MediaQueryData(size: Size(852, 393),
+        padding: EdgeInsets.only(right: 59, bottom: 21)),
+      child: Scaffold(body: RemoteSessionLayout(
       child: const SizedBox.expand(key: ValueKey('desktop')),
       rail: RemoteEdgeControl(label: 'Hide keyboard', icon: Icons.keyboard_hide,
         onPressed: () { taps++; }),
-    ))));
+    )))));
     expect(tester.getRect(find.byKey(const ValueKey('desktop'))).right, 852);
-    expect(tester.getRect(find.byType(RemoteEdgeControl)).left, 804);
-    expect(tester.getSize(find.byType(RemoteEdgeControl)), const Size(48, 48));
+    final background = find.descendant(of: find.byType(RemoteEdgeControl),
+      matching: find.byType(Material)).first;
+    expect(tester.getRect(background).right, 852 - 59);
+    expect(tester.getSize(background), const Size(48, 48));
+    expect(tester.getSize(find.byType(IconButton)), const Size(48, 48));
     expect(find.byType(IconButton), findsOneWidget);
     await tester.tap(find.byTooltip('Hide keyboard'));
     expect(taps, 1);

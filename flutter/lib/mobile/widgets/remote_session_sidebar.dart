@@ -225,7 +225,7 @@ class RemoteSessionPanel extends StatelessWidget {
   );
 }
 
-/// A reserved edge strip, so keyboard dismissal never covers the remote view.
+/// A compact edge button for restoring controls or dismissing the keyboard.
 class RemoteEdgeControl extends StatelessWidget {
   const RemoteEdgeControl({
     super.key,
@@ -238,10 +238,11 @@ class RemoteEdgeControl extends StatelessWidget {
   final VoidCallback onPressed;
 
   @override
-  Widget build(BuildContext context) => Material(
-    color: Theme.of(context).colorScheme.surface,
-    child: SafeArea(
-      left: false,
+  Widget build(BuildContext context) => SafeArea(
+    left: false,
+    child: Material(
+      color: Theme.of(context).colorScheme.surface,
+      borderRadius: const BorderRadius.horizontal(left: Radius.circular(12)),
       child: SizedBox(
         width: 48,
         height: 48,
