@@ -37,7 +37,7 @@ other RustDesk builds is not promised without verification.
 Download **1.5.1 (101) Native Preview** from the [website](https://landesk.lifeos.md/#download)
 (Feishu primary, GitHub backup). [Release notes and checksums](https://github.com/quanru/landesk/releases/tag/v1.5.1-preview.20261113)
 cover macOS, Windows, Linux and Android. Both peers need the native build.
-The public iOS TestFlight beta remains build 100; build 101 is not yet available.
+iOS build 101 is approved for the [public TestFlight beta](https://testflight.apple.com/join/gFHTx8Xy).
 See the [release validation record](docs/validation/release-2026-11-13.md) for the actual checks and limits.
 
 <img src="assets/screenshots/native-ios-connected.png" alt="Native migration development build: iOS simulator controlling a real macOS desktop with virtual keys in landscape" width="880">

@@ -29,7 +29,7 @@
 
 通过[官网](https://landesk.lifeos.md/zh/#download)下载 **1.5.1（101）原生预览版**，飞书为主下载、GitHub 为备用。
 [发布说明与校验值](https://github.com/quanru/landesk/releases/tag/v1.5.1-preview.20261113)覆盖 macOS、Windows、Linux 和 Android，两端都需升级。
-iOS TestFlight 当前公开版本仍为 build 100，build 101 尚未开放。实际检查项与限制见[发布验证记录](docs/validation/release-2026-11-13.md)。
+iOS build 101 已通过外部审核，可加入 [TestFlight 公开测试](https://testflight.apple.com/join/gFHTx8Xy)。实际检查项与限制见[发布验证记录](docs/validation/release-2026-11-13.md)。
 
 <img src="assets/screenshots/native-ios-connected.png" alt="原生迁移开发版：iOS 模拟器实际控制 Mac，横屏显示虚拟按键" width="880">
 
