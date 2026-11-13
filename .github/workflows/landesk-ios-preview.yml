@@ -1,0 +1,85 @@
+name: Build unsigned LanDesk iOS preview
+on:
+  workflow_dispatch:
+    inputs:
+      source-sha:
+        description: Exact application source commit
+        required: true
+        type: string
+      build-run:
+        description: Native preview run providing matching bridge files
+        required: true
+        type: string
+permissions:
+  actions: read
+  contents: read
+env:
+  CARGO_BUILD_JOBS: '2'
+  VCPKG_MAX_CONCURRENCY: '2'
+jobs:
+  ios:
+    runs-on: macos-15
+    timeout-minutes: 120
+    steps:
+      - name: Verify source-bound bridge run
+        uses: actions/github-script@d7906e4ad0b1822421a7e6a35d5ca353c962f410
+        env:
+          SOURCE_SHA: ${{ inputs.source-sha }}
+          BUILD_RUN: ${{ inputs.build-run }}
+        with:
+          script: |
+            if (!/^[0-9a-f]{40}$/.test(process.env.SOURCE_SHA)) throw new Error('Full source SHA required');
+            const {data: run} = await github.rest.actions.getWorkflowRun({owner: context.repo.owner, repo: context.repo.repo, run_id: Number(process.env.BUILD_RUN)});
+            if (run.head_sha !== process.env.SOURCE_SHA || run.path !== '.github/workflows/landesk-preview.yml') throw new Error('Bridge provenance mismatch');
+            const jobs = await github.paginate(github.rest.actions.listJobsForWorkflowRun, {owner: context.repo.owner, repo: context.repo.repo, run_id: run.id});
+            if (!jobs.some(j => j.name === 'bridge / bridge' && j.conclusion === 'success')) throw new Error('Bridge build has not succeeded');
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          ref: ${{ inputs.source-sha }}
+          submodules: recursive
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2
+        with:
+          channel: stable
+          flutter-version: 3.44.1
+          cache: true
+      - uses: dtolnay/rust-toolchain@e97e2d8cc328f1b50210efc529dca0028893a2d9
+        with:
+          toolchain: '1.82'
+          targets: aarch64-apple-ios
+      - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32
+        with:
+          prefix-key: landesk-ios-preview
+      - name: Install assembler
+        run: |
+          curl --fail --location https://www.nasm.us/pub/nasm/releasebuilds/2.16.03/macosx/nasm-2.16.03-macosx.zip -o "$RUNNER_TEMP/nasm.zip"
+          unzip "$RUNNER_TEMP/nasm.zip" -d "$RUNNER_TEMP/nasm"
+          mkdir -p "$RUNNER_TEMP/bin"
+          cp "$RUNNER_TEMP/nasm/nasm-2.16.03/nasm" "$RUNNER_TEMP/bin/"
+          echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
+      - uses: lukka/run-vcpkg@b1a0dd252f06b9e25b3c022a9a03bd7a427fb6a2
+        with:
+          vcpkgGitCommitId: 9e593bb18ea69cc5095e012465dcd675a822ed0d
+          doNotCache: false
+      - name: Build iPhoneOS native dependencies
+        run: "$VCPKG_ROOT/vcpkg install --triplet arm64-ios --x-install-root=\"$VCPKG_ROOT/installed\""
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          name: landesk-bridge
+          path: ./
+          run-id: ${{ inputs.build-run }}
+          github-token: ${{ github.token }}
+      - name: Build iOS core and unsigned archive
+        run: |
+          cargo build --locked --release --lib --features flutter,hwcodec --target aarch64-apple-ios
+          cd flutter
+          flutter build ipa --release --no-codesign --no-tree-shake-icons
+          cd ..
+          ditto -c -k --sequesterRsrc --keepParent flutter/build/ios/archive/Runner.xcarchive "$RUNNER_TEMP/landesk-ios-unsigned.xcarchive.zip"
+          printf '%s\n' '${{ inputs.source-sha }}' > "$RUNNER_TEMP/ios-source-sha.txt"
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: landesk-ios-unsigned
+          path: |
+            ${{ runner.temp }}/landesk-ios-unsigned.xcarchive.zip
+            ${{ runner.temp }}/ios-source-sha.txt
+          if-no-files-found: error
