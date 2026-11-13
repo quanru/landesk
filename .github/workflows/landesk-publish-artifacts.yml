@@ -7,7 +7,7 @@ on:
         required: true
         type: string
       android-run:
-        description: Successful Android packaging recovery run
+        description: Native preview run or successful Android packaging recovery run
         required: true
         type: string
       source-sha:
@@ -43,7 +43,20 @@ jobs:
               if (!jobs.some(j => j.name === name && j.conclusion === 'success')) throw new Error(`Build failed: ${name}`);
             }
             const {data: android} = await github.rest.actions.getWorkflowRun({...repo, run_id: Number(process.env.ANDROID_RUN)});
-            if (android.path !== '.github/workflows/landesk-android-package.yml' || android.conclusion !== 'success') throw new Error('Android packaging not successful');
+            if (android.path === '.github/workflows/landesk-preview.yml') {
+              if (android.head_sha !== process.env.SOURCE_SHA) throw new Error('Android source mismatch');
+              const androidJobs = await github.paginate(github.rest.actions.listJobsForWorkflowRun, {...repo, run_id: android.id});
+              for (const target of ['aarch64-linux-android', 'armv7-linux-androideabi', 'x86_64-linux-android']) {
+                if (!androidJobs.some(j => j.name === `android / Build landesk android apk ${target}` && j.conclusion === 'success')) throw new Error(`Android build failed: ${target}`);
+              }
+            } else if (android.path !== '.github/workflows/landesk-android-package.yml' || android.conclusion !== 'success') {
+              throw new Error('Android packaging not successful');
+            }
+            const {data: pubspec} = await github.rest.repos.getContent({...repo, path: 'flutter/pubspec.yaml', ref: process.env.SOURCE_SHA});
+            const version = Buffer.from(pubspec.content, 'base64').toString('utf8').match(/^version:\s*(\d+\.\d+\.\d+)\+(\d+)\s*$/m);
+            if (!version) throw new Error('Version and unique build number required');
+            core.exportVariable('RELEASE_VERSION', version[1]);
+            core.exportVariable('RELEASE_BUILD', version[2]);
             const releases = await github.paginate(github.rest.repos.listReleases, repo);
             const release = releases.find(r => r.tag_name === process.env.RELEASE_TAG);
             if (!release?.draft || !release.prerelease || release.target_commitish !== process.env.SOURCE_SHA) throw new Error('Require source-bound draft prerelease');
@@ -78,7 +91,11 @@ jobs:
           assets = json.loads(subprocess.check_output(['gh', 'release', 'view', tag, '--json', 'assets']))['assets']
           files = sorted(pathlib.Path('packages').iterdir())
           if len(files) != 5: raise RuntimeError('Expected Windows, Linux and three Android packages')
+          prefix = 'landesk-' + os.environ['RELEASE_VERSION'] + '-'
+          build_prefix = prefix + os.environ['RELEASE_BUILD'] + '-'
           for file in files:
+              if not file.name.startswith(prefix): raise RuntimeError('Unexpected package version: ' + file.name)
+              file = file.rename(file.with_name(build_prefix + file.name[len(prefix):]))
               digest = 'sha256:' + hashlib.sha256(file.read_bytes()).hexdigest()
               existing = next((a for a in assets if a['name'] == file.name), None)
               if existing:
