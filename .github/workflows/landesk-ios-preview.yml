@@ -20,7 +20,13 @@ jobs:
   ios:
     runs-on: macos-15
     timeout-minutes: 120
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.3.app/Contents/Developer
     steps:
+      - name: Verify supported iOS SDK
+        run: |
+          xcodebuild -version
+          xcrun --sdk iphoneos --show-sdk-version
       - name: Verify source-bound bridge run
         uses: actions/github-script@d7906e4ad0b1822421a7e6a35d5ca353c962f410
         env:
@@ -48,7 +54,7 @@ jobs:
           targets: aarch64-apple-ios
       - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32
         with:
-          prefix-key: landesk-ios-preview
+          prefix-key: landesk-ios-preview-sdk26
       - name: Install assembler
         run: |
           curl --fail --location https://www.nasm.us/pub/nasm/releasebuilds/2.16.03/macosx/nasm-2.16.03-macosx.zip -o "$RUNNER_TEMP/nasm.zip"
