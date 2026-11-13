@@ -5,6 +5,7 @@
 
 | 已提供的二进制 | 构建源码提交 | 源码快照 |
 | --- | --- | --- |
+| 1.5.1（101）原生预览 `v1.5.1-preview.20261113`（macOS、Windows、Linux、Android） | `2104c34b09fb26eecac92de65e87cfb767231f14` | [构建 101 源码及固定子模块](https://github.com/quanru/landesk/releases/download/v1.5.1-preview.20261113/landesk-1.5.1-101-source.tar.gz)，SHA-256：`5d803b45103b19c7b43c9776ae47e98874f16d1a0d1559cdd7c7f1ef6ef41ea5` |
 | macOS 1.3.0（99）、iOS TestFlight 1.3.0（99），公开预览 `v1.3.0-preview.20261030` | `03e92c382b5f484a978039a95b8f96b52371217e`（按该 Release 发布记录） | [构建 99 源码及固定子模块](https://github.com/quanru/landesk/releases/download/v1.3.0-preview.20261030/landesk-99-source.tar.gz)，SHA-256 见同一 Release 的 SHA256SUMS.txt |
 | 本机 macOS 1.3.0 (78)，新增许可入口 | `638463eef` | [构建 78 源码及子模块](https://github.com/quanru/landesk/releases/download/v1.3.0-preview.20261028/landesk-78-source.tar.gz)（校验见 landesk-78-source.sha256） |
 | macOS 1.3.0 (75)，GitHub `v1.3.0-preview.20261028` | `88d5d5c18` | [Mac 源码及子模块](https://github.com/quanru/landesk/releases/download/v1.3.0-preview.20261028/landesk-macos-75-source.tar.gz) |
