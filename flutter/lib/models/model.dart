@@ -42,6 +42,7 @@ import '../common.dart';
 import '../utils/image.dart' as img;
 import '../common/widgets/dialog.dart';
 import 'input_model.dart';
+import 'app_mode_model.dart';
 import 'platform_model.dart';
 import 'package:flutter_hbb/utils/scale.dart';
 
@@ -334,7 +335,9 @@ class FfiModel with ChangeNotifier {
   StreamEventHandler startEventListener(SessionID sessionId, String peerId) {
     return (evt) async {
       var name = evt['name'];
-      if (name == 'msgbox') {
+      if (name == 'landesk_app_mode') {
+        parent.target?.appMode.receive(evt['data'] ?? '');
+      } else if (name == 'msgbox') {
         handleMsgBox(evt, sessionId, peerId);
       } else if (name == 'toast') {
         handleToast(evt, sessionId, peerId);
@@ -2618,6 +2621,8 @@ class CursorModel with ChangeNotifier {
   // remote physical display coordinate
   // For update pan (mobile), onOneFingerPanStart, onOneFingerPanUpdate, onHoldDragUpdate
   Rect getVisibleRect() {
+    final focus = parent.target?.canvasModel.appFocus;
+    if (focus != null) return focus.shift(Offset(_displayOriginX, _displayOriginY));
     final size = parent.target?.canvasModel.getSize() ??
         MediaQueryData.fromView(ui.window).size;
     final xoffset = parent.target?.canvasModel.x ?? 0;
@@ -3409,6 +3414,7 @@ enum ConnType {
 
 /// Flutter state manager and data communication with the Rust core.
 class FFI {
+  late final appMode = AppModeModel(this);
   var id = '';
   var version = '';
   var connType = ConnType.defaultConn;
@@ -3757,6 +3763,7 @@ class FFI {
   /// Close the remote session.
   Future<void> close({bool closeSession = true}) async {
     closed = true;
+    appMode.close();
     if (isWeb) {
       platformFFI.clearVideoFrameCallback();
     }

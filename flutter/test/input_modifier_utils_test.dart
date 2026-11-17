@@ -3,6 +3,15 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_hbb/models/input_modifier_utils.dart';
 
 void main() {
+  test('Mac keypad digits keep numeric mode without a Num Lock switch', () {
+    expect(remoteNumLockEnabled(isMacOS: true, numLockEnabled: false), isTrue);
+  });
+
+  test('other platforms preserve their Num Lock state', () {
+    expect(remoteNumLockEnabled(isMacOS: false, numLockEnabled: false), isFalse);
+    expect(remoteNumLockEnabled(isMacOS: false, numLockEnabled: true), isTrue);
+  });
+
   group('shouldReleaseStaleMobileShift', () {
     test('releases one-shot mobile shift after a text key', () {
       expect(

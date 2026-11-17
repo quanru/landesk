@@ -586,8 +586,10 @@ class InputModel {
           .contains(KeyboardLockMode.capsLock)) {
         lockModes |= (1 << capslock);
       }
-      if (HardwareKeyboard.instance.lockModesEnabled
-          .contains(KeyboardLockMode.numLock)) {
+      if (remoteNumLockEnabled(
+          isMacOS: isMacOS,
+          numLockEnabled: HardwareKeyboard.instance.lockModesEnabled
+              .contains(KeyboardLockMode.numLock))) {
         lockModes |= (1 << numlock);
       }
       if (HardwareKeyboard.instance.lockModesEnabled
@@ -2339,6 +2341,13 @@ class InputModel {
   }) {
     if (rect == null) {
       return null;
+    }
+
+    final focus = parent.target?.canvasModel.appViewport?.visible;
+    if (focus != null && !focus.contains(Offset(x, y))) {
+      if (evtType != 'up' && !onExit) return null;
+      x = x.clamp(focus.left, focus.right - 0.01);
+      y = y.clamp(focus.top, focus.bottom - 0.01);
     }
 
     final nearThr = 3;

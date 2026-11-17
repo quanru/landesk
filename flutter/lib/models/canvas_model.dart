@@ -11,6 +11,15 @@ class CanvasModel with ChangeNotifier {
   double _devicePixelRatio = 1.0;
   Size _size = Size.zero;
   Size? _mobileViewport;
+  Rect? appFocus;
+  AppViewport? get appViewport => appFocus == null || size.isEmpty
+      ? null : AppViewport(appFocus!, size);
+
+  void setAppFocus(Rect? frame) {
+    if (appFocus == frame) return;
+    appFocus = frame;
+    notifyListeners();
+  }
 
   void updateMobileViewport(Size size) {
     if (_mobileViewport == size) return;
@@ -64,6 +73,7 @@ class CanvasModel with ChangeNotifier {
   }
 
   double get x {
+    if (appViewport case final view?) return view.offset.dx;
     final width = getDisplayWidth() * _scale;
     // Panning must not leave a fitted landscape desktop off-centre.
     if (isMobile && _size.width > _size.height && width <= _size.width) {
@@ -71,12 +81,12 @@ class CanvasModel with ChangeNotifier {
     }
     return _x;
   }
-  double get y => _y;
-  double get scale => _scale;
+  double get y => appViewport?.offset.dy ?? _y;
+  double get scale => appViewport?.scale ?? _scale;
   bool get locked => _locked;
   double get devicePixelRatio => _devicePixelRatio;
   Size get size => _size;
-  ScrollStyle get scrollStyle => _scrollStyle;
+  ScrollStyle get scrollStyle => appFocus == null ? _scrollStyle : ScrollStyle.scrollauto;
   ViewStyle get viewStyle => _lastViewStyle;
   RxBool get imageOverflow => _imageOverflow;
 
@@ -512,6 +522,7 @@ class CanvasModel with ChangeNotifier {
   }
 
   clear() {
+    appFocus = null;
     _x = 0;
     _y = 0;
     _scale = 1.0;

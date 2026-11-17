@@ -2266,6 +2266,10 @@ impl<T: InvokeUiSession> Remote<T> {
                     }
                 }
                 Some(message::Union::Misc(misc)) => match misc.union {
+                    #[cfg(feature = "flutter")]
+                    Some(misc::Union::LandeskAppResponse(response)) => {
+                        self.handler.ui_handler.app_mode_response(response);
+                    }
                     Some(misc::Union::AudioFormat(f)) => {
                         self.audio_sender.send(MediaData::AudioFormat(f)).ok();
                     }
