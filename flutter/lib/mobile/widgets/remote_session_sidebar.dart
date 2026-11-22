@@ -8,18 +8,20 @@ class RemoteSessionLayout extends StatelessWidget {
     required this.child,
     this.rail,
     this.panel,
+    this.overlayRail = false,
   });
 
   final Widget child;
   final Widget? rail;
   final Widget? panel;
+  final bool overlayRail;
 
   @override
   Widget build(BuildContext context) {
     final landscape =
         MediaQuery.sizeOf(context).width > MediaQuery.sizeOf(context).height;
     final expanded = rail is RemoteActionRail;
-    final gutter = expanded ? RemoteActionRail.width : 0.0;
+    final gutter = expanded && !overlayRail ? RemoteActionRail.width : 0.0;
     return ColoredBox(
       color: Colors.black,
       child: Stack(
@@ -232,17 +234,47 @@ class RemoteEdgeControl extends StatelessWidget {
     required this.label,
     required this.icon,
     required this.onPressed,
+    this.compact = false,
   });
   final String label;
   final IconData icon;
   final VoidCallback onPressed;
+  final bool compact;
+
+  static const _shape = BorderRadius.horizontal(left: Radius.circular(12));
+
+  Widget _compactButton(BuildContext context) => SizedBox.square(
+    dimension: 48,
+    child: Stack(
+      alignment: Alignment.centerRight,
+      children: [
+        Material(
+          color: Theme.of(context).colorScheme.surface,
+          borderRadius: _shape,
+          child: const SizedBox(width: 24, height: 32),
+        ),
+        Positioned.fill(
+          child: Material(
+            type: MaterialType.transparency,
+            child: IconButton(
+              tooltip: label,
+              padding: EdgeInsets.zero,
+              alignment: Alignment.centerRight,
+              icon: SizedBox(width: 24, child: Icon(icon, size: 16)),
+              onPressed: onPressed,
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
 
   @override
   Widget build(BuildContext context) => SafeArea(
     left: false,
-    child: Material(
+    child: compact ? _compactButton(context) : Material(
       color: Theme.of(context).colorScheme.surface,
-      borderRadius: const BorderRadius.horizontal(left: Radius.circular(12)),
+      borderRadius: _shape,
       child: SizedBox(
         width: 48,
         height: 48,

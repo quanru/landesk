@@ -551,6 +551,11 @@ class RustdeskImpl {
         () => js.context.callMethod('setByName', ['send_chat', text]));
   }
 
+  Future<void> sessionAppModeRequest(
+      {required UuidValue sessionId, required String text, dynamic hint}) async {
+    throw UnsupportedError('App mode requires a native LanDesk client.');
+  }
+
   Future<void> sessionPeerOption(
       {required UuidValue sessionId,
       required String name,

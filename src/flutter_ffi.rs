@@ -715,6 +715,12 @@ pub fn session_send_chat(session_id: SessionID, text: String) {
     }
 }
 
+pub fn session_app_mode_request(session_id: SessionID, text: String) {
+    if let Some(session) = sessions::get_session_by_session_id(&session_id) {
+        session.app_mode_request(text);
+    }
+}
+
 // Terminal functions
 pub fn session_open_terminal(session_id: SessionID, terminal_id: i32, rows: u32, cols: u32) {
     if let Some(session) = sessions::get_session_by_session_id(&session_id) {

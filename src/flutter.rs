@@ -671,6 +671,10 @@ impl FlutterHandler {
 }
 
 impl InvokeUiSession for FlutterHandler {
+    fn app_mode_response(&self, response: String) {
+        self.push_event("landesk_app_mode", &[("data", response)], &[]);
+    }
+
     // On the event stream, so that it keeps its order with the cursor_id events around it.
     fn set_cursor_data(&self, cd: CursorData) {
         let colors = cd.colors.to_vec();

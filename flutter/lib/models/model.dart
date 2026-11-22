@@ -42,6 +42,7 @@ import '../common.dart';
 import '../utils/image.dart' as img;
 import '../common/widgets/dialog.dart';
 import 'input_model.dart';
+import 'app_mode_model.dart';
 import 'platform_model.dart';
 import 'package:flutter_hbb/utils/scale.dart';
 
@@ -334,7 +335,9 @@ class FfiModel with ChangeNotifier {
   StreamEventHandler startEventListener(SessionID sessionId, String peerId) {
     return (evt) async {
       var name = evt['name'];
-      if (name == 'msgbox') {
+      if (name == 'landesk_app_mode') {
+        parent.target?.appMode.receive(evt['data'] ?? '');
+      } else if (name == 'msgbox') {
         handleMsgBox(evt, sessionId, peerId);
       } else if (name == 'toast') {
         handleToast(evt, sessionId, peerId);
@@ -2618,6 +2621,8 @@ class CursorModel with ChangeNotifier {
   // remote physical display coordinate
   // For update pan (mobile), onOneFingerPanStart, onOneFingerPanUpdate, onHoldDragUpdate
   Rect getVisibleRect() {
+    final focus = parent.target?.canvasModel.appFocus;
+    if (focus != null) return focus.shift(Offset(_displayOriginX, _displayOriginY));
     final size = parent.target?.canvasModel.getSize() ??
         MediaQueryData.fromView(ui.window).size;
     final xoffset = parent.target?.canvasModel.x ?? 0;
@@ -2660,9 +2665,16 @@ class CursorModel with ChangeNotifier {
     if (!(parent.target?.ffiModel.touchMode ?? false)) {
       return false;
     }
-    if (_keyHelpToolsRect != null &&
-        isPointInRect(offset, _keyHelpToolsRect!)) {
-      return true;
+    if (_keyHelpToolsRect != null) {
+      // Touch positions are inside SafeArea; the toolbar rectangle is global.
+      final padding = isMobile
+          ? MediaQueryData.fromView(
+              WidgetsBinding.instance.platformDispatcher.views.first).padding
+          : EdgeInsets.zero;
+      if (isPointInRect(
+          offset + Offset(padding.left, padding.top), _keyHelpToolsRect!)) {
+        return true;
+      }
     }
     return false;
   }
@@ -3409,6 +3421,7 @@ enum ConnType {
 
 /// Flutter state manager and data communication with the Rust core.
 class FFI {
+  late final appMode = AppModeModel(this);
   var id = '';
   var version = '';
   var connType = ConnType.defaultConn;
@@ -3757,6 +3770,7 @@ class FFI {
   /// Close the remote session.
   Future<void> close({bool closeSession = true}) async {
     closed = true;
+    appMode.close();
     if (isWeb) {
       platformFFI.clearVideoFrameCallback();
     }
@@ -4028,7 +4042,10 @@ Future<void> initializeCursorAndCanvas(FFI ffi) async {
   }
   if (p == null || currentDisplay != ffi.ffiModel.pi.currentDisplay) {
     ffi.cursorModel.updateDisplayOrigin(
-        ffi.ffiModel.rect?.left ?? 0, ffi.ffiModel.rect?.top ?? 0);
+        ffi.ffiModel.rect?.left ?? 0, ffi.ffiModel.rect?.top ?? 0,
+        // A Mac reports its cursor position separately. Warping it to the
+        // display origin on a phone connection can activate a hot corner.
+        updateCursorPos: !isMobile || ffi.ffiModel.pi.platform != kPeerPlatformMacOS);
     return;
   }
   double xCursor = p['xCursor'];
