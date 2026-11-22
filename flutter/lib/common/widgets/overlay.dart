@@ -1,4 +1,6 @@
-import 'package:auto_size_text/auto_size_text.dart';
+import 'dart:math' as math;
+import 'dart:ui' show FontFeature;
+
 import 'package:debounce_throttle/debounce_throttle.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hbb/common.dart';
@@ -458,21 +460,25 @@ class QualityMonitor extends StatelessWidget {
   final QualityMonitorModel qualityMonitorModel;
   QualityMonitor(this.qualityMonitorModel);
 
-  Widget _row(String info, String? value, {Color? rightColor}) {
+  Widget _row(String info, String? value,
+      {Color? rightColor, bool numeric = false}) {
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Expanded(
             flex: 8,
-            child: AutoSizeText(info,
-                style: TextStyle(color: Color.fromARGB(255, 210, 210, 210)),
-                textAlign: TextAlign.right,
-                maxLines: 1)),
-        Spacer(flex: 1),
+            child: Text(info,
+                style: const TextStyle(color: Color.fromARGB(255, 210, 210, 210)),
+                textAlign: TextAlign.end)),
+        const Spacer(flex: 1),
         Expanded(
             flex: 8,
-            child: AutoSizeText(value ?? '',
-                style: TextStyle(color: rightColor ?? Colors.white),
-                maxLines: 1)),
+            child: Text(value ?? '',
+                style: TextStyle(
+                  color: rightColor ?? Colors.white,
+                  fontFeatures:
+                      numeric ? const [FontFeature.tabularFigures()] : null,
+                ))),
       ],
     );
   }
@@ -484,21 +490,34 @@ class QualityMonitor extends StatelessWidget {
           builder: (context, qualityMonitorModel, child) => qualityMonitorModel
                   .show
               ? Container(
-                  constraints: BoxConstraints(maxWidth: 200),
+                  constraints: BoxConstraints(
+                    maxWidth: math.max(
+                      0.0,
+                      math.min(
+                        200 * MediaQuery.textScalerOf(context).scale(14) / 14,
+                        MediaQuery.sizeOf(context).width - 20,
+                      ),
+                    ),
+                  ),
                   padding: const EdgeInsets.all(8),
                   color: MyTheme.canvasColor.withAlpha(150),
                   child: Column(
+                    mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _row("Speed", qualityMonitorModel.data.speed ?? '-'),
-                      _row("FPS", qualityMonitorModel.data.fps ?? '-'),
+                      _row("Speed", qualityMonitorModel.data.speed ?? '-',
+                          numeric: true),
+                      _row("FPS", qualityMonitorModel.data.fps ?? '-',
+                          numeric: true),
                       // let delay be 0 if fps is 0
                       _row(
                           "Delay",
                           "${qualityMonitorModel.data.delay == null ? '-' : (qualityMonitorModel.data.fps ?? "").replaceAll(' ', '').replaceAll('0', '').isEmpty ? 0 : qualityMonitorModel.data.delay}ms",
-                          rightColor: Colors.green),
+                          rightColor: Colors.green,
+                          numeric: true),
                       _row("Target Bitrate",
-                          "${qualityMonitorModel.data.targetBitrate ?? '-'}kb"),
+                          "${qualityMonitorModel.data.targetBitrate ?? '-'}kb",
+                          numeric: true),
                       _row(
                           "Codec", qualityMonitorModel.data.codecFormat ?? '-'),
                       _row("Chroma", qualityMonitorModel.data.chroma ?? '-'),

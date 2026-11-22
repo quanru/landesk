@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:bot_toast/bot_toast.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_hbb/common/formatter/id_formatter.dart';
 import 'package:flutter_hbb/common/shared_state.dart';
 import 'package:flutter_hbb/common/widgets/setting_widgets.dart';
 import 'package:flutter_hbb/consts.dart';
@@ -27,8 +28,10 @@ void clientClose(SessionID sessionId, FFI ffi) async {
     }
     closeConnection();
   } else {
-    msgBox(sessionId, 'info', 'Close', 'Are you sure to close the connection?',
-        '', ffi.dialogManager);
+    msgBox(sessionId, 'info', 'Disconnect',
+        'Are you sure to close the connection?', '', ffi.dialogManager,
+        detail: ffi.id.isEmpty ? null : '${translate("ID")}: ${formatID(ffi.id)}',
+        submitLabel: 'Disconnect');
   }
 }
 

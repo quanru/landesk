@@ -5,6 +5,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_hbb/common/formatter/id_formatter.dart';
 import 'package:flutter_hbb/common/shared_state.dart';
 import 'package:flutter_hbb/common/widgets/toolbar.dart';
 import 'package:flutter_hbb/consts.dart';
@@ -140,8 +141,8 @@ class _RemotePageState extends State<RemotePage> with WidgetsBindingObserver {
     );
     WidgetsBinding.instance.addPostFrameCallback((_) {
       SystemChrome.setEnabledSystemUIMode(SystemUiMode.manual, overlays: []);
-      gFFI.dialogManager
-          .showLoading(translate('Connecting...'), onCancel: closeConnection);
+      gFFI.dialogManager.showLoading(translate('Connecting...'),
+          detail: formatID(widget.id), onCancel: closeConnection);
     });
     WakelockManager.enable(_uniqueKey);
     _physicalFocusNode.requestFocus();

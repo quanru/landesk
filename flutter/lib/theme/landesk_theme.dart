@@ -105,14 +105,15 @@ class LandeskTheme {
           onError: p.onAccent,
           surfaceTint: Colors.transparent,
         );
-    Color? overlay(Set<WidgetState> states) {
+    Color? overlay(Set<WidgetState> states, {Color? color}) {
       if (states.contains(WidgetState.disabled)) return Colors.transparent;
+      final tint = color ?? p.accent;
       if (states.contains(WidgetState.pressed)) {
-        return p.accent.withValues(alpha: .16);
+        return tint.withValues(alpha: .16);
       }
       if (states.contains(WidgetState.hovered) ||
           states.contains(WidgetState.focused)) {
-        return p.accent.withValues(alpha: .08);
+        return tint.withValues(alpha: .08);
       }
       return null;
     }
@@ -139,6 +140,9 @@ class LandeskTheme {
       ),
     );
     final filled = baseButton.copyWith(
+      overlayColor: WidgetStateProperty.resolveWith(
+        (states) => overlay(states, color: p.onAccent),
+      ),
       backgroundColor: WidgetStateProperty.resolveWith(
         (states) => states.contains(WidgetState.disabled) ? p.inset : p.accent,
       ),

@@ -20,6 +20,7 @@ import '../../models/platform_model.dart';
 import '../widgets/deploy_dialog.dart';
 import '../../models/shortcut_model.dart';
 import '../widgets/dialog.dart';
+import '../../common/landesk_text.dart';
 import 'home_page.dart';
 import 'mobile_keyboard_shortcuts_page.dart';
 import 'scan_page.dart';
@@ -1073,6 +1074,11 @@ class _SettingsState extends State<SettingsPage> with WidgetsBindingObserver {
                 ),
                 leading: Icon(Icons.info)),
             SettingsTile(
+              title: Text(landeskText(context, 'Connection guide')),
+              onPressed: (context) => openLandeskGuide(context),
+              leading: const Icon(Icons.open_in_new),
+            ),
+            SettingsTile(
                 title: Text(translate("Build Date")),
                 value: Padding(
                   padding: EdgeInsets.symmetric(vertical: 8),
@@ -1210,6 +1216,10 @@ void showAbout(OverlayDialogManager dialogManager) {
       title: Text(translate('About RustDesk')),
       content: Wrap(direction: Axis.vertical, spacing: 12, children: [
         Text('Version: $version'),
+        TextButton(
+          onPressed: () => openLandeskGuide(context),
+          child: Text(landeskText(context, 'Connection guide')),
+        ),
         InkWell(
             onTap: () async {
               const url = 'https://rustdesk.com/';
