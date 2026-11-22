@@ -1,0 +1,39 @@
+name: Verify LanDesk session feedback
+on:
+  push:
+    branches: ['verify/session-feedback-20261122']
+permissions:
+  contents: read
+  actions: read
+jobs:
+  flutter:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      - name: Verify unchanged native bridge inputs
+        run: |
+          git fetch --depth=1 origin 72c186df271771b492c0dc0da79fcdf26f6e8873
+          git diff --exit-code FETCH_HEAD HEAD -- src libs Cargo.toml Cargo.lock build.rs flutter/pubspec.yaml flutter/pubspec.lock
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2
+        with:
+          channel: stable
+          flutter-version: 3.44.1
+          cache: true
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          name: landesk-bridge
+          path: .
+          run-id: 44992514019
+          github-token: ${{ github.token }}
+      - name: Run Flutter regression tests
+        working-directory: flutter
+        run: |
+          flutter pub get
+          flutter test --no-pub --concurrency=2 --reporter expanded \
+            test/file_model_test.dart \
+            test/landesk_quality_monitor_test.dart \
+            test/landesk_theme_test.dart \
+            test/landesk_touch_dispatch_test.dart \
+            test/landesk_remote_session_sidebar_test.dart \
+            test/landesk_app_mode_test.dart
