@@ -13,6 +13,7 @@ import 'remote_input_stack.dart';
 import 'remote_session_sidebar.dart';
 import 'remote_shortcut.dart';
 import 'window_overview.dart';
+import 'app_mode_picker.dart';
 
 /// Product controls live outside the upstream remote pointer and key listeners.
 /// Their widget position stays stable when the toolbar or soft keyboard changes.
@@ -36,6 +37,22 @@ class _LandeskRemoteControlsState extends State<LandeskRemoteControls> {
   bool expanded = true;
   bool keysVisible = true;
 
+  @override
+  void initState() {
+    super.initState();
+    widget.ffi.appMode.addListener(appModeChanged);
+  }
+
+  void appModeChanged() {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void dispose() {
+    widget.ffi.appMode.removeListener(appModeChanged);
+    super.dispose();
+  }
+
   bool get canInput {
     final input = widget.ffi.inputModel;
     return !widget.ffi.closed && input.keyboardPerm && !input.isViewOnly &&
@@ -53,6 +70,34 @@ class _LandeskRemoteControlsState extends State<LandeskRemoteControls> {
   }
 
   Future<void> shortcut(RemoteShortcut shortcut) => sendRemoteShortcut(shortcut, write);
+
+  void apps() async {
+    final appMode = widget.ffi.appMode;
+    final wasExpanded = expanded;
+    var opened = false;
+    // The host should fit the window to the canvas with its toolbar collapsed.
+    setState(() => expanded = false);
+    await showModalBottomSheet<void>(context: context, isScrollControlled: true,
+      constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * 0.85),
+      builder: (context) => AppModePicker(load: appMode.windows,
+        loadThumbnail: appMode.thumbnail,
+        selectedId: appMode.selected?.id,
+        select: (window, fit, scale) async {
+          await appMode.focus(window, fit: fit, contentScale: scale);
+          opened = true;
+        },
+        chinese: Localizations.localeOf(context).languageCode == 'zh'));
+    if (mounted && !opened) setState(() => expanded = wasExpanded);
+  }
+
+  void desktop() async {
+    try {
+      await widget.ffi.appMode.desktop();
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+    }
+    if (mounted) setState(() {});
+  }
 
   void overview() async {
     final platform = widget.ffi.ffiModel.pi.platform;
@@ -88,20 +133,25 @@ class _LandeskRemoteControlsState extends State<LandeskRemoteControls> {
     final model = widget.ffi.ffiModel;
     final ready = model.pi.isSet.isTrue && model.waitForFirstImage.isFalse;
     final enabled = ready && canInput;
+    final canOpenControls = ready && !widget.ffi.closed &&
+        widget.ffi.inputModel.keyboardPerm && !widget.ffi.inputModel.isViewOnly &&
+        !widget.ffi.inputModel.isViewCamera;
     final keyboardOpen = widget.keyboardOpen;
     final showKeys = enabled && !keyboardOpen;
     Widget button(IconData icon, String label, VoidCallback? action,
         {bool selected = false}) => RemoteRailButton(icon: icon,
       label: landeskText(context, translate(label)), onPressed: action, selected: selected);
     return RemoteSessionLayout(
+      overlayRail: widget.ffi.appMode.selected != null,
       rail: !ready ? null : !expanded || keyboardOpen
         ? RemoteEdgeControl(label: translate(keyboardOpen ? 'Hide' : 'Control Actions'),
+            compact: !keyboardOpen,
             icon: keyboardOpen ? Icons.keyboard_hide_outlined : Icons.chevron_left,
             onPressed: keyboardOpen ? widget.onHideKeyboard
                 : () => setState(() => expanded = true))
         : RemoteActionRail(collapseLabel: translate('Hide'),
             onCollapse: () => setState(() => expanded = false), children: [
-          button(Icons.keyboard_outlined, 'Keyboard', enabled ? widget.onKeyboard : null),
+          button(Icons.keyboard_outlined, 'Keyboard', canOpenControls ? widget.onKeyboard : null),
           button(Icons.keyboard_alt_outlined, 'Virtual keys', enabled ? () {
             keys.currentState?.setVisible(!keysVisible);
           } : null, selected: keysVisible),
@@ -109,6 +159,11 @@ class _LandeskRemoteControlsState extends State<LandeskRemoteControls> {
             keys.currentState?.editLayout();
           } : null),
           button(Icons.window_outlined, 'All windows', enabled ? overview : null),
+          if (widget.ffi.appMode.supported) ...[
+            button(Icons.apps, 'Apps', canOpenControls ? apps : null),
+            if (widget.ffi.appMode.selected != null)
+              button(Icons.desktop_windows_outlined, 'Show desktop', desktop),
+          ],
           button(model.touchMode ? Icons.touch_app : Icons.mouse_outlined,
             model.touchMode ? 'Touch mode' : 'Mouse mode', enabled ? () async {
               model.toggleTouchMode();

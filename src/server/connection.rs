@@ -356,6 +356,8 @@ impl TerminalUserToken {
     }
 }
 pub struct Connection {
+    #[cfg(any(target_os = "macos", target_os = "windows", target_os = "linux"))]
+    app_mode: Arc<std::sync::Mutex<crate::platform::app_mode::AppMode>>,
     inner: ConnInner,
     display_idx: usize,
     stream: super::Stream,
@@ -565,6 +567,8 @@ impl Connection {
         #[cfg(not(any(target_os = "android", target_os = "ios")))]
         let tx_cloned = tx.clone();
         let mut conn = Self {
+            #[cfg(any(target_os = "macos", target_os = "windows", target_os = "linux"))]
+            app_mode: Default::default(),
             inner: ConnInner {
                 id,
                 tx: Some(tx),
@@ -1980,11 +1984,19 @@ impl Connection {
         #[cfg(target_os = "linux")]
         {
             if crate::platform::current_is_wayland() {
+                match tokio::task::spawn_blocking(crate::platform::app_mode::AppMode::supported).await {
+                    Ok(true) => {
+                        platform_additions.insert("landesk_app_mode".into(), json!(1));
+                    }
+                    Err(error) => log::trace!("Cannot check Linux app mode support: {error}"),
+                    _ => {}
+                }
                 platform_additions.insert("is_wayland".into(), json!(true));
             }
         }
         #[cfg(target_os = "windows")]
         {
+            platform_additions.insert("landesk_app_mode".into(), json!(1));
             platform_additions.insert(
                 "is_installed".into(),
                 json!(crate::platform::is_installed()),
@@ -1999,6 +2011,7 @@ impl Connection {
         }
         #[cfg(target_os = "macos")]
         {
+            platform_additions.insert("landesk_app_mode".into(), json!(1));
             platform_additions.insert(
                 "supported_privacy_mode_impl".into(),
                 json!(privacy_mode::get_supported_privacy_mode_impl()),
@@ -3902,6 +3915,26 @@ impl Connection {
                     _ => {}
                 },
                 Some(message::Union::Misc(misc)) => match misc.union {
+                    #[cfg(any(target_os = "macos", target_os = "windows", target_os = "linux"))]
+                    Some(misc::Union::LandeskAppRequest(request)) => {
+                        if self.peer_keyboard_enabled() && !self.view_camera && request.len() <= 2048 {
+                            #[cfg(target_os = "macos")]
+                            if crate::platform::app_mode::queue_thumbnail(&request, self.inner.tx.as_ref()) {
+                                return true;
+                            }
+                            let state = self.app_mode.clone();
+                            match tokio::task::spawn_blocking(move || state.lock().unwrap().request(&request)).await {
+                                Ok(response) => {
+                                    let mut misc = Misc::new();
+                                    misc.set_landesk_app_response(response);
+                                    let mut message = Message::new();
+                                    message.set_misc(misc);
+                                    self.send(message).await;
+                                }
+                                Err(error) => hbb_common::throttled_log!(Duration::from_secs(60), warn, "App mode request failed: {}", error),
+                            }
+                        }
+                    }
                     Some(misc::Union::SwitchDisplay(s)) => {
                         self.handle_switch_display(s).await;
                     }
@@ -7585,6 +7618,15 @@ mod test {
                 Connection::authorized_message_scope_violation(conn_type, &msg),
                 expected
             );
+        }
+    }
+
+    #[test]
+    fn app_actions_require_a_remote_desktop_session() {
+        let request = misc_msg(|misc| misc.set_landesk_app_request("{}".into()));
+        assert!(Connection::authorized_message_scope_violation(AuthConnType::Remote, &request).is_none());
+        for scope in [AuthConnType::FileTransfer, AuthConnType::Terminal, AuthConnType::ViewCamera, AuthConnType::PortForward] {
+            assert!(Connection::authorized_message_scope_violation(scope, &request).is_some());
         }
     }
 

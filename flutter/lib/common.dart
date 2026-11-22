@@ -1285,6 +1285,10 @@ class AccessibilityListener extends StatelessWidget {
     return Listener(
         onPointerDown: (evt) {
           if (evt.size == 1) {
+            // Initialize then cancel the original gesture before replaying its replacement.
+            GestureBinding.instance.pointerRouter.route(evt);
+            GestureBinding.instance.pointerRouter.route(PointerCancelEvent(
+                pointer: evt.pointer, position: evt.position));
             GestureBinding.instance.handlePointerEvent(PointerAddedEvent(
                 pointer: evt.pointer + offset, position: evt.position));
             GestureBinding.instance.handlePointerEvent(PointerDownEvent(

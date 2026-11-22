@@ -15,6 +15,24 @@ pub mod win_device;
 pub mod macos;
 
 #[cfg(target_os = "macos")]
+pub mod macos_app_mode;
+
+#[cfg(target_os = "macos")]
+pub use macos_app_mode as app_mode;
+
+#[cfg(windows)]
+pub mod windows_app_mode;
+
+#[cfg(windows)]
+pub use windows_app_mode as app_mode;
+
+#[cfg(target_os = "linux")]
+pub mod linux_app_mode;
+
+#[cfg(target_os = "linux")]
+pub use linux_app_mode as app_mode;
+
+#[cfg(target_os = "macos")]
 pub mod delegate;
 
 #[cfg(target_os = "linux")]

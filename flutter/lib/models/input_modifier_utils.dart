@@ -1,6 +1,13 @@
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
+// Keep the same keypad policy as the native macOS input path.
+bool remoteNumLockEnabled({
+  required bool isMacOS,
+  required bool numLockEnabled,
+}) =>
+    isMacOS || numLockEnabled;
+
 /// Identifies where terminal input originated so paste data can bypass all
 /// keyboard-only transformations.
 enum TerminalInputSource {

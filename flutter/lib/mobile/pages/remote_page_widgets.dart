@@ -249,11 +249,35 @@ class ImagePaint extends StatelessWidget {
       }
     }
     final adjust = c.getAdjustY();
+    if (c.appViewport case final view?) {
+      return CustomPaint(painter: _AppFocusPainter(m.image, view.window,
+          view.offset + Offset(0, adjust), view.scale));
+    }
     return CustomPaint(
       painter: ImagePainter(
           image: m.image, x: c.x / s, y: (c.y + adjust) / s, scale: s),
     );
   }
+}
+
+class _AppFocusPainter extends CustomPainter {
+  final ui.Image? image;
+  final Rect source;
+  final Offset offset;
+  final double scale;
+  _AppFocusPainter(this.image, this.source, this.offset, this.scale);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final image = this.image;
+    if (image == null || scale <= 0) return;
+    final target = Rect.fromLTWH(offset.dx + source.left * scale,
+        offset.dy + source.top * scale, source.width * scale, source.height * scale);
+    canvas.drawImageRect(image, source, target, Paint()..filterQuality = FilterQuality.medium);
+  }
+
+  @override
+  bool shouldRepaint(covariant _AppFocusPainter oldDelegate) => true;
 }
 
 class CursorPaint extends StatelessWidget {

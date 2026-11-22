@@ -82,6 +82,67 @@ void main() {
     await tester.binding.setSurfaceSize(null);
   });
 
+  testWidgets('restore control has a small tab and a 48-point tap target', (
+    tester,
+  ) async {
+    const size = Size(852, 393);
+    await tester.binding.setSurfaceSize(size);
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    var taps = 0;
+    await tester.pumpWidget(MaterialApp(
+      home: MediaQuery(
+        data: const MediaQueryData(
+          size: size,
+          padding: EdgeInsets.only(right: 59),
+        ),
+        child: Scaffold(
+          body: RemoteSessionLayout(
+            child: const SizedBox.expand(),
+            rail: RemoteEdgeControl(
+              label: 'Control Actions',
+              icon: Icons.chevron_left,
+              compact: true,
+              onPressed: () => taps++,
+            ),
+          ),
+        ),
+      ),
+    ));
+
+    final tab = tester.getRect(find.descendant(
+      of: find.byType(RemoteEdgeControl),
+      matching: find.byType(Material),
+    ).first);
+    final target = tester.getRect(find.byType(IconButton));
+    expect(tab.size, const Size(24, 32));
+    expect(tab.right, size.width - 59);
+    expect(target.size, const Size(48, 48));
+    expect(tester.getCenter(find.byIcon(Icons.chevron_left)), tab.center);
+    await tester.tapAt(Offset(target.left + 4, target.center.dy));
+    expect(taps, 1);
+  });
+
+  testWidgets(
+    'app mode canvas uses the whole width while the right rail is expanded',
+    (tester) async {
+      const size = Size(852, 393);
+      await tester.binding.setSurfaceSize(size);
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      const canvas = ValueKey('app canvas');
+      await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+          body: RemoteSessionLayout(
+            overlayRail: true,
+            rail: rail(),
+            child: const SizedBox.expand(key: canvas),
+          ),
+        ),
+      ));
+      expect(tester.getRect(find.byKey(canvas)), Offset.zero & size);
+      expect(tester.getRect(find.byType(RemoteActionRail)).right, size.width);
+    },
+  );
+
   testWidgets(
     'side panel consumes its own taps and leaves the desktop interactive',
     (tester) async {

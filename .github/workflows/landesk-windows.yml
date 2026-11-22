@@ -2,6 +2,10 @@
 name: LanDesk windows
 'on':
   workflow_call:
+    inputs:
+      verify-app-mode:
+        type: boolean
+        default: false
 permissions:
   contents: read
 env:
@@ -128,6 +132,51 @@ jobs:
         Remove-Item -Path usbmmidd_v2\Win32 -Recurse
         Remove-Item -Path "usbmmidd_v2\deviceinstaller64.exe", "usbmmidd_v2\deviceinstaller.exe", "usbmmidd_v2\usbmmidd.bat"
         mv -Force .\usbmmidd_v2 ./rustdesk
+    - name: Verify Windows App mode
+      if: inputs.verify-app-mode
+      shell: bash
+      env:
+        LANDESK_APP_MODE_EVIDENCE: ${{ github.workspace }}/windows-app-mode.json
+      run: |
+        set -euo pipefail
+        FEATURES=$(python3 ./build.py --portable --flutter --skip-portable-pack --hwcodec ${{ matrix.job.build-args }} --print-features)
+        cargo test --locked --release --lib --features "$FEATURES" platform::windows_app_mode::tests -- --test-threads=1 2>&1 | tee windows-app-mode-unit.log
+        cargo test --locked --release --lib --features "$FEATURES" app_actions_require_a_remote_desktop_session 2>&1 | tee windows-app-mode-auth.log
+        cargo test --locked --release --lib --features "$FEATURES" platform::windows_app_mode::tests::real_windows_switch_resize_and_restore -- --ignored --exact --test-threads=1 --nocapture 2>&1 | tee windows-app-mode-desktop.log
+        test -s "$LANDESK_APP_MODE_EVIDENCE"
+    - name: Verify candidate window and capture desktop
+      if: inputs.verify-app-mode
+      shell: pwsh
+      run: |
+        $ErrorActionPreference = 'Stop'
+        $exe = Resolve-Path rustdesk/landesk.exe
+        $app = Start-Process $exe -PassThru
+        try {
+          Start-Sleep -Seconds 15
+          $app.Refresh()
+          if ($app.HasExited -or $app.MainWindowHandle -eq 0) { throw 'LanDesk did not open a window' }
+          Add-Type -AssemblyName System.Windows.Forms
+          Add-Type -AssemblyName System.Drawing
+          $bounds = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
+          $bitmap = New-Object System.Drawing.Bitmap $bounds.Width, $bounds.Height
+          $graphics = [System.Drawing.Graphics]::FromImage($bitmap)
+          try {
+            $graphics.CopyFromScreen($bounds.Location, [System.Drawing.Point]::Empty, $bounds.Size)
+            $bitmap.Save("$PWD/windows-desktop.png")
+          } finally { $graphics.Dispose(); $bitmap.Dispose() }
+          @{ source = '${{ github.sha }}'; environment = 'windows-2022 CI VM'; window = $app.MainWindowTitle; sha256 = (Get-FileHash $exe -Algorithm SHA256).Hash; version = (Get-Item $exe).VersionInfo.FileVersion } | ConvertTo-Json | Set-Content windows-candidate.json
+        } finally { if (-not $app.HasExited) { Stop-Process -Id $app.Id } }
+    - name: Upload Windows verification evidence
+      if: always() && inputs.verify-app-mode
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+      with:
+        name: landesk-windows-app-mode-verification
+        path: |
+          windows-app-mode*.log
+          windows-app-mode.json
+          windows-desktop.png
+          windows-candidate.json
+        if-no-files-found: warn
     - name: Package portable preview
       shell: pwsh
       run: 'Compress-Archive -Path rustdesk/* -DestinationPath landesk-1.5.1-windows-x86_64-unsigned.zip

@@ -20,6 +20,7 @@ const _chinese = <String, String>{
   'Virtual keys': '虚拟按键',
   'Edit layout': '编辑布局',
   'All windows': '窗口概览',
+  'Show desktop': '返回桌面',
 };
 
 String landeskText(BuildContext context, String text) {

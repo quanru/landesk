@@ -1,0 +1,18 @@
+name: Verify LanDesk Windows App mode
+on:
+  push:
+    branches: ['verify/windows-app-mode-*']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: landesk-windows-app-mode-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  bridge:
+    uses: ./.github/workflows/landesk-bridge.yml
+  windows:
+    needs: bridge
+    uses: ./.github/workflows/landesk-windows.yml
+    with:
+      verify-app-mode: true
