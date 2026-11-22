@@ -31,6 +31,7 @@ import 'package:window_manager/window_manager.dart';
 import 'package:window_size/window_size.dart' as window_size;
 
 import '../consts.dart';
+import 'common/landesk_text.dart';
 import 'common/widgets/overlay.dart';
 import 'mobile/pages/file_manager_page.dart';
 import 'mobile/pages/remote_page.dart';
@@ -694,6 +695,7 @@ class OverlayDialogManager {
       {bool clickMaskDismiss = false,
       bool showCancel = true,
       VoidCallback? onCancel,
+      String? detail,
       String? tag}) {
     if (tag == null) {
       tag = _tagCount.toString();
@@ -720,6 +722,16 @@ class OverlayDialogManager {
                   Center(
                       child: Text(translate(text),
                           style: const TextStyle(fontSize: 15))),
+                  if (detail != null && detail.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Center(
+                      child: Text(detail,
+                          textAlign: TextAlign.center,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontSize: 13)),
+                    ),
+                  ],
                   const SizedBox(height: 20),
                   Offstage(
                       offstage: !showCancel,
@@ -980,6 +992,8 @@ Widget createDialogContent(String text) {
 void msgBox(SessionID sessionId, String type, String title, String text,
     String link, OverlayDialogManager dialogManager,
     {bool? hasCancel,
+    String? detail,
+    String submitLabel = 'OK',
     ReconnectHandle? reconnect,
     int? reconnectTimeout,
     VoidCallback? onSubmit,
@@ -1056,13 +1070,13 @@ void msgBox(SessionID sessionId, String type, String title, String text,
     late final Widget btn;
     if (submitTimeout != null) {
       btn = _CountDownButton(
-        text: 'OK',
+        text: submitLabel,
         second: submitTimeout,
         onPressed: submit,
         submitOnTimeout: true,
       );
     } else {
-      btn = dialogButton('OK', onPressed: submit);
+      btn = dialogButton(submitLabel, onPressed: submit);
     }
     buttons.insert(0, btn);
   }
@@ -1104,7 +1118,9 @@ void msgBox(SessionID sessionId, String type, String title, String text,
   dialogManager.show(
     (setState, close, context) => CustomAlertDialog(
       title: null,
-      content: SelectionArea(child: msgboxContent(type, title, text)),
+      content: SelectionArea(
+        child: msgboxContent(type, title, text, detail: detail),
+      ),
       actions: buttons,
       onSubmit: hasOk ? submit : null,
       onCancel: hasCancel == true ? cancel : null,
@@ -1152,7 +1168,7 @@ Widget msgboxIcon(String type) {
 }
 
 // title should be null
-Widget msgboxContent(String type, String title, String text) {
+Widget msgboxContent(String type, String title, String text, {String? detail}) {
   String translateText(String text) {
     if (text.indexOf('Failed') == 0 && text.indexOf(': ') > 0) {
       List<String> words = text.split(': ');
@@ -1185,6 +1201,7 @@ Widget msgboxContent(String type, String title, String text) {
               style: TextStyle(fontSize: 21),
             ).marginOnly(bottom: 10),
             createDialogContent(translateText(text)),
+            if (detail != null) Text(detail).marginOnly(top: 8),
           ],
         ),
       ),
@@ -1414,6 +1431,26 @@ String translate(String name) {
     return name.split(': ').map((x) => translate(x)).join(': ');
   }
   return platformFFI.translate(name, localeName);
+}
+
+Future<void> openLandeskGuide(BuildContext context) async {
+  final locale = Localizations.maybeLocaleOf(context);
+  final traditional = locale?.scriptCode == 'Hant' ||
+      const {'TW', 'HK', 'MO'}.contains(locale?.countryCode);
+  final prefix = locale?.languageCode != 'zh'
+      ? ''
+      : traditional
+          ? '/zh-tw'
+          : '/zh';
+  final uri = Uri.https('landesk.lifeos.md', '$prefix/guide/start');
+  try {
+    if (await launchUrl(uri, mode: LaunchMode.externalApplication)) return;
+  } on PlatformException {
+    // The original settings stay available if the system cannot open a browser.
+  }
+  if (context.mounted) {
+    showToast(landeskText(context, 'Could not open the setup guide'));
+  }
 }
 
 // This function must be kept the same as the one in rust and sciter code.

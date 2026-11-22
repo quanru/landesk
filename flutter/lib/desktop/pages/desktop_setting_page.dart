@@ -26,6 +26,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:url_launcher/url_launcher_string.dart';
 
 import '../../common/widgets/dialog.dart';
+import '../../common/landesk_text.dart';
 import '../../common/widgets/login.dart';
 import '../widgets/native_network_settings.dart';
 import '../widgets/settings_session_guard.dart';
@@ -2191,6 +2192,10 @@ class _AboutState extends State<_About> {
                     translate('Website'),
                     style: linkStyle,
                   ).marginSymmetric(vertical: 4.0)),
+              TextButton(
+                onPressed: () => openLandeskGuide(context),
+                child: Text(landeskText(context, 'Connection guide')),
+              ),
               Container(
                 decoration: const BoxDecoration(color: Color(0xFF2c8cff)),
                 padding:

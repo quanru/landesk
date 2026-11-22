@@ -5,7 +5,6 @@ import 'dart:math';
 import 'package:extended_text/extended_text.dart';
 import 'package:flutter_hbb/common/widgets/dialog.dart';
 import 'package:flutter_hbb/desktop/widgets/dragable_divider.dart';
-import 'package:percent_indicator/percent_indicator.dart';
 import 'package:desktop_drop/desktop_drop.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
@@ -25,6 +24,7 @@ import '../../desktop/widgets/material_mod_popup_menu.dart' as mod_menu;
 import '../../common.dart';
 import '../../models/model.dart';
 import '../../models/platform_model.dart';
+import '../widgets/file_transfer_job_status.dart';
 import '../widgets/popup_menu.dart';
 
 /// status of location bar
@@ -238,7 +238,6 @@ class _FileManagerPageState extends State<FileManagerPage>
           controller: ScrollController(),
           itemBuilder: (BuildContext context, int index) {
             final item = jobs[index];
-            final status = item.getStatus();
             return Padding(
               padding: const EdgeInsets.only(bottom: 5),
               child: generateCard(
@@ -267,60 +266,7 @@ class _FileManagerPageState extends State<FileManagerPage>
                                       position: TextOverflowPosition.start),
                                 ),
                               ),
-                              Tooltip(
-                                waitDuration: Duration(milliseconds: 500),
-                                message: status,
-                                child: Text(status,
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: MyTheme.darkGray,
-                                    )).marginOnly(top: 6),
-                              ),
-                              Offstage(
-                                offstage: item.type != JobType.transfer ||
-                                    item.state != JobState.inProgress,
-                                child: LinearPercentIndicator(
-                                  animateFromLastPercent: true,
-                                  center: SizedBox.expand(
-                                    child: ShaderMask(
-                                      blendMode: BlendMode.srcATop,
-                                      shaderCallback: (bounds) =>
-                                          LinearGradient(
-                                        colors: [
-                                          Colors.white,
-                                          Colors.transparent,
-                                        ],
-                                        stops: [item.percent, item.percent],
-                                      ).createShader(bounds),
-                                      child: FittedBox(
-                                        fit: BoxFit.scaleDown,
-                                        child: Text.rich(
-                                          TextSpan(
-                                            text: item.percentText,
-                                            children: [
-                                              if (item.recvJobRes)
-                                                TextSpan(
-                                                  text:
-                                                      ' ${readableFileSize(item.speed)}/s',
-                                                  style: TextStyle(
-                                                    fontSize: 12,
-                                                    fontWeight: FontWeight.w300,
-                                                    color: MyTheme.darkGray,
-                                                  ),
-                                                ),
-                                            ],
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                  barRadius: Radius.circular(15),
-                                  percent: item.percent,
-                                  progressColor: MyTheme.accent,
-                                  backgroundColor: Theme.of(context).hoverColor,
-                                  lineHeight: kDesktopFileTransferRowHeight,
-                                ).paddingSymmetric(vertical: 8),
-                              ),
+                              FileTransferJobStatus(item: item),
                             ],
                           ),
                         ),

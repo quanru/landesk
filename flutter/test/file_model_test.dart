@@ -1,11 +1,14 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:flutter/material.dart';
+import 'package:flutter_hbb/desktop/widgets/file_transfer_job_status.dart';
 import 'package:flutter_hbb/generated_bridge.dart';
 import 'package:flutter_hbb/models/file_model.dart';
 import 'package:flutter_hbb/models/model.dart';
 import 'package:flutter_hbb/models/platform_model.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:percent_indicator/percent_indicator.dart';
 import 'package:uuid/uuid.dart';
 
 final _sessionId = UuidValue('00000000-0000-0000-0000-000000000000');
@@ -108,6 +111,31 @@ class _DeletingController extends FileController {
 }
 
 void main() {
+  testWidgets('file transfer only shows a percentage when the byte total is known',
+      (tester) async {
+    platformFFI.setBindingForTesting(_FileBinding());
+    final item = JobProgress()
+      ..type = JobType.transfer
+      ..state = JobState.inProgress;
+    Widget view() => MaterialApp(home: FileTransferJobStatus(item: item));
+
+    await tester.pumpWidget(view());
+    expect(find.text('Transfer file'), findsOneWidget);
+    expect(find.text('0/0 files'), findsNothing);
+    expect(find.byType(LinearPercentIndicator), findsNothing);
+
+    item
+      ..totalSize = 400
+      ..finishedSize = 100
+      ..fileCount = 2;
+    await tester.pumpWidget(view());
+    final indicator = find.byType(LinearPercentIndicator);
+    expect(tester.widget<LinearPercentIndicator>(indicator).percent, 0.25);
+
+    item.clear();
+    expect(item.totalSize, 0);
+  });
+
   for (final scenario in ['completion', 'reconnect', 'dispatch reconnect']) {
     testWidgets('SAF retry after $scenario', (tester) async {
       const path = '/@rustdesk/tree/grant/root';

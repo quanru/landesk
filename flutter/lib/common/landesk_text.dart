@@ -21,6 +21,8 @@ const _chinese = <String, String>{
   'Edit layout': '编辑布局',
   'All windows': '窗口概览',
   'Show desktop': '返回桌面',
+  'Connection guide': '连接指南',
+  'Could not open the setup guide': '无法打开连接指南',
 };
 
 String landeskText(BuildContext context, String text) {

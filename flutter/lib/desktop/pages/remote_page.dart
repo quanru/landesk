@@ -4,6 +4,7 @@ import 'package:desktop_multi_window/desktop_multi_window.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/scheduler.dart';
+import 'package:flutter_hbb/common/formatter/id_formatter.dart';
 import 'package:get/get.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_hbb/models/state_model.dart';
@@ -192,8 +193,8 @@ class _RemotePageState extends State<RemotePage>
     );
     WidgetsBinding.instance.addPostFrameCallback((_) {
       SystemChrome.setEnabledSystemUIMode(SystemUiMode.manual, overlays: []);
-      _ffi.dialogManager
-          .showLoading(translate('Connecting...'), onCancel: closeConnection);
+      _ffi.dialogManager.showLoading(translate('Connecting...'),
+          detail: formatID(widget.id), onCancel: closeConnection);
     });
     WakelockManager.enable(_uniqueKey);
 

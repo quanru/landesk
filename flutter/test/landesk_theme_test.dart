@@ -100,6 +100,11 @@ void main() {
           }),
           p.inset,
         );
+        final pressed = theme.elevatedButtonTheme.style!.overlayColor!
+            .resolve({WidgetState.pressed})!;
+        final heldFill = Color.alphaBlend(pressed, p.accent);
+        expect(heldFill, isNot(p.accent));
+        expect(contrast(heldFill, p.onAccent), greaterThanOrEqualTo(4.5));
         expect(
           theme.outlinedButtonTheme.style!.side!.resolve({
             WidgetState.focused,

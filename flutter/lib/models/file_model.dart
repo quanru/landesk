@@ -1868,6 +1868,7 @@ class JobProgress {
     fileNum = 0;
     speed = 0;
     finishedSize = 0;
+    totalSize = 0;
     jobName = "";
     fileName = "";
     fileCount = 0;
@@ -1930,10 +1931,11 @@ class JobProgress {
       return res;
     } else if (type == JobType.transfer) {
       var res = "";
-      if (state != JobState.inProgress && state != JobState.none) {
+      if ((state != JobState.inProgress || totalSize <= 0) &&
+          state != JobState.none) {
         res += display();
       }
-      if (filesStr.isNotEmpty) {
+      if (fileCount > 0 || state != JobState.inProgress) {
         if (res.isNotEmpty) {
           res += ", ";
         }
